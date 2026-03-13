@@ -9,9 +9,8 @@ declare global {
 
 function App() {
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  // Инициализация Telegram Web App
+  // Инициализация Telegram
   useEffect(() => {
     const tg = window.Telegram.WebApp;
     tg.ready();
@@ -20,22 +19,17 @@ function App() {
 
   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
   // СЮДА ВСТАВЬ USERNAME ЧУЖОГО БОТА БЕЗ @
-  const botUsername = 'VoiceShazamBot';   // ← ИЗМЕНИ НА РЕАЛЬНЫЙ (например: MusicLeakBot или как называется)
+  const botUsername = 'forty7mbot';   // ← ИЗМЕНИ НА РЕАЛЬНЫЙ (например: VoiceShazamBot)
   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
 
-  const handleInlineSearch = () => {
+  const handleSearch = () => {
     if (!query.trim()) {
-      window.Telegram.WebApp.showAlert('Введите название трека');
+      window.Telegram.WebApp.showAlert('Напиши название трека!');
       return;
     }
 
-    setLoading(true);
-
     // Переключаемся в inline-режим чужого бота
     window.Telegram.WebApp.switchInlineQuery(query);
-
-    // Через 2 секунды убираем лоадер (inline работает мгновенно)
-    setTimeout(() => setLoading(false), 2000);
   };
 
   return (
@@ -51,7 +45,6 @@ function App() {
         Forty7 — uncensored music
       </h1>
 
-      {/* Поиск */}
       <div style={{ display: 'flex', marginBottom: '20px' }}>
         <input
           type="text"
@@ -60,7 +53,7 @@ function App() {
           onChange={(e) => setQuery(e.target.value)}
           style={{
             flex: 1,
-            padding: '12px',
+            padding: '14px',
             fontSize: '16px',
             border: '1px solid #333',
             borderRadius: '8px 0 0 8px',
@@ -69,27 +62,25 @@ function App() {
           }}
         />
         <button
-          onClick={handleInlineSearch}
-          disabled={loading}
+          onClick={handleSearch}
           style={{
-            padding: '12px 20px',
+            padding: '14px 24px',
             fontSize: '16px',
-            background: loading ? '#444' : '#28a745',
+            background: '#28a745',
             color: 'white',
             border: 'none',
             borderRadius: '0 8px 8px 0',
-            cursor: loading ? 'not-allowed' : 'pointer'
+            cursor: 'pointer'
           }}
         >
-          {loading ? 'Открываем...' : `Искать в @${botUsername}`}
+          Искать в @{botUsername}
         </button>
       </div>
 
       <p style={{ textAlign: 'center', color: '#aaa', fontSize: '14px' }}>
-        После нажатия выбери чат и выбери трек из результатов бота
+        После нажатия выбери любой чат —<br />
+        появятся результаты от бота
       </p>
-
-      {/* Плейлист и плеер здесь не нужны, потому что треки будут приходить от чужого бота */}
     </div>
   );
 }
