@@ -19,7 +19,7 @@ function App() {
 
   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
   // СЮДА ВСТАВЬ USERNAME ЧУЖОГО БОТА БЕЗ @
-  const botUsername = 'forty7mbot';   // ← ИЗМЕНИ НА РЕАЛЬНЫЙ (например: VoiceShazamBot)
+  const botUsername = 'VoiceShazamBot';   // ← ИЗМЕНИ НА РЕАЛЬНЫЙ (например: VoiceShazamBot)
   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
 
   const handleSearch = () => {
