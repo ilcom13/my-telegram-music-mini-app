@@ -16,16 +16,23 @@ interface Track {
   mp3: string | null;
 }
 
+interface Suggestion {
+  query: string;
+}
+
 export default function App() {
   const [query, setQuery] = useState('');
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState('0:00');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const suggestTimer = useRef<any>(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -53,13 +60,37 @@ export default function App() {
     };
   }, []);
 
-  const search = async () => {
-    if (!query.trim()) return;
+  // Автодополнение — запрос к SoundCloud autocomplete через Worker
+  useEffect(() => {
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    if (!query.trim() || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    suggestTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${WORKER_URL}/suggest?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.suggestions?.length) {
+          setSuggestions(data.suggestions);
+          setShowSuggestions(true);
+        }
+      } catch { /* тихо игнорируем */ }
+    }, 350);
+  }, [query]);
+
+  const search = async (q?: string) => {
+    const searchQuery = q || query;
+    if (!searchQuery.trim()) return;
+    setShowSuggestions(false);
+    setSuggestions([]);
     setLoading(true);
     setError('');
     setTracks([]);
+    if (q) setQuery(q);
     try {
-      const res = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       if (!data.tracks?.length) throw new Error('Треки не найдены');
@@ -74,13 +105,11 @@ export default function App() {
   const playTrack = (track: Track) => {
     if (!track.mp3) return;
     const audio = audioRef.current!;
-
     if (currentTrack?.id === track.id) {
       if (isPlaying) { audio.pause(); setIsPlaying(false); }
       else { audio.play(); setIsPlaying(true); }
       return;
     }
-
     audio.src = `${WORKER_URL}/stream?url=${encodeURIComponent(track.mp3)}`;
     audio.play();
     setCurrentTrack(track);
@@ -117,33 +146,79 @@ export default function App() {
         <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Без цензуры 🎵</div>
       </div>
 
-      <div style={{ padding: '14px 16px', display: 'flex', gap: 8 }}>
-        <input
-          type="text"
-          placeholder="Артист или название..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && search()}
-          style={{
-            flex: 1, padding: '12px 16px', fontSize: 15,
-            background: '#161616', border: '1px solid #252525',
-            borderRadius: 12, color: '#fff', outline: 'none',
-          }}
-        />
-        <button
-          onClick={search}
-          disabled={loading}
-          style={{
-            padding: '12px 20px', fontSize: 15, fontWeight: 700,
-            background: loading ? '#222' : '#ff5500',
-            color: '#fff', border: 'none', borderRadius: 12,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            minWidth: 72, transition: 'background 0.2s',
-          }}
-        >
-          {loading ? '...' : '▶'}
-        </button>
+      {/* Поиск с автодополнением */}
+      <div style={{ padding: '14px 16px 0', position: 'relative' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Артист или название..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') search();
+              if (e.key === 'Escape') setShowSuggestions(false);
+            }}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            style={{
+              flex: 1, padding: '12px 16px', fontSize: 15,
+              background: '#161616', border: '1px solid #252525',
+              borderRadius: showSuggestions && suggestions.length > 0 ? '12px 12px 0 0' : '12px',
+              color: '#fff', outline: 'none',
+            }}
+          />
+          <button
+            onClick={() => search()}
+            disabled={loading}
+            style={{
+              padding: '12px 20px', fontSize: 15, fontWeight: 700,
+              background: loading ? '#222' : '#ff5500',
+              color: '#fff', border: 'none', borderRadius: 12,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              minWidth: 72, transition: 'background 0.2s',
+            }}
+          >
+            {loading ? '...' : '▶'}
+          </button>
+        </div>
+
+        {/* Выпадающие подсказки */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            left: 16, right: 76,
+            background: '#161616',
+            border: '1px solid #252525',
+            borderTop: 'none',
+            borderRadius: '0 0 12px 12px',
+            zIndex: 100,
+            overflow: 'hidden',
+          }}>
+            {suggestions.map((s, i) => (
+              <div
+                key={i}
+                onClick={() => search(s.query)}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  color: '#ccc',
+                  cursor: 'pointer',
+                  borderTop: i > 0 ? '1px solid #1e1e1e' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1e1e1e')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span style={{ color: '#444', fontSize: 12 }}>🔍</span>
+                {s.query}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      <div style={{ height: 14 }} />
 
       {error && (
         <div style={{
