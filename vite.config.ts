@@ -5,8 +5,8 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), basicSsl()],
+  base: '/',  // ← это главное исправление: корень сайта
   build: {
-    outDir: './docs'
-  },
-  base: '/vite-boilerplate/'
+    outDir: './docs'  // оставляем, раз билд идёт в docs
+  }
 });
