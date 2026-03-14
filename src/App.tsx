@@ -46,6 +46,8 @@ export default function App() {
   const [history, setHistory] = useState<Track[]>([]);
   const [trending, setTrending] = useState<Track[]>([]);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [trendGenre, setTrendGenre] = useState('all-music');
+  const [trendPage, setTrendPage] = useState<Record<string,Track[]>>({});
   const [libTab, setLibTab] = useState<'liked'|'playlists'>('liked');
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -79,17 +81,22 @@ export default function App() {
 
   useEffect(() => { if (audioRef.current) audioRef.current.volume = volume; }, [volume]);
 
-  const loadTrending = async () => {
+  const loadTrending = async (genre = trendGenre, reset = false) => {
     setTrendLoading(true);
     try {
-      const r = await fetch(`${WORKER_URL}/trending`);
+      const r = await fetch(`${WORKER_URL}/trending?genre=${genre}`);
       const d = await r.json();
-      if (d.tracks) setTrending(d.tracks);
+      if (d.tracks) {
+        setTrending(d.tracks);
+        setTrendPage(prev => ({ ...prev, [genre]: reset ? d.tracks : [...(prev[genre] || []), ...d.tracks] }));
+      }
     } catch {}
     setTrendLoading(false);
   };
 
-  useEffect(() => { if (screen === 'trending' && trending.length === 0) loadTrending(); }, [screen]);
+  useEffect(() => {
+    if (screen === 'trending' && !trendPage[trendGenre]) loadTrending(trendGenre, true);
+  }, [screen, trendGenre]);
 
   const search = async () => {
     if (!query.trim()) return;
@@ -411,28 +418,60 @@ export default function App() {
         )}
 
         {/* TRENDING */}
-        {screen==='trending' && (
-          <div>
-            <div style={{padding:'48px 16px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div style={{fontSize:24,fontWeight:600,color:'#f0f0f8',letterSpacing:-0.4}}>В тренде</div>
-              <button onClick={loadTrending} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-              </button>
-            </div>
-            {trendLoading
-              ? <div style={{display:'flex',alignItems:'center',justifyContent:'center',paddingTop:80}}>
-                  <div style={{fontSize:14,color:'#555'}}>Загружаем тренды...</div>
-                </div>
-              : trending.length===0
-                ? <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,color:'#444',textAlign:'center',padding:'60px 20px 0'}}>
-                    <div style={{fontSize:44,marginBottom:14}}>📈</div>
-                    <div style={{fontSize:15,color:'#555'}}>Не удалось загрузить</div>
-                    <button onClick={loadTrending} style={{marginTop:16,padding:'10px 24px',background:ACC_DIM,border:'none',borderRadius:12,color:ACC,fontSize:14,cursor:'pointer'}}>Попробовать снова</button>
+        {screen==='trending' && (() => {
+          const GENRES = [
+            { id: 'all-music', label: 'Всё', emoji: '🎵' },
+            { id: 'hip-hop-rap', label: 'Рэп', emoji: '🎤' },
+            { id: 'r-b-soul', label: 'R&B', emoji: '🎸' },
+            { id: 'electronic', label: 'Электро', emoji: '⚡' },
+            { id: 'pop', label: 'Поп', emoji: '✨' },
+            { id: 'trap', label: 'Trap', emoji: '🔊' },
+            { id: 'alternative-rock', label: 'Рок', emoji: '🎸' },
+            { id: 'ambient', label: 'Амбиент', emoji: '🌙' },
+          ];
+          const currentTracks = trendPage[trendGenre] || trending;
+          return (
+            <div>
+              <div style={{padding:'48px 16px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontSize:24,fontWeight:600,color:'#f0f0f8',letterSpacing:-0.4}}>В тренде</div>
+                <button onClick={()=>loadTrending(trendGenre,true)} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                </button>
+              </div>
+
+              {/* Genre pills */}
+              <div style={{display:'flex',gap:8,padding:'0 16px 16px',overflowX:'auto',scrollbarWidth:'none'}}>
+                {GENRES.map(g => (
+                  <button key={g.id} onClick={()=>{setTrendGenre(g.id);}} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:20,border:'none',background:trendGenre===g.id?ACC:ACC_DIM,color:trendGenre===g.id?'#0c0c11':ACC,fontSize:13,fontWeight:500,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
+                    <span style={{fontSize:14}}>{g.emoji}</span>{g.label}
+                  </button>
+                ))}
+              </div>
+
+              {trendLoading && currentTracks.length===0
+                ? <div style={{display:'flex',alignItems:'center',justifyContent:'center',paddingTop:80}}>
+                    <div style={{fontSize:14,color:'#555'}}>Загружаем...</div>
                   </div>
-                : <div style={{padding:'0 4px'}}>{trending.map((t,i)=><TrackRow key={t.id} track={t} num={i+1}/>)}</div>
-            }
-          </div>
-        )}
+                : currentTracks.length===0
+                  ? <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,textAlign:'center',padding:'60px 20px 0'}}>
+                      <div style={{fontSize:44,marginBottom:14}}>📈</div>
+                      <div style={{fontSize:15,color:'#555'}}>Не удалось загрузить</div>
+                      <button onClick={()=>loadTrending(trendGenre,true)} style={{marginTop:16,padding:'10px 24px',background:ACC_DIM,border:'none',borderRadius:12,color:ACC,fontSize:14,cursor:'pointer'}}>Попробовать снова</button>
+                    </div>
+                  : <div>
+                      <div style={{padding:'0 4px'}}>
+                        {currentTracks.map((t,i)=><TrackRow key={t.id+i} track={t} num={i+1}/>)}
+                      </div>
+                      <div style={{padding:'12px 16px 8px',display:'flex',justifyContent:'center'}}>
+                        <button onClick={()=>loadTrending(trendGenre,false)} disabled={trendLoading} style={{padding:'11px 32px',background:ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:14,color:ACC,fontSize:14,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?0.5:1}}>
+                          {trendLoading?'Загружаем...':'Загрузить ещё'}
+                        </button>
+                      </div>
+                    </div>
+              }
+            </div>
+          );
+        })()}
 
         {/* PROFILE */}
         {screen==='profile' && (
