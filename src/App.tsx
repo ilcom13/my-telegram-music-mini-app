@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
-const ACC = '#E8C98A';
-const ACC_DIM = 'rgba(232,201,138,0.13)';
+const ACC = '#D4A843';           // насыщеннее бежевый/золотой
+const ACC_DIM = 'rgba(212,168,67,0.14)';
 const BG = '#0e0e0e';
 const BG2 = '#161616';
 const BG3 = '#1e1e1e';
@@ -21,7 +21,7 @@ interface Track {
   trackCount?: number; albumId?: string; albumTitle?: string;
 }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; }
-interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; trackCount?: number; }
+interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; trackCount?: number; plays?: number; }
 interface ArtistInfo {
   id: string; name: string; username: string; avatar: string; banner: string;
   followers: number; permalink: string; tracks: Track[];
@@ -42,8 +42,7 @@ const T: Record<string,Record<string,string>> = {
     favArtists:'Artists',addFav:'Follow',removeFav:'Following',backToSearch:'Back',
     searchPlaceholder:'Songs or artist',noRecommended:'Listen to some tracks first',
     goToAlbum:'Go to album',tracks:'Tracks',discography:'Discography',popular:'Popular',
-    latestRelease:'Latest release',allTracks:'All tracks',noTracks:'No tracks found',
-    showMore:'Show more',
+    latestRelease:'Latest release',noTracks:'No tracks found',showMore:'Show more',
   },
   ru: {
     home:'Главная',search:'Поиск',library:'Библиотека',trending:'Тренды',profile:'Профиль',
@@ -59,8 +58,7 @@ const T: Record<string,Record<string,string>> = {
     removeFav:'Подписан',backToSearch:'Назад',searchPlaceholder:'Песни или артист',
     noRecommended:'Послушай пару треков',goToAlbum:'Перейти в альбом',
     tracks:'Треки',discography:'Дискография',popular:'Популярное',
-    latestRelease:'Последний релиз',allTracks:'Все треки',noTracks:'Треки не найдены',
-    showMore:'Показать ещё',
+    latestRelease:'Последний релиз',noTracks:'Треки не найдены',showMore:'Показать ещё',
   },
 };
 
@@ -77,6 +75,13 @@ function Img({src,size,radius,fb='🎵'}:{src:string;size:number;radius:number;f
   const s:React.CSSProperties={width:size,height:size,borderRadius:radius,flexShrink:0,display:'block'};
   if(src&&!e)return<img src={src} style={{...s,objectFit:'cover'}} onError={()=>sE(true)}/>;
   return<div style={{...s,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:Math.floor(size*.36),color:ACC}}>{fb}</div>;
+}
+
+// Квадратное изображение для альбомов — всегда 1:1
+function AlbumImg({src,radius=10}:{src:string;radius?:number}) {
+  const[e,sE]=useState(false);
+  if(src&&!e)return<img src={src} style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block',borderRadius:radius}} onError={()=>sE(true)}/>;
+  return<div style={{width:'100%',aspectRatio:'1',background:BG3,borderRadius:radius,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,color:ACC}}>💿</div>;
 }
 
 const GENRES=[{id:'top',label:'Топ',e:'🔥'},{id:'new',label:'Новинки',e:'⚡'},{id:'ru-rap',label:'RU Рэп',e:'🎤'},{id:'hip-hop',label:'Hip-Hop',e:'🎧'},{id:'trap',label:'Trap',e:'💀'},{id:'drill',label:'Drill',e:'🔩'},{id:'electronic',label:'Electronic',e:'⚡'},{id:'rnb',label:'R&B',e:'💜'},{id:'pop',label:'Pop',e:'✨'},{id:'latin',label:'Latin',e:'🌴'}];
@@ -105,11 +110,32 @@ function SliderTrack({val,sp,h=3}:{val:number;sp:ReturnType<typeof useSlider>;h?
 
 function Spinner() {
   return (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',paddingTop:80,gap:12}}>
-      <div style={{width:32,height:32,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',paddingTop:60,gap:12}}>
+      <div style={{width:30,height:30,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
+}
+
+// ── SMART RECOMMENDATIONS ────────────────────────────────────────────────────
+// Считаем сколько раз слушали каждого артиста
+function getArtistPlayCounts(history: Track[]): Record<string,number> {
+  const counts: Record<string,number> = {};
+  for (const tr of history) {
+    if (!tr.artist || REMIX_W.some(w => tr.artist.toLowerCase().includes(w))) continue;
+    counts[tr.artist] = (counts[tr.artist] || 0) + 1;
+  }
+  return counts;
+}
+
+// Выбираем топ артистов по прослушиваниям, отсекаем тех кого слушали мало
+function getTopArtists(history: Track[], minPlays = 2, limit = 5): string[] {
+  const counts = getArtistPlayCounts(history);
+  return Object.entries(counts)
+    .filter(([,c]) => c >= minPlays)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([a]) => a);
 }
 
 export default function App(){
@@ -123,7 +149,7 @@ export default function App(){
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
 
-  // Artist page state
+  // Artist page
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
   const[artistLoading,setArtistLoading]=useState(false);
   const[artistTab,setArtistTab]=useState<'albums'|'tracks'>('albums');
@@ -154,6 +180,7 @@ export default function App(){
   const[openPlId,setOpenPlId]=useState<string|null>(null);
   const[history,setHistory]=useState<Track[]>([]);
   const[recs,setRecs]=useState<Track[]>([]);
+  const[recsVersion,setRecsVersion]=useState(0); // триггер для пересчёта рек
   const[trends,setTrends]=useState<Record<string,Track[]>>({});
   const[trendLoading,setTrendLoading]=useState(false);
   const[trendGenre,setTrendGenre]=useState('top');
@@ -167,6 +194,7 @@ export default function App(){
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const playCountSinceRec=useRef(0); // счётчик прослушиваний для обновления рек
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
   const uid=String(tg?.id||'anon');
   const uName=tg?.first_name||tg?.username||'User';
@@ -191,7 +219,34 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en');}catch{}
   },[]);
 
-  useEffect(()=>{if(history.length<2)return;const artists=[...new Set(history.map(tr=>tr.artist).filter(a=>!REMIX_W.some(w=>a.toLowerCase().includes(w))))].slice(0,5);if(!artists.length)return;fetch(`${W}/search?q=__recommend__${encodeURIComponent(artists.join(','))}`).then(r=>r.json()).then(d=>{if(d.tracks?.length)setRecs(d.tracks);}).catch(()=>{});},[history.length]);
+  // ── УМНЫЕ РЕКОМЕНДАЦИИ ───────────────────────────────────────────────────────
+  // Обновляем рек при каждом recsVersion или когда история достигает порога
+  useEffect(()=>{
+    if(history.length<2) return;
+    // Берём только артистов которых слушали >= 2 раз
+    const topArtists = getTopArtists(history, 2, 5);
+    // Если нет таких — берём последних уникальных артистов (хотя бы 1 прослушивание)
+    const fallbackArtists = getTopArtists(history, 1, 3);
+    const artists = topArtists.length >= 1 ? topArtists : fallbackArtists;
+    if(!artists.length) return;
+
+    // Формируем запрос: топ артисты с весовым коэффициентом
+    const counts = getArtistPlayCounts(history);
+    // Сортируем по количеству прослушиваний, берём уникальных
+    const weighted = artists.sort((a,b) => (counts[b]||0) - (counts[a]||0));
+
+    fetch(`${W}/search?q=__recommend__${encodeURIComponent(weighted.join(','))}`)
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.tracks?.length){
+          // Фильтруем: убираем треки которые уже есть в истории
+          const historyIds = new Set(history.map(h=>h.id));
+          const fresh = d.tracks.filter((tr:Track) => !historyIds.has(tr.id));
+          setRecs(fresh.length > 0 ? fresh : d.tracks);
+        }
+      })
+      .catch(()=>{});
+  },[recsVersion, history.length]);
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -223,7 +278,17 @@ export default function App(){
     if(!track.mp3)return;
     if(audio.current){audio.current.src=`${W}/stream?url=${encodeURIComponent(track.mp3)}`;audio.current.play();setPlaying(true);}
     setCurrent(track);setProgress(0);setCurTime('0:00');
-    setHistory(prev=>{const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,30);try{localStorage.setItem('h47',JSON.stringify(n));}catch{}return n;});
+    setHistory(prev=>{
+      const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
+      try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
+      // Обновляем рекомендации каждые 3 прослушивания
+      playCountSinceRec.current += 1;
+      if(playCountSinceRec.current >= 3){
+        playCountSinceRec.current = 0;
+        setRecsVersion(v => v + 1);
+      }
+      return n;
+    });
   };
   const playTrack=(track:Track)=>{
     if(track.isArtist){openArtist('',track.title,track.cover,track.plays);return;}
@@ -242,7 +307,7 @@ export default function App(){
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
-  // ── OPEN ARTIST ──────────────────────────────────────────────────────────────
+  // ── OPEN ARTIST ───────────────────────────────────────────────────────────────
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as 'home'|'search'|'library'|'trending'|'profile'|'artist'|'album';
@@ -272,10 +337,16 @@ export default function App(){
         tracks:sorted,albums:[],latestRelease:latest
       });
 
-      // Загружаем альбомы параллельно
       if(userId){
         loadArtistAlbums(userId);
         loadArtistTracks(userId, 0, true);
+      } else {
+        // userId не известен — пробуем через имя
+        loadArtistAlbumsByName(name);
+        // Треки уже есть в sorted, показываем их
+        setArtistTracks(sorted);
+        setArtistTracksHasMore(false);
+        setArtistTracksLoading(false);
       }
     }catch{
       setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
@@ -293,20 +364,42 @@ export default function App(){
     setArtistAlbumsLoading(false);
   };
 
+  const loadArtistAlbumsByName=async(name:string)=>{
+    setArtistAlbumsLoading(true);
+    try{
+      const r=await fetch(`${W}/albums?q=${encodeURIComponent(name)}`);
+      const d=await r.json();
+      const albums:AlbumInfo[]=(d.tracks||[])
+        .filter((al:Track)=>al.isAlbum)
+        .map((al:Track)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0}));
+      setArtistAlbums(albums);
+    }catch{}
+    setArtistAlbumsLoading(false);
+  };
+
+  // Загружаем ВСЕ треки артиста — сначала из artist API, потом дополняем через /artist/tracks
   const loadArtistTracks=async(userId:string,offset:number,reset=false)=>{
     setArtistTracksLoading(true);
     try{
       const r=await fetch(`${W}/artist/tracks?userId=${userId}&offset=${offset}`);
       const d=await r.json();
       const newTracks:Track[]=d.tracks||[];
-      setArtistTracks(prev=>reset?newTracks:[...prev,...newTracks]);
+      setArtistTracks(prev=>{
+        if(reset){
+          // Если есть треки из artist API (sorted) — объединяем, убирая дубли
+          return newTracks;
+        }
+        const existing=new Set(prev.map(t=>t.id));
+        const fresh=newTracks.filter(t=>!existing.has(t.id));
+        return [...prev,...fresh];
+      });
       setArtistTracksHasMore(d.hasMore||false);
       setArtistTracksOffset(d.nextOffset||offset+20);
     }catch{}
     setArtistTracksLoading(false);
   };
 
-  // ── OPEN ALBUM ───────────────────────────────────────────────────────────────
+  // ── OPEN ALBUM ────────────────────────────────────────────────────────────────
   const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     setAlbumLoading(true);
     prevScreen.current=screen as 'home'|'search'|'library'|'trending'|'profile'|'artist'|'album';
@@ -316,7 +409,6 @@ export default function App(){
       const r=await fetch(`${W}/album?id=${id}`);
       const d=await r.json();
       if(d.album){
-        // Добавляем albumTitle к каждому треку для использования в меню
         const tracks=(d.tracks||[]).map((tr:Track)=>({...tr,albumId:id,albumTitle:d.album.title||title}));
         setAlbumPage({id:d.album.id,title:d.album.title||title,artist:d.album.artist||artist,cover:d.album.cover||cover,tracks,permalink:d.album.permalink||''});
       } else {
@@ -399,7 +491,7 @@ export default function App(){
         {mOpen&&(
           <div onClick={e=>e.stopPropagation()} style={{position:'absolute',right:8,top:'calc(100% + 2px)',background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:50,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.8)',overflow:'hidden'}}>
             {menuItems.map((item,i)=>(
-              <button key={i} onClick={item.fn} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'10px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const}}>
+              <button key={i} onClick={item.fn} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'10px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const,outline:'none'}}>
                 {item.icon}{item.label}
               </button>
             ))}
@@ -416,13 +508,27 @@ export default function App(){
         {playlists.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
           :playlists.map(pl=><div key={pl.id} onClick={()=>addToPl2(pl.id,track)} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
         }
-        <button onClick={()=>setAddToPl(null)} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
+        <button onClick={()=>setAddToPl(null)} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,outline:'none'}}>{t('cancel')}</button>
       </div>
     </div>
   );
 
-  const SectionLabel=({text}:{text:string})=>(
-    <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
+  const SectionLabel=({text,right}:{text:string;right?:React.ReactNode})=>(
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:8}}>
+      <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8}}>{text}</div>
+      {right}
+    </div>
+  );
+
+  // Кнопка назад — без outline при нажатии
+  const BackBtn=()=>(
+    <button
+      onClick={()=>setScreen(prevScreen.current)}
+      style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,outline:'none',WebkitTapHighlightColor:'transparent'}}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>{t('backToSearch')}</span>
+    </button>
   );
 
   const NAV=[
@@ -432,7 +538,7 @@ export default function App(){
     {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,lbl:()=>t('trending')},
   ];
 
-  // ── FULL PLAYER ──────────────────────────────────────────────────────────────
+  // ── FULL PLAYER ───────────────────────────────────────────────────────────────
   if(fullPlayer&&current)return(
     <div style={{background:FULL_BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden'}}>
       <audio ref={audio}/>
@@ -441,22 +547,22 @@ export default function App(){
           <div style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
-              <button onClick={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC}}>{lang==='ru'?'Очистить':'Clear'}</button>
+              <button onClick={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC,outline:'none'}}>{lang==='ru'?'Очистить':'Clear'}</button>
             </div>
             {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
                 <div key={tr.id+i} draggable onDragStart={()=>setDragIdx(i)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(dragIdx!==null&&dragIdx!==i)moveQ(dragIdx,i);setDragIdx(null);}}
-                  style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab',background:dragIdx===i?ACC_DIM:'transparent',borderRadius:6}}>
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab'}}>
                   <div style={{color:'#444',fontSize:15,padding:'0 3px'}}>⠿</div>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
                     <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{tr.artist}</div>
                   </div>
-                  <button onClick={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3}}>
+                  <button onClick={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3,outline:'none'}}>
                     <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${ACC}`,marginLeft:1}}/>
                   </button>
-                  <button onClick={()=>rmQ(i)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:16,padding:'0 3px',lineHeight:1}}>×</button>
+                  <button onClick={()=>rmQ(i)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:16,padding:'0 3px',lineHeight:1,outline:'none'}}>×</button>
                 </div>
               ))
             }
@@ -464,11 +570,11 @@ export default function App(){
         </div>
       )}
       <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:40,paddingBottom:10,flexShrink:0}}>
-        <button onClick={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:6,margin:-6}}>
+        <button onClick={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:6,margin:-6,outline:'none',WebkitTapHighlightColor:'transparent'}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase'}}>{t('nowPlaying')}</span>
-        <button onClick={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:6,margin:-6,position:'relative'}}>
+        <button onClick={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:6,margin:-6,position:'relative',outline:'none',WebkitTapHighlightColor:'transparent'}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
           {queue.length>0&&<span style={{position:'absolute',top:3,right:3,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center'}}>{queue.length}</span>}
         </button>
@@ -479,21 +585,11 @@ export default function App(){
         </div>
       </div>
       <div style={{width:'100%',flexShrink:0,marginBottom:10}}>
-        {/* Клик по названию → в альбом если есть albumId */}
-        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
-          <button
-            onClick={()=>{if(current.albumId){setFullPlayer(false);openAlbum(current.albumId,current.albumTitle||'',current.artist,current.cover);}}}
-            style={{background:'none',border:'none',padding:0,cursor:current.albumId?'pointer':'default',flex:1,minWidth:0,textAlign:'left' as const}}
-          >
-            <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',borderBottom:current.albumId?`1px solid ${ACC}55`:'none',paddingBottom:current.albumId?1:0,display:'inline-block',maxWidth:'100%'}}>
-              {current.title}
-            </div>
-          </button>
-          {current.albumId&&(
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0,opacity:0.7}}><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          )}
+        {/* #1 название НЕ кликабельно — просто текст */}
+        <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>
+          {current.title}
         </div>
-        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const}}>
+        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,outline:'none'}}>
           <span style={{fontSize:13,color:ACC}}>{current.artist}</span>
         </button>
         {current.plays>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
@@ -501,15 +597,15 @@ export default function App(){
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
-          <button onClick={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5}}>
+          <button onClick={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,outline:'none'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center'}}>
-          <button onClick={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5}}>
+          <button onClick={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,outline:'none'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
-          <button onClick={()=>share(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5}}>
+          <button onClick={()=>share(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,outline:'none'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
         </div>
@@ -520,9 +616,9 @@ export default function App(){
         <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:TEXT_SEC,marginTop:5}}><span>{curTime}</span><span>{current.duration}</span></div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:32,flexShrink:0,marginBottom:12}}>
-        <button style={{background:'none',border:'none',cursor:'pointer',opacity:0.35}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></button>
-        <button onClick={togglePlay} style={{width:58,height:58,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}><PP sz="lg"/></button>
-        <button onClick={()=>{if(queue.length>0){const nxt=queue[0];setQueue(prev=>prev.slice(1));playDirect(nxt);}}} style={{background:'none',border:'none',cursor:'pointer',opacity:queue.length>0?1:0.35}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
+        <button style={{background:'none',border:'none',cursor:'pointer',opacity:0.35,outline:'none'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></button>
+        <button onClick={togglePlay} style={{width:58,height:58,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,outline:'none'}}><PP sz="lg"/></button>
+        <button onClick={()=>{if(queue.length>0){const nxt=queue[0];setQueue(prev=>prev.slice(1));playDirect(nxt);}}} style={{background:'none',border:'none',cursor:'pointer',opacity:queue.length>0?1:0.35,outline:'none'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
       </div>
       <div style={{width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
@@ -533,56 +629,57 @@ export default function App(){
     </div>
   );
 
-  // ── BACK BUTTON ──────────────────────────────────────────────────────────────
-  const BackBtn=()=>(
-    <button
-      onClick={()=>setScreen(prevScreen.current)}
-      style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6}}
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>{t('backToSearch')}</span>
-    </button>
-  );
-
   // ── MAIN ─────────────────────────────────────────────────────────────────────
   return(
     <div onClick={()=>menuId&&setMenuId(null)} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
+      <style>{`
+        button:focus{outline:none}
+        button::-moz-focus-inner{border:0}
+        *{-webkit-tap-highlight-color:transparent}
+        ::-webkit-scrollbar{display:none}
+      `}</style>
       <div style={{paddingBottom:current?NAV_H+76+8:NAV_H+6,minHeight:'100vh'}}>
 
         {/* ── ARTIST PAGE ──────────────────────────────────────────────────────── */}
         {screen==='artist'&&(
           <div>
-            <div style={{padding:'44px 16px 0'}}><BackBtn/></div>
+            {/* #3 кнопка назад прямо под верхним краем, без отступа */}
+            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16}}>
+              <BackBtn/>
+            </div>
             {artistLoading?<Spinner/>:artistPage&&(
               <div>
-                {/* Banner + avatar */}
-                <div style={{width:'100%',height:120,background:BG3,position:'relative',overflow:'hidden',marginBottom:-34}}>
+                {/* #3 баннер сразу после кнопки назад, вплотную */}
+                <div style={{width:'100%',height:110,background:BG3,position:'relative',overflow:'hidden',marginTop:8,marginBottom:-30}}>
                   {artistPage.banner
                     ?<img src={artistPage.banner} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} onError={()=>{}}/>
                     :<div style={{width:'100%',height:'100%',background:`linear-gradient(135deg,#2a1f0e,${BG})`}}/>
                   }
-                  <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,transparent 20%,${BG})`}}/>
+                  <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,transparent 30%,${BG})`}}/>
                 </div>
+                {/* Аватар + инфо */}
                 <div style={{padding:'0 16px 14px',display:'flex',alignItems:'flex-end',gap:12,position:'relative',zIndex:1}}>
-                  <div style={{flexShrink:0,borderRadius:'50%',overflow:'hidden',border:`2px solid ${BG}`}}><Img src={artistPage.avatar} size={70} radius={35}/></div>
+                  <div style={{flexShrink:0,borderRadius:'50%',overflow:'hidden',border:`2px solid ${BG}`}}>
+                    <Img src={artistPage.avatar} size={68} radius={34}/>
+                  </div>
                   <div style={{flex:1,minWidth:0,paddingBottom:2}}>
-                    <div style={{fontSize:19,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{artistPage.name}</div>
+                    <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{artistPage.name}</div>
                     {artistPage.username&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>@{artistPage.username}</div>}
                     {artistPage.followers>0&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>{fmtP(artistPage.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
                   </div>
-                  <button onClick={()=>artistPage&&toggleFavA(artistPage)} style={{flexShrink:0,padding:'6px 14px',borderRadius:16,border:`1px solid ${isFavA(artistPage)?ACC:'#3a3a3a'}`,background:isFavA(artistPage)?ACC_DIM:'transparent',color:isFavA(artistPage)?ACC:TEXT_SEC,fontSize:12,cursor:'pointer',marginBottom:2,fontWeight:500}}>
+                  <button onClick={()=>artistPage&&toggleFavA(artistPage)} style={{flexShrink:0,padding:'6px 13px',borderRadius:16,border:`1px solid ${isFavA(artistPage)?ACC:'#3a3a3a'}`,background:isFavA(artistPage)?ACC_DIM:'transparent',color:isFavA(artistPage)?ACC:TEXT_SEC,fontSize:12,cursor:'pointer',fontWeight:500,outline:'none'}}>
                     {isFavA(artistPage)?t('removeFav'):t('addFav')}
                   </button>
                 </div>
 
-                {/* Latest release */}
+                {/* Последний релиз */}
                 {artistPage.latestRelease&&(
                   <div style={{padding:'0 16px 14px'}}>
                     <SectionLabel text={t('latestRelease')}/>
                     <div onClick={()=>artistPage.latestRelease&&playTrack(artistPage.latestRelease)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,background:BG2,cursor:'pointer',border:`1px solid #252525`}}>
                       <div style={{position:'relative',flexShrink:0}}>
-                        <Img src={artistPage.latestRelease.cover} size={54} radius={8}/>
+                        <Img src={artistPage.latestRelease.cover} size={52} radius={8}/>
                         {current?.id===artistPage.latestRelease.id&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
@@ -594,9 +691,9 @@ export default function App(){
                   </div>
                 )}
 
-                {/* Popular */}
+                {/* Топ 5 популярных */}
                 {artistPage.tracks.length>0&&(
-                  <div style={{marginBottom:16}}>
+                  <div style={{marginBottom:14}}>
                     <SectionLabel text={t('popular')}/>
                     <div style={{padding:'0 4px'}}>
                       {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
@@ -604,56 +701,73 @@ export default function App(){
                   </div>
                 )}
 
-                {/* Discography tabs: Albums | Tracks */}
-                <div style={{padding:'0 16px 10px'}}>
+                {/* Дискография: Альбомы | Треки */}
+                <div style={{padding:'0 16px 16px'}}>
                   <SectionLabel text={t('discography')}/>
-                  <div style={{display:'flex',gap:6,marginBottom:12}}>
+                  <div style={{display:'flex',gap:6,marginBottom:14}}>
                     {(['albums','tracks'] as const).map(tab=>(
-                      <button key={tab} onClick={()=>setArtistTab(tab)} style={{padding:'5px 14px',borderRadius:16,border:'none',background:artistTab===tab?ACC:ACC_DIM,color:artistTab===tab?BG:ACC,fontSize:12,fontWeight:artistTab===tab?600:400,cursor:'pointer'}}>
+                      <button
+                        key={tab}
+                        onClick={()=>{
+                          setArtistTab(tab);
+                          // При переключении на треки — если пустые и есть userId, грузим
+                          if(tab==='tracks'&&artistTracks.length===0&&artistUserId.current){
+                            loadArtistTracks(artistUserId.current,0,true);
+                          }
+                        }}
+                        style={{padding:'5px 16px',borderRadius:16,border:'none',background:artistTab===tab?ACC:ACC_DIM,color:artistTab===tab?BG:ACC,fontSize:12,fontWeight:artistTab===tab?600:400,cursor:'pointer',outline:'none'}}
+                      >
                         {tab==='albums'?t('albumsTab'):t('tracks')}
                       </button>
                     ))}
                   </div>
 
-                  {/* Albums tab */}
+                  {/* Вкладка Альбомы */}
                   {artistTab==='albums'&&(
-                    artistAlbumsLoading&&artistAlbums.length===0?<Spinner/>:
-                    artistAlbums.length===0
-                      ?<div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'20px 0'}}>{lang==='ru'?'Альбомы не найдены':'No albums found'}</div>
-                      :<div style={{display:'flex',flexWrap:'wrap' as const,gap:12}}>
-                        {artistAlbums.map(al=>(
-                          <div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{width:'calc(50% - 6px)',cursor:'pointer',boxSizing:'border-box' as const}}>
-                            <div style={{borderRadius:10,overflow:'hidden',marginBottom:6,boxShadow:'0 4px 12px rgba(0,0,0,0.4)'}}><Img src={al.cover} size={500} radius={0}/></div>
-                            <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div>
-                            <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{(al.trackCount??0)>0?`${al.trackCount} треков`:lang==='ru'?'Альбом':'Album'}</div>
-                          </div>
-                        ))}
-                      </div>
+                    artistAlbumsLoading&&artistAlbums.length===0
+                      ?<Spinner/>
+                      :artistAlbums.length===0
+                        ?<div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'20px 0'}}>{lang==='ru'?'Альбомы не найдены':'No albums found'}</div>
+                        :<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                          {artistAlbums.map(al=>(
+                            <div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{cursor:'pointer'}}>
+                              {/* Квадратное изображение */}
+                              <div style={{borderRadius:10,overflow:'hidden',marginBottom:6,boxShadow:'0 4px 12px rgba(0,0,0,0.4)'}}>
+                                <AlbumImg src={al.cover} radius={0}/>
+                              </div>
+                              <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div>
+                              <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>
+                                {(al.trackCount??0)>0?`${al.trackCount} треков`:lang==='ru'?'Альбом':'Album'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                   )}
 
-                  {/* Tracks tab */}
+                  {/* Вкладка Треки */}
                   {artistTab==='tracks'&&(
                     <div>
-                      {artistTracksLoading&&artistTracks.length===0?<Spinner/>:(
-                        <div>
-                          <div style={{padding:'0 4px'}}>
-                            {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
-                          </div>
+                      {artistTracksLoading&&artistTracks.length===0
+                        ?<Spinner/>
+                        :<div>
+                          {artistTracks.length===0
+                            ?<div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'20px 0'}}>{t('noTracks')}</div>
+                            :<div style={{padding:'0 4px'}}>
+                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+                            </div>
+                          }
                           {artistTracksLoading&&artistTracks.length>0&&(
                             <div style={{textAlign:'center',padding:'12px',color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>
                           )}
                           {artistTracksHasMore&&!artistTracksLoading&&(
-                            <div style={{display:'flex',justifyContent:'center',padding:'10px 0'}}>
-                              <button onClick={()=>loadArtistTracks(artistUserId.current,artistTracksOffset)} style={{padding:'9px 28px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer'}}>
+                            <div style={{display:'flex',justifyContent:'center',padding:'12px 0'}}>
+                              <button onClick={()=>loadArtistTracks(artistUserId.current,artistTracksOffset)} style={{padding:'9px 28px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',outline:'none'}}>
                                 {t('showMore')}
                               </button>
                             </div>
                           )}
-                          {artistTracks.length===0&&!artistTracksLoading&&(
-                            <div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'20px 0'}}>{t('noTracks')}</div>
-                          )}
                         </div>
-                      )}
+                      }
                     </div>
                   )}
                 </div>
@@ -666,42 +780,39 @@ export default function App(){
         {screen==='album'&&(
           <div>
             <div style={{padding:'44px 16px 0'}}><BackBtn/></div>
-            {albumLoading
-              ?<Spinner/>
-              :albumPage&&(
-                <div>
-                  <div style={{padding:'10px 16px 0',display:'flex',gap:14,alignItems:'center'}}>
-                    <Img src={albumPage.cover} size={80} radius={10}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,lineHeight:1.3}}>{albumPage.title}</div>
-                      <button onClick={()=>openArtist('',albumPage.artist,'',0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',marginTop:4,display:'block',textAlign:'left' as const}}>
-                        <span style={{fontSize:12,color:ACC}}>{albumPage.artist}</span>
-                      </button>
-                      <div style={{fontSize:11,color:TEXT_MUTED,marginTop:4}}>{albumPage.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
-                    </div>
+            {albumLoading?<Spinner/>:albumPage&&(
+              <div>
+                <div style={{padding:'10px 16px 0',display:'flex',gap:14,alignItems:'center'}}>
+                  <Img src={albumPage.cover} size={80} radius={10}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,lineHeight:1.3}}>{albumPage.title}</div>
+                    <button onClick={()=>openArtist('',albumPage.artist,'',0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',marginTop:4,display:'block',textAlign:'left' as const,outline:'none'}}>
+                      <span style={{fontSize:12,color:ACC}}>{albumPage.artist}</span>
+                    </button>
+                    <div style={{fontSize:11,color:TEXT_MUTED,marginTop:4}}>{albumPage.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
                   </div>
-                  <div style={{display:'flex',gap:7,padding:'12px 16px'}}>
-                    <button onClick={()=>{if(albumPage.tracks.length){playTrack(albumPage.tracks[0]);setQueue(albumPage.tracks.slice(1));}}} style={{flex:1,padding:'10px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${BG}`}}/>
-                      {lang==='ru'?'Играть':'Play'}
-                    </button>
-                    <button onClick={()=>{const sh=[...albumPage.tracks].sort(()=>Math.random()-.5);if(sh.length){playTrack(sh[0]);setQueue(sh.slice(1));}}} style={{flex:1,padding:'10px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:10,color:ACC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-                      {t('shuffle')}
-                    </button>
-                    <button onClick={()=>toggleFavAl(albumPage)} style={{padding:'10px 14px',borderRadius:10,border:`1px solid ${isFavAl(albumPage.id)?ACC:'#3a3a3a'}`,background:isFavAl(albumPage.id)?ACC_DIM:'transparent',color:isFavAl(albumPage.id)?ACC:TEXT_SEC,fontSize:15,cursor:'pointer'}}>
-                      {isFavAl(albumPage.id)?'♥':'♡'}
-                    </button>
-                  </div>
-                  {albumPage.tracks.length===0
-                    ?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Треки загружаются...':'Loading tracks...'}</div>
-                    :<div style={{padding:'0 4px'}}>
-                      {albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
-                    </div>
-                  }
                 </div>
-              )
-            }
+                <div style={{display:'flex',gap:7,padding:'12px 16px'}}>
+                  <button onClick={()=>{if(albumPage.tracks.length){playTrack(albumPage.tracks[0]);setQueue(albumPage.tracks.slice(1));}}} style={{flex:1,padding:'10px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5,outline:'none'}}>
+                    <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${BG}`}}/>
+                    {lang==='ru'?'Играть':'Play'}
+                  </button>
+                  <button onClick={()=>{const sh=[...albumPage.tracks].sort(()=>Math.random()-.5);if(sh.length){playTrack(sh[0]);setQueue(sh.slice(1));}}} style={{flex:1,padding:'10px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:10,color:ACC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5,outline:'none'}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                    {t('shuffle')}
+                  </button>
+                  <button onClick={()=>toggleFavAl(albumPage)} style={{padding:'10px 14px',borderRadius:10,border:`1px solid ${isFavAl(albumPage.id)?ACC:'#3a3a3a'}`,background:isFavAl(albumPage.id)?ACC_DIM:'transparent',color:isFavAl(albumPage.id)?ACC:TEXT_SEC,fontSize:15,cursor:'pointer',outline:'none'}}>
+                    {isFavAl(albumPage.id)?'♥':'♡'}
+                  </button>
+                </div>
+                {albumPage.tracks.length===0
+                  ?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>
+                  :<div style={{padding:'0 4px'}}>
+                    {albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+                  </div>
+                }
+              </div>
+            )}
           </div>
         )}
 
@@ -711,22 +822,22 @@ export default function App(){
             <div style={{padding:'44px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
-                <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600,opacity:0.8}}>FORTY7</div>
+                <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600,opacity:0.85}}>FORTY7</div>
               </div>
-              <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 11px',borderRadius:18,background:BG2,border:`1px solid #2e2e2e`,cursor:'pointer',flexShrink:0,maxWidth:140}}>
+              <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 11px',borderRadius:18,background:BG2,border:`1px solid #2e2e2e`,cursor:'pointer',flexShrink:0,maxWidth:140,outline:'none'}}>
                 <div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,border:`1px solid ${ACC}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC,flexShrink:0}}>{uInit}</div>
                 <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
               </button>
             </div>
             {history.length>0&&(
               <div>
-                <div style={{padding:'10px 16px 8px'}}><SectionLabel text={t('recent')}/></div>
-                <div style={{display:'flex',gap:10,padding:'0 16px',overflowX:'auto',scrollbarWidth:'none' as const}}>
+                <div style={{padding:'6px 0 8px'}}><SectionLabel text={t('recent')}/></div>
+                <div style={{display:'flex',gap:10,padding:'0 16px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
                     <div key={tr.id} style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e'}}>
                       <div onClick={()=>playTrack(tr)} style={{width:100,height:100}}><Img src={tr.cover} size={100} radius={0}/></div>
                       <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
-                        <button onClick={()=>openArtist('',tr.artist,tr.cover,0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const}}>
+                        <button onClick={()=>openArtist('',tr.artist,tr.cover,0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const,outline:'none'}}>
                           <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',opacity:0.9}}>{tr.artist}</div>
                         </button>
                         <div onClick={()=>playTrack(tr)} style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',cursor:'pointer'}}>{tr.title}</div>
@@ -736,10 +847,10 @@ export default function App(){
                 </div>
               </div>
             )}
-            <div style={{padding:'14px 16px 8px'}}><SectionLabel text={t('recommended')}/></div>
+            <div style={{padding:'14px 0 6px'}}><SectionLabel text={t('recommended')}/></div>
             {recs.length===0&&history.length<2
               ?<div style={{padding:'0 16px',fontSize:12,color:TEXT_MUTED}}>{t('noRecommended')}</div>
-              :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history).slice(0,8).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
+              :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
             }
           </div>
         )}
@@ -752,11 +863,11 @@ export default function App(){
               <div style={{display:'flex',gap:8}}>
                 <input type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
                   style={{flex:1,padding:'11px 14px',fontSize:14,background:BG2,border:'1px solid #2a2a2a',borderRadius:12,color:TEXT_PRIMARY,outline:'none',width:'100%',boxSizing:'border-box' as const}}/>
-                <button onClick={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0}}>{loading?'...':t('find')}</button>
+                <button onClick={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0,outline:'none'}}>{loading?'...':t('find')}</button>
               </div>
-              <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto',scrollbarWidth:'none' as const}}>
+              <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto'}}>
                 {(['sound','albums','remix','artists'] as const).map(m=>(
-                  <button key={m} onClick={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const}}>
+                  <button key={m} onClick={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,outline:'none'}}>
                     {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='remix'?t('remix'):t('artists')}
                   </button>
                 ))}
@@ -774,9 +885,9 @@ export default function App(){
         {screen==='library'&&(
           <div>
             <div style={{padding:'44px 16px 12px'}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
-            <div style={{display:'flex',gap:5,padding:'0 16px 12px',overflowX:'auto',scrollbarWidth:'none' as const}}>
+            <div style={{display:'flex',gap:5,padding:'0 16px 12px',overflowX:'auto'}}>
               {(['liked','playlists','artists','albums'] as const).map(tab=>(
-                <button key={tab} onClick={()=>setLibTab(tab)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:libTab===tab?ACC:ACC_DIM,color:libTab===tab?BG:ACC,fontSize:12,fontWeight:libTab===tab?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const}}>
+                <button key={tab} onClick={()=>setLibTab(tab)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:libTab===tab?ACC:ACC_DIM,color:libTab===tab?BG:ACC,fontSize:12,fontWeight:libTab===tab?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,outline:'none'}}>
                   {tab==='liked'?t('likedTracks'):tab==='playlists'?t('playlists'):tab==='artists'?t('favArtists'):t('albums')}
                 </button>
               ))}
@@ -822,7 +933,7 @@ export default function App(){
             )}
             {libTab==='playlists'&&(
               <div style={{padding:'0 16px'}}>
-                <button onClick={()=>setShowNewPl(true)} style={{width:'100%',padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',marginBottom:9,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                <button onClick={()=>setShowNewPl(true)} style={{width:'100%',padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',marginBottom:9,display:'flex',alignItems:'center',justifyContent:'center',gap:6,outline:'none'}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   {t('createPlaylist')}
                 </button>
@@ -831,8 +942,8 @@ export default function App(){
                     <input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()}
                       style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:7}}/>
                     <div style={{display:'flex',gap:6}}>
-                      <button onClick={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer'}}>{t('create')}</button>
-                      <button onClick={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer'}}>{t('cancel')}</button>
+                      <button onClick={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',outline:'none'}}>{t('create')}</button>
+                      <button onClick={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',outline:'none'}}>{t('cancel')}</button>
                     </div>
                   </div>
                 )}
@@ -849,7 +960,7 @@ export default function App(){
                           <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div>
                           <div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
                         </div>
-                        <button onClick={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0}}>
+                        <button onClick={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,outline:'none'}}>
                           <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/>
                         </button>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
@@ -857,8 +968,8 @@ export default function App(){
                       {isOpen&&(
                         <div>
                           <div style={{display:'flex',gap:5,padding:'0 13px 9px'}}>
-                            <button onClick={()=>shufflePl(pl)} style={{flex:1,padding:'7px',background:ACC_DIM,border:'none',borderRadius:7,color:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}</button>
-                            <button onClick={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{flex:1,padding:'7px',background:pl.repeat?ACC:ACC_DIM,border:'none',borderRadius:7,color:pl.repeat?BG:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>{t('repeatPl')}</button>
+                            <button onClick={()=>shufflePl(pl)} style={{flex:1,padding:'7px',background:ACC_DIM,border:'none',borderRadius:7,color:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,outline:'none'}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}</button>
+                            <button onClick={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{flex:1,padding:'7px',background:pl.repeat?ACC:ACC_DIM,border:'none',borderRadius:7,color:pl.repeat?BG:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,outline:'none'}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>{t('repeatPl')}</button>
                           </div>
                           <div style={{borderTop:'1px solid #1e1e1e'}}>
                             {pl.tracks.length===0
@@ -892,11 +1003,11 @@ export default function App(){
             <div>
               <div style={{padding:'44px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('trending')}</div>
-                <button onClick={()=>loadTrend(trendGenre,true)} style={{background:'none',border:'none',cursor:'pointer',padding:4}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+                <button onClick={()=>loadTrend(trendGenre,true)} style={{background:'none',border:'none',cursor:'pointer',padding:4,outline:'none'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
               </div>
-              <div style={{display:'flex',gap:6,padding:'0 16px 12px',overflowX:'auto',scrollbarWidth:'none' as const}}>
+              <div style={{display:'flex',gap:6,padding:'0 16px 12px',overflowX:'auto'}}>
                 {GENRES.map(g=>(
-                  <button key={g.id} onClick={()=>setTrendGenre(g.id)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 11px',borderRadius:12,border:trendGenre===g.id?`1px solid ${ACC}44`:'1px solid #222',background:trendGenre===g.id?ACC_DIM:BG2,color:trendGenre===g.id?ACC:TEXT_SEC,cursor:'pointer',flexShrink:0,minWidth:54,transition:'all 0.15s'}}>
+                  <button key={g.id} onClick={()=>setTrendGenre(g.id)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 11px',borderRadius:12,border:trendGenre===g.id?`1px solid ${ACC}44`:'1px solid #222',background:trendGenre===g.id?ACC_DIM:BG2,color:trendGenre===g.id?ACC:TEXT_SEC,cursor:'pointer',flexShrink:0,minWidth:54,transition:'all 0.15s',outline:'none'}}>
                     <span style={{fontSize:19}}>{g.e}</span>
                     <span style={{fontSize:9,fontWeight:trendGenre===g.id?600:400,whiteSpace:'nowrap'}}>{g.label}</span>
                   </button>
@@ -904,10 +1015,10 @@ export default function App(){
               </div>
               {trendLoading&&ct.length===0?<Spinner/>
                 :ct.length===0
-                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'60px 20px 0',textAlign:'center'}}><div style={{fontSize:38,marginBottom:12}}>📈</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('notFound')}</div><button onClick={()=>loadTrend(trendGenre,true)} style={{marginTop:12,padding:'8px 20px',background:ACC_DIM,border:'none',borderRadius:9,color:ACC,fontSize:12,cursor:'pointer'}}>{t('retry')}</button></div>
+                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'60px 20px 0',textAlign:'center'}}><div style={{fontSize:38,marginBottom:12}}>📈</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('notFound')}</div><button onClick={()=>loadTrend(trendGenre,true)} style={{marginTop:12,padding:'8px 20px',background:ACC_DIM,border:'none',borderRadius:9,color:ACC,fontSize:12,cursor:'pointer',outline:'none'}}>{t('retry')}</button></div>
                   :<div>
                     <div style={{padding:'0 4px'}}>{ct.map((tr,i)=><TRow key={tr.id+i} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
-                    <div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'center'}}><button onClick={()=>loadTrend(trendGenre,false)} disabled={trendLoading} style={{padding:'9px 32px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?.5:1}}>{trendLoading?t('loading'):t('loadMore')}</button></div>
+                    <div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'center'}}><button onClick={()=>loadTrend(trendGenre,false)} disabled={trendLoading} style={{padding:'9px 32px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?.5:1,outline:'none'}}>{trendLoading?t('loading'):t('loadMore')}</button></div>
                   </div>
               }
             </div>
@@ -918,7 +1029,7 @@ export default function App(){
         {screen==='profile'&&(
           <div>
             <div style={{padding:'44px 16px 18px',display:'flex',alignItems:'center',gap:4}}>
-              <button onClick={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px 4px 0',display:'flex',alignItems:'center',gap:5}}>
+              <button onClick={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px 4px 0',display:'flex',alignItems:'center',gap:5,outline:'none'}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
@@ -941,14 +1052,14 @@ export default function App(){
                 <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div>
                 <div style={{display:'flex',gap:6}}>
                   {(['ru','en'] as const).map(l=>(
-                    <button key={l} onClick={()=>chgLang(l)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:13,fontWeight:lang===l?600:400,cursor:'pointer'}}>
+                    <button key={l} onClick={()=>chgLang(l)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:13,fontWeight:lang===l?600:400,cursor:'pointer',outline:'none'}}>
                       {l==='ru'?'🇷🇺 Русский':'🇺🇸 English'}
                     </button>
                   ))}
                 </div>
               </div>
-              <button onClick={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer'}}>🔄 {t('syncBtn')}</button>
-              <button onClick={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);}} style={{width:'100%',marginTop:6,padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer'}}>{t('resetData')}</button>
+              <button onClick={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',outline:'none'}}>🔄 {t('syncBtn')}</button>
+              <button onClick={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);}} style={{width:'100%',marginTop:6,padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer',outline:'none'}}>{t('resetData')}</button>
             </div>
           </div>
         )}
@@ -965,15 +1076,16 @@ export default function App(){
               <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
               <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{current.artist}</div>
             </div>
-            {/* Громкость слева от кнопки плея */}
-            <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+            {/* Громкость слева от плея */}
+            <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
-              <div {...volSP} ref={volSP.ref} style={{width:42,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+              <div {...volSP} ref={volSP.ref} style={{width:40,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
                 <div style={{width:'100%',height:2.5,background:'rgba(255,255,255,0.08)',borderRadius:2,position:'relative'}}>
                   <div style={{width:`${volume*100}%`,height:'100%',background:'#6a6050',borderRadius:2}}/>
+                  <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#8a8070',borderRadius:'50%'}}/>
                 </div>
               </div>
-              <button onClick={e=>{e.stopPropagation();togglePlay();}} style={{width:38,height:38,minWidth:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0}}>
+              <button onClick={e=>{e.stopPropagation();togglePlay();}} style={{width:38,height:38,minWidth:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,outline:'none'}}>
                 <PP sz="sm" col={BG}/>
               </button>
             </div>
