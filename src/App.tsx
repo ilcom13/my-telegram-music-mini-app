@@ -87,6 +87,7 @@ export default function App() {
   const userId = String(tgUser?.id || 'anon');
   const userName = tgUser?.first_name || tgUser?.username || 'User';
   const userHandle = tgUser?.username ? `@${tgUser.username}` : '';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   // ── Sync ──────────────────────────────────────────────────────────────────
   const syncSave = async (data: object) => {
@@ -467,7 +468,7 @@ export default function App() {
                   </div>
                   {artistPage.latestRelease&&(
                     <div style={{padding:'0 16px 20px'}}>
-                      <div style={{fontSize:14,fontWeight:600,color:'#888',marginBottom:10,textTransform:'uppercase' as any,letterSpacing:0.8,fontSize:11}}>{t('latestRelease')}</div>
+                      <div style={{fontSize:11,fontWeight:600,color:'#888',marginBottom:10,textTransform:'uppercase' as any,letterSpacing:0.8}}>{t('latestRelease')}</div>
                       <div onClick={()=>artistPage.latestRelease&&playTrack(artistPage.latestRelease)} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:16,background:'#141420',border:`1px solid ${ACC}22`,cursor:'pointer'}}>
                         <Cover cover={artistPage.latestRelease.cover} size={56} radius={10}/>
                         <div style={{flex:1,minWidth:0}}>
