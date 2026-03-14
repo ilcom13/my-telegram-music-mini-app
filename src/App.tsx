@@ -420,14 +420,16 @@ export default function App() {
         {/* TRENDING */}
         {screen==='trending' && (() => {
           const GENRES = [
-            { id: 'all-music', label: 'Всё', emoji: '🎵' },
-            { id: 'hip-hop-rap', label: 'Рэп', emoji: '🎤' },
-            { id: 'r-b-soul', label: 'R&B', emoji: '🎸' },
-            { id: 'electronic', label: 'Электро', emoji: '⚡' },
-            { id: 'pop', label: 'Поп', emoji: '✨' },
-            { id: 'trap', label: 'Trap', emoji: '🔊' },
-            { id: 'alternative-rock', label: 'Рок', emoji: '🎸' },
-            { id: 'ambient', label: 'Амбиент', emoji: '🌙' },
+            { id: 'all',        label: 'Всё',          emoji: '🔥', desc: 'Топ треки' },
+            { id: 'ru-rap',     label: 'RU Рэп',       emoji: '🇷🇺', desc: 'Русский рэп' },
+            { id: 'ua-rap',     label: 'UA Реп',       emoji: '🇺🇦', desc: 'Украинський реп' },
+            { id: 'hip-hop',    label: 'Hip-Hop',      emoji: '🎤', desc: 'Мировой рэп' },
+            { id: 'trap',       label: 'Trap',         emoji: '💀', desc: 'Trap & Dark' },
+            { id: 'drill',      label: 'Drill',        emoji: '🔫', desc: 'UK & NY Drill' },
+            { id: 'electronic', label: 'Electronic',   emoji: '⚡', desc: 'House, Techno' },
+            { id: 'rnb',        label: 'R&B',          emoji: '💜', desc: 'R&B & Soul' },
+            { id: 'pop',        label: 'Pop',          emoji: '✨', desc: 'Поп хиты' },
+            { id: 'latin',      label: 'Latin',        emoji: '🌴', desc: 'Reggaeton & Latin' },
           ];
           const currentTracks = trendPage[trendGenre] || trending;
           return (
@@ -440,10 +442,11 @@ export default function App() {
               </div>
 
               {/* Genre pills */}
-              <div style={{display:'flex',gap:8,padding:'0 16px 16px',overflowX:'auto',scrollbarWidth:'none'}}>
+              <div style={{display:'flex',gap:8,padding:'0 16px 16px',overflowX:'auto',scrollbarWidth:'none' as any}}>
                 {GENRES.map(g => (
-                  <button key={g.id} onClick={()=>{setTrendGenre(g.id);}} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:20,border:'none',background:trendGenre===g.id?ACC:ACC_DIM,color:trendGenre===g.id?'#0c0c11':ACC,fontSize:13,fontWeight:500,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
-                    <span style={{fontSize:14}}>{g.emoji}</span>{g.label}
+                  <button key={g.id} onClick={()=>{setTrendGenre(g.id);}} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'10px 16px',borderRadius:16,border:trendGenre===g.id?`1.5px solid ${ACC}`:'1.5px solid transparent',background:trendGenre===g.id?ACC_DIM:'#111118',color:trendGenre===g.id?ACC:'#888',cursor:'pointer',flexShrink:0,minWidth:72,transition:'all 0.15s'}}>
+                    <span style={{fontSize:22}}>{g.emoji}</span>
+                    <span style={{fontSize:12,fontWeight:trendGenre===g.id?600:400,whiteSpace:'nowrap'}}>{g.label}</span>
                   </button>
                 ))}
               </div>
