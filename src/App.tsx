@@ -625,7 +625,7 @@ export default function App(){
                           <div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{width:'calc(50% - 6px)',cursor:'pointer',boxSizing:'border-box' as const}}>
                             <div style={{borderRadius:10,overflow:'hidden',marginBottom:6,boxShadow:'0 4px 12px rgba(0,0,0,0.4)'}}><Img src={al.cover} size={500} radius={0}/></div>
                             <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div>
-                            <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{al.trackCount>0?`${al.trackCount} треков`:lang==='ru'?'Альбом':'Album'}</div>
+                            <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{(al.trackCount??0)>0?`${al.trackCount} треков`:lang==='ru'?'Альбом':'Album'}</div>
                           </div>
                         ))}
                       </div>
