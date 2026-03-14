@@ -2,24 +2,26 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
-const ACC = '#E8C98A';          // более насыщенный бежевый/золотой
+const ACC = '#E8C98A';
 const ACC_DIM = 'rgba(232,201,138,0.13)';
-const BG = '#0e0e0e';           // темнее фон
+const BG = '#0e0e0e';
 const BG2 = '#161616';
 const BG3 = '#1e1e1e';
+const MINI_BG = 'rgba(38,34,28,0.97)';
+const FULL_BG = '#181510';
 const TEXT_PRIMARY = '#f0f0f0';
-const TEXT_SEC = '#9a9a9a';     // читаемый серый для вторичного текста
-const TEXT_MUTED = '#5a5a5a';   // приглушённый но видимый
+const TEXT_SEC = '#9a9a9a';
+const TEXT_MUTED = '#5a5a5a';
 const NAV_H = 60;
 
-interface Track { id: string; title: string; artist: string; cover: string; duration: string; plays: number; mp3: string | null; isArtist?: boolean; isAlbum?: boolean; permalink?: string; trackCount?: number; }
+interface Track { id: string; title: string; artist: string; cover: string; duration: string; plays: number; mp3: string | null; isArtist?: boolean; isAlbum?: boolean; permalink?: string; trackCount?: number; albumId?: string; albumTitle?: string; }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; }
 interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; }
-interface ArtistInfo { id: string; name: string; username: string; avatar: string; banner: string; followers: number; permalink: string; tracks: Track[]; latestRelease: Track | null; }
+interface ArtistInfo { id: string; name: string; username: string; avatar: string; banner: string; followers: number; permalink: string; tracks: Track[]; albums: AlbumInfo[]; latestRelease: Track | null; }
 
 const T: Record<string,Record<string,string>> = {
-  en: { home:'Home',search:'Search',library:'Library',trending:'Trending',profile:'Profile',find:'Find',notFound:'Nothing found',recent:'Recent',recommended:'Recommended',likedTracks:'Liked',playlists:'Playlists',albums:'Albums',createPlaylist:'Create playlist',playlistName:'Playlist name',create:'Create',cancel:'Cancel',addToPlaylist:'Add to playlist',noPlaylists:'No playlists.',noLiked:'No liked tracks',loading:'Loading...',loadMore:'Load more',retry:'Try again',nowPlaying:'Now playing',plays:'plays',resetData:'Reset all data',language:'Language',listenedTracks:'Listened',share:'Share',copied:'Copied!',queue:'Queue',sound:'Sound',remix:'Remix',artists:'Artists',albumsTab:'Albums',shuffle:'Shuffle',repeatPl:'Repeat',syncSaved:'Synced ✓',syncing:'Syncing...',syncBtn:'Sync across devices',favArtists:'Artists',addFav:'Follow',removeFav:'Following',backToSearch:'Back',searchPlaceholder:'Songs or artist',noRecommended:'Listen to some tracks first',},
-  ru: { home:'Главная',search:'Поиск',library:'Библиотека',trending:'Тренды',profile:'Профиль',find:'Найти',notFound:'Ничего не найдено',recent:'Недавнее',recommended:'Рекомендованное',likedTracks:'Лайки',playlists:'Плейлисты',albums:'Альбомы',createPlaylist:'Создать плейлист',playlistName:'Название',create:'Создать',cancel:'Отмена',addToPlaylist:'В плейлист',noPlaylists:'Нет плейлистов.',noLiked:'Нет лайков',loading:'Загружаем...',loadMore:'Ещё',retry:'Повторить',nowPlaying:'Сейчас играет',plays:'прослушиваний',resetData:'Сбросить данные',language:'Язык',listenedTracks:'Прослушано',share:'Поделиться',copied:'Скопировано!',queue:'Очередь',sound:'Sound',remix:'Remix',artists:'Артисты',albumsTab:'Альбомы',shuffle:'Перемешать',repeatPl:'Повторять',syncSaved:'Синхронизовано ✓',syncing:'Синхронизация...',syncBtn:'Синхронизировать между устройствами',favArtists:'Артисты',addFav:'Подписаться',removeFav:'Подписан',backToSearch:'Назад',searchPlaceholder:'Песни или артист',noRecommended:'Послушай пару треков',},
+  en: { home:'Home',search:'Search',library:'Library',trending:'Trending',profile:'Profile',find:'Find',notFound:'Nothing found',recent:'Recent',recommended:'Recommended',likedTracks:'Liked',playlists:'Playlists',albums:'Albums',createPlaylist:'Create playlist',playlistName:'Playlist name',create:'Create',cancel:'Cancel',addToPlaylist:'Add to playlist',noPlaylists:'No playlists.',noLiked:'No liked tracks',loading:'Loading...',loadMore:'Load more',retry:'Try again',nowPlaying:'Now playing',plays:'plays',resetData:'Reset all data',language:'Language',listenedTracks:'Listened',share:'Share',copied:'Copied!',queue:'Queue',sound:'Sound',remix:'Remix',artists:'Artists',albumsTab:'Albums',shuffle:'Shuffle',repeatPl:'Repeat',syncSaved:'Synced ✓',syncing:'Syncing...',syncBtn:'Sync across devices',favArtists:'Artists',addFav:'Follow',removeFav:'Following',backToSearch:'Back',searchPlaceholder:'Songs or artist',noRecommended:'Listen to some tracks first',goToAlbum:'Go to album',},
+  ru: { home:'Главная',search:'Поиск',library:'Библиотека',trending:'Тренды',profile:'Профиль',find:'Найти',notFound:'Ничего не найдено',recent:'Недавнее',recommended:'Рекомендованное',likedTracks:'Лайки',playlists:'Плейлисты',albums:'Альбомы',createPlaylist:'Создать плейлист',playlistName:'Название',create:'Создать',cancel:'Отмена',addToPlaylist:'В плейлист',noPlaylists:'Нет плейлистов.',noLiked:'Нет лайков',loading:'Загружаем...',loadMore:'Ещё',retry:'Повторить',nowPlaying:'Сейчас играет',plays:'прослушиваний',resetData:'Сбросить данные',language:'Язык',listenedTracks:'Прослушано',share:'Поделиться',copied:'Скопировано!',queue:'Очередь',sound:'Sound',remix:'Remix',artists:'Артисты',albumsTab:'Альбомы',shuffle:'Перемешать',repeatPl:'Повторять',syncSaved:'Синхронизовано ✓',syncing:'Синхронизация...',syncBtn:'Синхронизировать между устройствами',favArtists:'Артисты',addFav:'Подписаться',removeFav:'Подписан',backToSearch:'Назад',searchPlaceholder:'Песни или артист',noRecommended:'Послушай пару треков',goToAlbum:'Перейти в альбом',},
 };
 
 function fmtP(n: number) { if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return Math.round(n/1000)+'K';return n>0?String(n):''; }
@@ -52,8 +54,8 @@ function useSlider(val:number,onChange:(v:number)=>void){
 
 function SliderTrack({val,sp,h=3}:{val:number;sp:ReturnType<typeof useSlider>;h?:number}){
   return(
-    <div {...sp} ref={sp.ref} style={{flex:1,height:Math.max(h,20),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
-      <div style={{width:'100%',height:h,background:BG3,borderRadius:h,position:'relative'}}>
+    <div {...sp} ref={sp.ref} style={{flex:1,height:Math.max(h,22),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+      <div style={{width:'100%',height:h,background:'rgba(255,255,255,0.1)',borderRadius:h,position:'relative'}}>
         <div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:h,transition:'width 0.05s'}}/>
         <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:h+10,height:h+10,background:ACC,borderRadius:'50%'}}/>
       </div>
@@ -66,7 +68,7 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
-  const[searchMode,setSearchMode]=useState<'sound'|'remix'|'artists'|'albums'>('sound');
+  const[searchMode,setSearchMode]=useState<'sound'|'albums'|'remix'|'artists'>('sound');
   const[results,setResults]=useState<Track[]>([]);
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
@@ -123,7 +125,30 @@ export default function App(){
 
   useEffect(()=>{if(history.length<2)return;const artists=[...new Set(history.map(tr=>tr.artist).filter(a=>!REMIX_W.some(w=>a.toLowerCase().includes(w))))].slice(0,5);if(!artists.length)return;fetch(`${W}/search?q=__recommend__${encodeURIComponent(artists.join(','))}`).then(r=>r.json()).then(d=>{if(d.tracks?.length)setRecs(d.tracks);}).catch(()=>{});},[history.length]);
 
-  useEffect(()=>{const a=audio.current;if(!a)return;const onT=()=>{if(a.duration){setProgress(a.currentTime/a.duration*100);const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);setCurTime(`${m}:${s.toString().padStart(2,'0')}`);}}; const onE=()=>{if(loop){a.currentTime=0;a.play();}else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}else setPlaying(false);};a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};},[current,loop,queue]);
+  useEffect(()=>{
+    const a=audio.current;if(!a)return;
+    const onT=()=>{if(a.duration){setProgress(a.currentTime/a.duration*100);const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);setCurTime(`${m}:${s.toString().padStart(2,'0')}`);}}; 
+    const onE=()=>{
+      if(loop){a.currentTime=0;a.play();}
+      else if(queue.length>0){
+        const nxt=queue[0];
+        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
+        playDirect(nxt);
+      } else {
+        const pool=recs.length>0?recs:(history.length>0?history:[]);
+        const available=pool.filter(tr=>tr.mp3&&tr.id!==current?.id);
+        if(available.length>0){
+          const next=available[Math.floor(Math.random()*Math.min(available.length,10))];
+          playDirect(next);
+        } else {
+          setPlaying(false);
+        }
+      }
+    };
+    a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
+    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
+  },[current,loop,queue,recs,history]);
+
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
   useEffect(()=>{if(screen==='trending'&&!trends[trendGenre])loadTrend(trendGenre,true);},[screen,trendGenre]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
@@ -149,46 +174,50 @@ export default function App(){
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums);return n;});};
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
-  const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error ? e.message : String(e));}finally{setLoading(false);};};
+  const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
-  // FIX #6: запрашиваем треки артиста через /search с mode=all, показываем даже без mp3
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as 'home'|'search'|'library'|'trending'|'profile'|'artist'|'album';
     setScreen('artist');
     setArtistPage(null);
     try{
-      const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
-      const d=await r.json();
+      const [artistRes,albumsRes]=await Promise.allSettled([
+        fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`),
+        fetch(`${W}/albums?q=${encodeURIComponent(name)}`)
+      ]);
+      const d=artistRes.status==='fulfilled'?await artistRes.value.json():{};
+      const albumsD=albumsRes.status==='fulfilled'?await albumsRes.value.json():{};
       const art=d.artist||{};
       let trks:Track[]=d.tracks||[];
-      // Если треков нет — делаем fallback поиск
       if(!trks.length){
         const sr=await fetch(`${W}/search?q=${encodeURIComponent(name)}&mode=sound`);
         const sd=await sr.json();
         trks=sd.tracks||[];
       }
-      setArtistPage({
-        id:art.id||name,
-        name:art.name||name,
-        username:art.username||'',
-        avatar:art.avatar||avatar||'',
-        banner:art.banner||'',
-        followers:art.followers||followers,
-        permalink:art.permalink||permalink,
-        tracks:trks,
-        latestRelease:trks[0]||null
-      });
-    }catch(err){
-      // При ошибке показываем страницу с базовой инфой и пустыми треками
-      setArtistPage({id:name,name,username:'',avatar,banner:'',followers,permalink,tracks:[],latestRelease:null});
+      const sorted=[...trks].sort((a,b)=>b.plays-a.plays);
+      const latest=sorted[0]||null;
+      const albums:AlbumInfo[]=(albumsD.tracks||[])
+        .filter((al:Track)=>al.isAlbum)
+        .map((al:Track)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||''}))
+        .slice(0,10);
+      setArtistPage({id:art.id||name,name:art.name||name,username:art.username||'',avatar:art.avatar||avatar||'',banner:art.banner||'',followers:art.followers||followers,permalink:art.permalink||permalink,tracks:sorted,albums,latestRelease:latest});
+    }catch{
+      setArtistPage({id:name,name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
     }
     setArtistLoading(false);
   };
 
-  const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{setAlbumLoading(true);prevScreen.current=screen as 'home'|'search'|'library'|'trending'|'profile'|'artist'|'album';setScreen('album');try{const r=await fetch(`${W}/album?id=${id}`);const d=await r.json();if(d.album)setAlbumPage({id:d.album.id,title:d.album.title||title,artist:d.album.artist||artist,cover:d.album.cover||cover,tracks:d.tracks||[],permalink:d.album.permalink||''});}catch{setAlbumPage({id,title,artist,cover,tracks:[],permalink:''});}setAlbumLoading(false);};
+  const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
+    setAlbumLoading(true);
+    prevScreen.current=screen as 'home'|'search'|'library'|'trending'|'profile'|'artist'|'album';
+    setScreen('album');
+    try{const r=await fetch(`${W}/album?id=${id}`);const d=await r.json();if(d.album)setAlbumPage({id:d.album.id,title:d.album.title||title,artist:d.album.artist||artist,cover:d.album.cover||cover,tracks:d.tracks||[],permalink:d.album.permalink||''});}
+    catch{setAlbumPage({id,title,artist,cover,tracks:[],permalink:''});}
+    setAlbumLoading(false);
+  };
   const isFavA=(a:ArtistInfo)=>favArtists.some(x=>x.id===a.id||x.name===a.name);
-  const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums);return n;});};
+  const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[],albums:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums);return n;});};
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
@@ -200,6 +229,7 @@ export default function App(){
   const chgLang=(l:'ru'|'en')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
+  const miniSeekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
   const volSP=useSlider(volume,v=>setVol(v));
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
@@ -218,6 +248,12 @@ export default function App(){
   const TRow=({track,num,onArtistClick}:{track:Track;num?:number;onArtistClick?:(name:string,cover:string)=>void})=>{
     const active=current?.id===track.id;
     const mOpen=menuId===track.id;
+    const menuItems=[
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
+      ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'Album',track.artist,track.cover);setMenuId(null);}}]:[]),
+    ];
     return(
       <div style={{position:'relative'}}>
         <div onClick={e=>{e.stopPropagation();if(mOpen){setMenuId(null);return;}setMenuId(null);playTrack(track);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent'}}>
@@ -229,7 +265,6 @@ export default function App(){
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:13,fontWeight:500,color:active?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{track.title}</div>
             <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
-              {/* FIX #5: имя артиста кликабельно */}
               {!track.isArtist&&!track.isAlbum&&onArtistClick
                 ?<button onClick={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left'}}>{track.artist}</button>
                 :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:track.artist}</span>
@@ -251,13 +286,9 @@ export default function App(){
           {(track.isArtist||track.isAlbum)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
         </div>
         {mOpen&&(
-          <div onClick={e=>e.stopPropagation()} style={{position:'absolute',right:8,top:'calc(100% + 2px)',background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:12,zIndex:50,minWidth:164,boxShadow:'0 12px 32px rgba(0,0,0,0.7)',overflow:'hidden'}}>
-            {[
-              {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
-              {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
-              {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
-            ].map((item,i)=>(
-              <button key={i} onClick={item.fn} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'10px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<2?'1px solid #252525':'none',textAlign:'left' as const}}>
+          <div onClick={e=>e.stopPropagation()} style={{position:'absolute',right:8,top:'calc(100% + 2px)',background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:50,minWidth:170,boxShadow:'0 12px 32px rgba(0,0,0,0.8)',overflow:'hidden'}}>
+            {menuItems.map((item,i)=>(
+              <button key={i} onClick={item.fn} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'10px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const}}>
                 {item.icon}{item.label}
               </button>
             ))}
@@ -288,11 +319,11 @@ export default function App(){
 
   // ── FULL PLAYER ─────────────────────────────────────────────────────────────
   if(fullPlayer&&current)return(
-    <div style={{background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden'}}>
+    <div style={{background:FULL_BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden'}}>
       <audio ref={audio}/>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end'}} onClick={()=>setShowQueue(false)}>
-          <div style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
               <button onClick={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC}}>{lang==='ru'?'Очистить':'Clear'}</button>
@@ -300,7 +331,7 @@ export default function App(){
             {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
                 <div key={tr.id+i} draggable onDragStart={()=>setDragIdx(i)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(dragIdx!==null&&dragIdx!==i)moveQ(dragIdx,i);setDragIdx(null);}}
-                  style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #222',cursor:'grab',background:dragIdx===i?ACC_DIM:'transparent',borderRadius:6}}>
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab',background:dragIdx===i?ACC_DIM:'transparent',borderRadius:6}}>
                   <div style={{color:'#444',fontSize:15,padding:'0 3px'}}>⠿</div>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
@@ -333,20 +364,26 @@ export default function App(){
         </div>
       </div>
       <div style={{width:'100%',flexShrink:0,marginBottom:10}}>
-        <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,wordBreak:'break-word' as const}}>{current.title}</div>
-        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,marginTop:4,display:'block',textAlign:'left' as const}}>
+        {/* #8 клик по названию → альбом */}
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <button onClick={()=>{if(current.albumId){setFullPlayer(false);openAlbum(current.albumId,current.albumTitle||'Album',current.artist,current.cover);}}} style={{background:'none',border:'none',padding:0,cursor:current.albumId?'pointer':'default',flex:1,minWidth:0,textAlign:'left' as const}}>
+            <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,wordBreak:'break-word' as const,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',textDecoration:current.albumId?`underline ${ACC}44`:'none',textUnderlineOffset:3}}>{current.title}</div>
+          </button>
+          {current.albumId&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0,opacity:0.6}}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>}
+        </div>
+        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,marginTop:5,display:'block',textAlign:'left' as const}}>
           <span style={{fontSize:13,color:ACC}}>{current.artist}</span>
         </button>
         {current.plays>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
       </div>
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:10}}>
-        <div style={{display:'flex',gap:0,alignItems:'center'}}>
+        <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
           <button onClick={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
-        <div style={{display:'flex',gap:0,alignItems:'center'}}>
+        <div style={{display:'flex',alignItems:'center'}}>
           <button onClick={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
@@ -378,13 +415,12 @@ export default function App(){
   return(
     <div onClick={()=>menuId&&setMenuId(null)} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
-      <div style={{paddingBottom:current?NAV_H+64+8:NAV_H+6,minHeight:'100vh'}}>
+      <div style={{paddingBottom:current?NAV_H+72+8:NAV_H+6,minHeight:'100vh'}}>
 
-        {/* ARTIST */}
+        {/* ARTIST — Spotify layout */}
         {screen==='artist'&&(
           <div>
             <div style={{padding:'44px 16px 0',display:'flex',alignItems:'center',gap:6}}>
-              {/* FIX #2: кнопка назад видимее */}
               <button onClick={()=>setScreen(prevScreen.current)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                 <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>{t('backToSearch')}</span>
@@ -398,14 +434,14 @@ export default function App(){
               </div>
               :artistPage&&(
                 <div>
-                  <div style={{width:'100%',height:110,background:BG3,position:'relative',overflow:'hidden',marginBottom:-28}}>
+                  <div style={{width:'100%',height:120,background:BG3,position:'relative',overflow:'hidden',marginBottom:-34}}>
                     {artistPage.banner?<img src={artistPage.banner} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} onError={()=>{}}/>:<div style={{width:'100%',height:'100%',background:`linear-gradient(135deg,#2a1f0e,${BG})`}}/>}
-                    <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,transparent 30%,${BG})`}}/>
+                    <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,transparent 20%,${BG})`}}/>
                   </div>
-                  <div style={{padding:'0 16px 14px',display:'flex',alignItems:'flex-end',gap:12,position:'relative',zIndex:1}}>
-                    <div style={{flexShrink:0,borderRadius:'50%',overflow:'hidden',border:`2px solid ${BG}`}}><Img src={artistPage.avatar} size={66} radius={33}/></div>
+                  <div style={{padding:'0 16px 16px',display:'flex',alignItems:'flex-end',gap:12,position:'relative',zIndex:1}}>
+                    <div style={{flexShrink:0,borderRadius:'50%',overflow:'hidden',border:`2px solid ${BG}`}}><Img src={artistPage.avatar} size={70} radius={35}/></div>
                     <div style={{flex:1,minWidth:0,paddingBottom:2}}>
-                      <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{artistPage.name}</div>
+                      <div style={{fontSize:19,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{artistPage.name}</div>
                       {artistPage.username&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>@{artistPage.username}</div>}
                       {artistPage.followers>0&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>{fmtP(artistPage.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
                     </div>
@@ -413,12 +449,59 @@ export default function App(){
                       {isFavA(artistPage)?t('removeFav'):t('addFav')}
                     </button>
                   </div>
-                  {/* FIX #6: показываем треки даже без mp3, с индикатором */}
+
                   {artistPage.tracks.length===0
                     ?<div style={{padding:'24px',textAlign:'center',color:TEXT_SEC,fontSize:13}}>{lang==='ru'?'Треки не найдены':'No tracks found'}</div>
                     :<div>
-                      <div style={{padding:'4px 16px 8px'}}><span style={{fontSize:11,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.5}}>{lang==='ru'?'Треки':'Tracks'} · {artistPage.tracks.length}</span></div>
-                      <div style={{padding:'0 4px'}}>{artistPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1}/>)}</div>
+                      {/* Последний релиз */}
+                      {artistPage.latestRelease&&(
+                        <div style={{padding:'4px 16px 16px'}}>
+                          <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,marginBottom:9}}>{lang==='ru'?'Последний релиз':'Latest release'}</div>
+                          <div onClick={()=>artistPage.latestRelease&&playTrack(artistPage.latestRelease)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,background:BG2,cursor:'pointer',border:`1px solid #252525`}}>
+                            <div style={{position:'relative',flexShrink:0}}>
+                              <Img src={artistPage.latestRelease.cover} size={54} radius={8}/>
+                              {current?.id===artistPage.latestRelease.id&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
+                            </div>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:14,fontWeight:600,color:current?.id===artistPage.latestRelease.id?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{artistPage.latestRelease.title}</div>
+                              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{artistPage.latestRelease.duration}{artistPage.latestRelease.plays>0?` · ${fmtP(artistPage.latestRelease.plays)} ${t('plays')}`:''}</div>
+                            </div>
+                            <HBtn track={artistPage.latestRelease} sz={18}/>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Топ 5 */}
+                      <div style={{padding:'0 16px 8px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8}}>{lang==='ru'?'Популярное':'Popular'}</div>
+                      </div>
+                      <div style={{padding:'0 4px'}}>
+                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(name,cover)=>openArtist('',name,cover,0)}/>)}
+                      </div>
+
+                      {/* Дискография */}
+                      {artistPage.albums.length>0&&(
+                        <div style={{padding:'16px 0 4px'}}>
+                          <div style={{padding:'0 16px 10px',fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8}}>{lang==='ru'?'Дискография':'Discography'}</div>
+                          <div style={{display:'flex',gap:12,padding:'0 16px',overflowX:'auto',scrollbarWidth:'none' as const}}>
+                            {artistPage.albums.map(al=>(
+                              <div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{width:108,flexShrink:0,cursor:'pointer'}}>
+                                <div style={{borderRadius:8,overflow:'hidden',marginBottom:7,boxShadow:'0 4px 12px rgba(0,0,0,0.4)'}}><Img src={al.cover} size={108} radius={0}/></div>
+                                <div style={{fontSize:11,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div>
+                                <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{lang==='ru'?'Альбом':'Album'}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Все треки */}
+                      <div style={{padding:'16px 0 4px'}}>
+                        <div style={{padding:'0 16px 8px',fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8}}>{lang==='ru'?'Все треки':'All tracks'} · {artistPage.tracks.length}</div>
+                        <div style={{padding:'0 4px'}}>
+                          {artistPage.tracks.map((tr,i)=><TRow key={tr.id+'all'} track={tr} num={i+1} onArtistClick={(name,cover)=>openArtist('',name,cover,0)}/>)}
+                        </div>
+                      </div>
                     </div>
                   }
                 </div>
@@ -427,7 +510,7 @@ export default function App(){
           </div>
         )}
 
-        {/* ALBUM */}
+        {/* ALBUM — все треки */}
         {screen==='album'&&(
           <div>
             <div style={{padding:'44px 16px 0',display:'flex',alignItems:'center',gap:6}}>
@@ -443,8 +526,10 @@ export default function App(){
                     <Img src={albumPage.cover} size={80} radius={10}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,lineHeight:1.3}}>{albumPage.title}</div>
-                      <div style={{fontSize:12,color:TEXT_SEC,marginTop:4}}>{albumPage.artist}</div>
-                      <div style={{fontSize:11,color:TEXT_MUTED,marginTop:2}}>{albumPage.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
+                      <button onClick={()=>openArtist('',albumPage.artist,'',0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',marginTop:4,display:'block',textAlign:'left' as const}}>
+                        <span style={{fontSize:12,color:ACC}}>{albumPage.artist}</span>
+                      </button>
+                      <div style={{fontSize:11,color:TEXT_MUTED,marginTop:4}}>{albumPage.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
                     </div>
                   </div>
                   <div style={{display:'flex',gap:7,padding:'12px 16px'}}>
@@ -460,7 +545,10 @@ export default function App(){
                       {isFavAl(albumPage.id)?'♥':'♡'}
                     </button>
                   </div>
-                  <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1}/>)}</div>
+                  {/* Все треки альбома без ограничений */}
+                  <div style={{padding:'0 4px'}}>
+                    {albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(name,cover)=>openArtist('',name,cover,0)}/>)}
+                  </div>
                 </div>
               )
             }
@@ -473,16 +561,13 @@ export default function App(){
             <div style={{padding:'44px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
-                {/* FIX #4: Forty7 видимее */}
                 <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600,opacity:0.8}}>FORTY7</div>
               </div>
-              {/* FIX #2: кнопка профиля видимее */}
               <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 11px',borderRadius:18,background:BG2,border:`1px solid #2e2e2e`,cursor:'pointer',flexShrink:0,maxWidth:140}}>
                 <div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,border:`1px solid ${ACC}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC,flexShrink:0}}>{uInit}</div>
                 <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
               </button>
             </div>
-
             {history.length>0&&(
               <div>
                 <div style={{padding:'10px 16px 8px'}}><div style={{fontSize:11,fontWeight:600,color:TEXT_SEC,textTransform:'uppercase' as const,letterSpacing:0.8}}>{t('recent')}</div></div>
@@ -491,7 +576,6 @@ export default function App(){
                     <div key={tr.id} style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e'}}>
                       <div onClick={()=>playTrack(tr)} style={{width:100,height:100}}><Img src={tr.cover} size={100} radius={0}/></div>
                       <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
-                        {/* FIX #5: имя артиста кликабельно в Recent */}
                         <button onClick={()=>openArtist('',tr.artist,tr.cover,0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const}}>
                           <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',opacity:0.9}}>{tr.artist}</div>
                         </button>
@@ -502,7 +586,6 @@ export default function App(){
                 </div>
               </div>
             )}
-
             <div style={{padding:'14px 16px 8px'}}><div style={{fontSize:11,fontWeight:600,color:TEXT_SEC,textTransform:'uppercase' as const,letterSpacing:0.8}}>{t('recommended')}</div></div>
             {recs.length===0&&history.length<2
               ?<div style={{padding:'0 16px',fontSize:12,color:TEXT_MUTED}}>{t('noRecommended')}</div>
@@ -511,7 +594,7 @@ export default function App(){
           </div>
         )}
 
-        {/* SEARCH */}
+        {/* SEARCH — порядок: Sound, Albums, Remix, Artists */}
         {screen==='search'&&(
           <div>
             <div style={{padding:'44px 16px 12px'}}>
@@ -522,9 +605,9 @@ export default function App(){
                 <button onClick={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0}}>{loading?'...':t('find')}</button>
               </div>
               <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto',scrollbarWidth:'none' as const}}>
-                {(['sound','remix','artists','albums'] as const).map(m=>(
+                {(['sound','albums','remix','artists'] as const).map(m=>(
                   <button key={m} onClick={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const}}>
-                    {t(m==='albums'?'albumsTab':m)}
+                    {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='remix'?t('remix'):t('artists')}
                   </button>
                 ))}
               </div>
@@ -548,21 +631,14 @@ export default function App(){
                 </button>
               ))}
             </div>
-            {/* FIX #1: эмодзи под цвет приложения */}
             {libTab==='liked'&&(liked.length===0
-              ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}>
-                <div style={{fontSize:38,marginBottom:12,filter:`sepia(1) saturate(3) hue-rotate(10deg)`}}>🎵</div>
-                <div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div>
-              </div>
+              ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12,filter:'sepia(1) saturate(3) hue-rotate(10deg)'}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
               :<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(name,cover)=>openArtist('',name,cover,0)}/>)}</div>
             )}
             {libTab==='artists'&&(
               <div style={{padding:'0 16px'}}>
                 {favArtists.length===0
-                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}>
-                    <div style={{fontSize:38,marginBottom:12,filter:`sepia(1) saturate(3) hue-rotate(10deg)`}}>🎤</div>
-                    <div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div>
-                  </div>
+                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12,filter:'sepia(1) saturate(3) hue-rotate(10deg)'}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>
                   :favArtists.map(a=>(
                     <div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer'}}>
                       <Img src={a.avatar||''} size={46} radius={23}/>
@@ -580,10 +656,7 @@ export default function App(){
             {libTab==='albums'&&(
               <div style={{padding:'0 16px'}}>
                 {favAlbums.length===0
-                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}>
-                    <div style={{fontSize:38,marginBottom:12,filter:`sepia(1) saturate(3) hue-rotate(10deg)`}}>💿</div>
-                    <div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div>
-                  </div>
+                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12,filter:'sepia(1) saturate(3) hue-rotate(10deg)'}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>
                   :favAlbums.map(al=>(
                     <div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer'}}>
                       <Img src={al.cover} size={50} radius={8}/>
@@ -626,8 +699,9 @@ export default function App(){
                           <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div>
                           <div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div>
                         </div>
-                        <button onClick={e=>{e.stopPropagation();playPl(pl);}} style={{width:32,height:32,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
-                          <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:2}}/>
+                        {/* #6 круглая кнопка плей */}
+                        <button onClick={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0}}>
+                          <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/>
                         </button>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
@@ -734,35 +808,27 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* MINI PLAYER — FIX #3 */}
+      {/* MINI PLAYER */}
       {current&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,16,14,0.97)',backdropFilter:'blur(20px)',border:'1px solid #252320',borderRadius:14,padding:'9px 12px 7px',zIndex:100}}>
-          <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:5}}>
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:MINI_BG,backdropFilter:'blur(20px)',border:'1px solid #3a3228',borderRadius:14,padding:'9px 12px 8px',zIndex:100}}>
+          <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:7}}>
             <div onClick={()=>setFullPlayer(true)} style={{cursor:'pointer',flexShrink:0}}><Img src={current.cover} size={38} radius={7}/></div>
             <div onClick={()=>setFullPlayer(true)} style={{flex:1,minWidth:0,cursor:'pointer'}}>
               <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
               <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{current.artist}</div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <div style={{width:44,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}} {...volSP} ref={volSP.ref}>
-                <div style={{width:'100%',height:2,background:'#2a2a2a',borderRadius:1,position:'relative'}}>
-                  <div style={{width:`${volume*100}%`,height:'100%',background:'#5a5a5a',borderRadius:1}}/>
-                </div>
-              </div>
-              {/* FIX #3: кнопка правильно круглая и больше зона нажатия */}
-              <button
-                onClick={e=>{e.stopPropagation();togglePlay();}}
-                style={{width:38,height:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0}}
-              >
-                <PP sz="sm" col={BG}/>
-              </button>
-            </div>
+            <button onClick={e=>{e.stopPropagation();togglePlay();}} style={{width:38,height:38,minWidth:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0}}>
+              <PP sz="sm" col={BG}/>
+            </button>
           </div>
-          {/* FIX #3: прогресс-бар и время СНИЗУ */}
+          {/* #3 перематываемый прогресс снизу */}
           <div style={{display:'flex',alignItems:'center',gap:7}}>
             <span style={{fontSize:9,color:TEXT_MUTED,minWidth:26,textAlign:'right'}}>{curTime}</span>
-            <div style={{flex:1,height:2,background:'#252525',borderRadius:1,overflow:'hidden'}}>
-              <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:1,transition:'width 0.3s linear'}}/>
+            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+              <div style={{width:'100%',height:2.5,background:'rgba(255,255,255,0.08)',borderRadius:2,position:'relative'}}>
+                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:2,transition:'width 0.3s linear'}}/>
+                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:10,height:10,background:ACC,borderRadius:'50%'}}/>
+              </div>
             </div>
             <span style={{fontSize:9,color:TEXT_MUTED,minWidth:26}}>{current.duration}</span>
           </div>
