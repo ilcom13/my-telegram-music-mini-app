@@ -13,7 +13,6 @@ function fmtPlays(n: number) {
   if (n >= 1000) return Math.round(n/1000)+'K';
   return n > 0 ? String(n) : '';
 }
-function fmtDur(s: string) { return s; }
 
 function Cover({ cover, size, radius }: { cover: string; size: number; radius: number }) {
   const [err, setErr] = useState(false);
