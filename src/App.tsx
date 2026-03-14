@@ -233,7 +233,7 @@ export default function App() {
         {/* HOME */}
         {screen === 'home' && (
           <div>
-            <div style={{ padding: '48px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '48px 15px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 13, color: '#666' }}>Добро пожаловать</div>
                 <div style={{ fontSize: 24, fontWeight: 600, color: '#f0f0f8', marginTop: 2, letterSpacing: -0.4 }}>Forty7</div>
