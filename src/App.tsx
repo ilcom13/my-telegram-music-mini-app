@@ -21,7 +21,7 @@ interface Track {
   trackCount?: number; albumId?: string; albumTitle?: string;
 }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; }
-interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; }
+interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; trackCount?: number; }
 interface ArtistInfo {
   id: string; name: string; username: string; avatar: string; banner: string;
   followers: number; permalink: string; tracks: Track[];
