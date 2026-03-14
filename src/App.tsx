@@ -8,7 +8,7 @@ const NAV_H = 64;
 
 interface Track { id: string; title: string; artist: string; cover: string; duration: string; plays: number; mp3: string | null; isArtist?: boolean; permalink?: string; scUserId?: string; }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; }
-interface ArtistInfo { id: string; name: string; avatar: string; followers: number; permalink: string; tracks: Track[]; latestRelease: Track | null; }
+interface ArtistInfo { id: string; name: string; username: string; avatar: string; banner: string; followers: number; permalink: string; tracks: Track[]; latestRelease: Track | null; }
 
 const T: Record<string,Record<string,string>> = {
   en: { welcome:'Welcome',home:'Home',search:'Search',library:'Library',trending:'Trending',profile:'Profile',find:'Find',notFound:'Nothing found',recent:'Recent',recommended:'Recommended',liked:'Liked',playlists:'Playlists',createPlaylist:'Create playlist',playlistName:'Playlist name',create:'Create',cancel:'Cancel',addToPlaylist:'Add to playlist',noPlaylists:'No playlists yet.',noLiked:'No liked tracks',loading:'Loading...',loadMore:'Load more',retry:'Try again',nowPlaying:'Now playing',plays:'plays',resetData:'Reset all data',language:'Language',likedTracks:'Liked tracks',listenedTracks:'Listened',share:'Share',copied:'Copied!',all:'See all',noRecommended:'Listen to some tracks for recommendations',queue:'Queue',addToQueue:'Add to queue',sound:'Sound',remix:'Remix',artists:'Artists',shuffle:'Shuffle',repeatPl:'Repeat',syncSaved:'Synced ✓',syncing:'Syncing...',syncBtn:'Sync across devices',favArtists:'Favourite artists',addFav:'Follow',removeFav:'Unfollow',latestRelease:'Latest release',allTracks:'All tracks',searchPlaceholder:'Songs or artist',backToSearch:'Back',},
@@ -19,6 +19,21 @@ function fmtPlays(n: number) {
   if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
   if (n >= 1000) return Math.round(n/1000)+'K';
   return n > 0 ? String(n) : '';
+}
+
+function getGreeting(lang: 'ru'|'en'): string {
+  const h = new Date().getHours();
+  if (lang === 'ru') {
+    if (h >= 5 && h < 12) return 'Доброе утро';
+    if (h >= 12 && h < 17) return 'Добрый день';
+    if (h >= 17 && h < 22) return 'Добрый вечер';
+    return 'Доброй ночи';
+  } else {
+    if (h >= 5 && h < 12) return 'Good morning';
+    if (h >= 12 && h < 17) return 'Good day';
+    if (h >= 17 && h < 22) return 'Good evening';
+    return 'Good night';
+  }
 }
 
 function Cover({ cover, size, radius }: { cover: string; size: number; radius: number }) {
@@ -213,17 +228,34 @@ export default function App() {
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);setScreen('artist');
     try{
-      const r=await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(name)}&mode=sound`);
+      const r=await fetch(`${WORKER_URL}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
-      const tracks=(d.tracks||[]).filter((tr:Track)=>tr.artist.toLowerCase()===name.toLowerCase()||tr.artist.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
-      setArtistPage({id:permalink,name,avatar,followers,permalink,tracks,latestRelease:tracks[0]||null});
+      const art=d.artist||{};
+      const tracks=d.tracks||[];
+      setArtistPage({
+        id:art.id||permalink,
+        name:art.name||name,
+        username:art.username||'',
+        avatar:art.avatar||avatar,
+        banner:art.banner||'',
+        followers:art.followers||followers,
+        permalink:art.permalink||permalink,
+        tracks,
+        latestRelease:tracks[0]||null
+      });
     }catch{}
     setArtistLoading(false);
   };
 
-  const isFavArtist=(id:string)=>favArtists.some(a=>a.id===id);
+  const isFavArtist=(id:string)=>favArtists.some(a=>a.id===id||a.name===id);
   const toggleFavArtist=(artist:ArtistInfo)=>{
-    setFavArtists(prev=>{const has=prev.some(a=>a.id===artist.id);const n=has?prev.filter(a=>a.id!==artist.id):[artist,...prev];try{localStorage.setItem('favArtists47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n);return n;});
+    setFavArtists(prev=>{
+      const has=prev.some(a=>a.id===artist.id||a.name===artist.name);
+      const n=has?prev.filter(a=>a.id!==artist.id&&a.name!==artist.name):[{...artist,username:artist.username||'',banner:artist.banner||'',latestRelease:null,tracks:[]},...prev];
+      try{localStorage.setItem('favArtists47',JSON.stringify(n));}catch{}
+      triggerSync(liked,playlists,history,volume,n);
+      return n;
+    });
   };
 
   const createPlaylist=()=>{
@@ -268,7 +300,7 @@ export default function App() {
     const menuOpen=openMenuId===track.id;
     return(
       <div style={{position:'relative'}}>
-        <div onClick={()=>{setOpenMenuId(null);playTrack(track);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:14,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent'}}>
+        <div onClick={()=>{ if(openMenuId===track.id){setOpenMenuId(null);return;} setOpenMenuId(null); playTrack(track); }} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:14,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent'}}>
           {num!==undefined&&<div style={{fontSize:12,color:active?ACC:'#555',width:20,flexShrink:0,textAlign:'right'}}>{num}</div>}
           <div style={{position:'relative',flexShrink:0}}>
             <Cover cover={track.cover} size={46} radius={track.isArtist?23:10}/>
@@ -383,8 +415,10 @@ export default function App() {
         <Cover cover={current.cover} size={Math.min(window.innerWidth-80,280)} radius={24}/>
       </div>
       <div style={{width:'100%',marginTop:22}}>
-        <div style={{fontSize:22,fontWeight:600,color:'#f0f0f8',letterSpacing:-0.4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
-        <div style={{fontSize:15,color:'#777',marginTop:4}}>{current.artist}</div>
+        <div style={{fontSize:20,fontWeight:600,color:'#f0f0f8',letterSpacing:-0.3,lineHeight:1.3,wordBreak:'break-word' as any}}>{current.title}</div>
+        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,marginTop:6,display:'block',textAlign:'left' as any}}>
+          <span style={{fontSize:15,color:ACC,opacity:0.8}}>{current.artist}</span>
+        </button>
         {current.plays>0&&<div style={{fontSize:12,color:'#444',marginTop:3}}>{fmtPlays(current.plays)} {t('plays')}</div>}
       </div>
       {/* Actions */}
@@ -455,16 +489,27 @@ export default function App() {
             {artistLoading?<div style={{display:'flex',alignItems:'center',justifyContent:'center',paddingTop:100}}><div style={{fontSize:14,color:'#555'}}>{t('loading')}</div></div>
               :artistPage&&(
                 <div>
-                  <div style={{padding:'20px 16px 24px',display:'flex',alignItems:'center',gap:16}}>
-                    <Cover cover={artistPage.avatar} size={80} radius={40}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:22,fontWeight:700,color:'#f0f0f8',letterSpacing:-0.4}}>{artistPage.name}</div>
-                      {artistPage.followers>0&&<div style={{fontSize:13,color:'#666',marginTop:4}}>{fmtPlays(artistPage.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
-                      <button onClick={()=>artistPage&&toggleFavArtist(artistPage)}
-                        style={{marginTop:10,padding:'7px 18px',borderRadius:20,border:`1px solid ${isFavArtist(artistPage.id)?ACC:'#333'}`,background:isFavArtist(artistPage.id)?ACC_DIM:'transparent',color:isFavArtist(artistPage.id)?ACC:'#888',fontSize:13,cursor:'pointer'}}>
-                        {isFavArtist(artistPage.id)?t('removeFav'):t('addFav')}
-                      </button>
+                  {/* Banner */}
+                  <div style={{width:'100%',height:130,background:'#1a1428',position:'relative',overflow:'hidden',marginBottom:-30}}>
+                    {artistPage.banner
+                      ?<img src={artistPage.banner} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} onError={()=>{}}/>
+                      :<div style={{width:'100%',height:'100%',background:`linear-gradient(135deg,#2a1040,#0b0b1f)`}}/>
+                    }
+                    <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 40%,#0c0c11)'}}/>
+                  </div>
+                  <div style={{padding:'0 16px 20px',display:'flex',alignItems:'flex-end',gap:14,position:'relative',zIndex:1}}>
+                    <div style={{flexShrink:0,border:'3px solid #0c0c11',borderRadius:'50%',overflow:'hidden'}}>
+                      <Cover cover={artistPage.avatar} size={76} radius={38}/>
                     </div>
+                    <div style={{flex:1,minWidth:0,paddingBottom:4}}>
+                      <div style={{fontSize:20,fontWeight:700,color:'#f0f0f8',letterSpacing:-0.3}}>{artistPage.name}</div>
+                      {artistPage.username&&<div style={{fontSize:13,color:'#666',marginTop:2}}>@{artistPage.username}</div>}
+                      {artistPage.followers>0&&<div style={{fontSize:12,color:'#555',marginTop:2}}>{fmtPlays(artistPage.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
+                    </div>
+                    <button onClick={()=>artistPage&&toggleFavArtist(artistPage)}
+                      style={{flexShrink:0,padding:'8px 16px',borderRadius:20,border:`1px solid ${isFavArtist(artistPage.id)||isFavArtist(artistPage.name)?ACC:'#333'}`,background:isFavArtist(artistPage.id)||isFavArtist(artistPage.name)?ACC_DIM:'transparent',color:isFavArtist(artistPage.id)||isFavArtist(artistPage.name)?ACC:'#888',fontSize:13,cursor:'pointer',marginBottom:4}}>
+                      {isFavArtist(artistPage.id)||isFavArtist(artistPage.name)?t('removeFav'):t('addFav')}
+                    </button>
                   </div>
                   {artistPage.latestRelease&&(
                     <div style={{padding:'0 16px 20px'}}>
@@ -498,7 +543,7 @@ export default function App() {
           <div>
             <div style={{padding:'48px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
-                <div style={{fontSize:13,color:'#666'}}>{t('welcome')}</div>
+                <div style={{fontSize:13,color:'#888'}}>{getGreeting(lang)}</div>
                 <div style={{fontSize:24,fontWeight:700,color:'#f0f0f8',marginTop:2,letterSpacing:-0.5}}>Forty7</div>
               </div>
               {/* Pill-shaped profile button */}
@@ -511,9 +556,8 @@ export default function App() {
             </div>
             {history.length>0&&(
               <div>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px 12px'}}>
+                <div style={{padding:'14px 16px 12px'}}>
                   <div style={{fontSize:16,fontWeight:600,color:'#e8e8f0'}}>{t('recent')}</div>
-                  <div style={{fontSize:13,color:ACC,cursor:'pointer'}} onClick={()=>setScreen('library')}>{t('all')}</div>
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px',overflowX:'auto',scrollbarWidth:'none' as any}}>
                   {history.slice(0,8).map(track=>(
@@ -594,10 +638,11 @@ export default function App() {
                 {favArtists.length===0
                   ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:44,marginBottom:14}}>🎤</div><div style={{fontSize:15,color:'#555'}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>
                   :favArtists.map(artist=>(
-                    <div key={artist.id} onClick={()=>openArtist(artist.permalink,artist.name,artist.avatar,artist.followers)} style={{display:'flex',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid #1a1a26',cursor:'pointer'}}>
-                      <Cover cover={artist.avatar} size={52} radius={26}/>
+                    <div key={artist.id||artist.name} onClick={()=>openArtist(artist.permalink||'',artist.name,artist.avatar||'',artist.followers)} style={{display:'flex',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid #1a1a26',cursor:'pointer'}}>
+                      <Cover cover={artist.avatar||''} size={52} radius={26}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:15,fontWeight:500,color:'#e0e0ec'}}>{artist.name}</div>
+                        {artist.username&&<div style={{fontSize:12,color:'#555',marginTop:1}}>@{artist.username}</div>}
                         {artist.followers>0&&<div style={{fontSize:12,color:'#666',marginTop:2}}>{fmtPlays(artist.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
