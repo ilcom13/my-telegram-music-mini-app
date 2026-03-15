@@ -137,6 +137,7 @@ export default function App(){
   const[albumLoading,setAlbumLoading]=useState(false);
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
   const[current,setCurrent]=useState<Track|null>(null);
+  const[bgCover,setBgCover]=useState('');
   const[playing,setPlaying]=useState(false);
   const[progress,setProgress]=useState(0);
   const[curTime,setCurTime]=useState('0:00');
@@ -235,9 +236,19 @@ export default function App(){
 
   const playDirect=(track:Track)=>{
     if(!track.mp3)return;
-    if(audio.current){audio.current.src=`${W}/stream?url=${encodeURIComponent(track.mp3)}`;audio.current.play();setPlaying(true);}
+    if(audio.current){
+      audio.current.pause();
+      audio.current.src=`${W}/stream?url=${encodeURIComponent(track.mp3)}`;
+      audio.current.load();
+      const tryPlay=()=>{
+        const p=audio.current?.play();
+        if(p){p.then(()=>setPlaying(true)).catch(()=>{setTimeout(()=>{audio.current?.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);});}
+      };
+      tryPlay();
+    }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent(track);setProgress(0);setCurTime('0:00');
+    if(track.cover)setBgCover(track.cover);
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
@@ -251,7 +262,14 @@ export default function App(){
     if(playHistory.length>0){
       const prev=playHistory[0];
       setPlayHistory(p=>p.slice(1));
-      if(audio.current&&prev.mp3){audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;audio.current.play();setPlaying(true);}
+      // Push current back to front of queue so Next still works
+      if(current){setQueue(q=>{const n=[current,...q];try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});}
+      if(audio.current&&prev.mp3){
+        audio.current.pause();
+        audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
+        audio.current.load();
+        audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
+      }
       setCurrent(prev);setProgress(0);setCurTime('0:00');
     } else if(current&&audio.current){
       audio.current.currentTime=0;
@@ -525,9 +543,10 @@ export default function App(){
           </div>
         </div>
       )}
-      <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:40,paddingBottom:10,flexShrink:0}}>
-        <button onPointerDown={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:8,margin:-8,...tap}}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:36,paddingBottom:8,flexShrink:0}}>
+        <button onPointerDown={()=>setFullPlayer(false)} style={{background:'rgba(255,255,255,0.07)',border:'none',cursor:'pointer',padding:'10px 16px',borderRadius:24,display:'flex',alignItems:'center',gap:6,...tap}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style={{fontSize:12,color:'#bbb',fontWeight:500}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
         <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase'}}>{t('nowPlaying')}</span>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:8,margin:-8,position:'relative',...tap}}>
@@ -713,7 +732,7 @@ export default function App(){
         {/* ── ALBUM ────────────────────────────────────────────────────────────── */}
         {screen==='album'&&(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16}}><BackBtn/></div>
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16}}><BackBtn/></div>
             {albumLoading?<Spinner/>:albumPage&&(
               <div>
                 <div style={{padding:'10px 16px 0',display:'flex',gap:14,alignItems:'center'}}>
@@ -744,7 +763,14 @@ export default function App(){
         {/* ── HOME ─────────────────────────────────────────────────────────────── */}
         {screen==='home'&&(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            {/* Blurred cover background */}
+            {(bgCover||(history.length>0&&history[0].cover))&&(
+              <div style={{position:'absolute',top:0,left:0,right:0,height:220,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
+                <img src={bgCover||history[0].cover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(28px) saturate(0.7) brightness(0.35)',transform:'scale(1.15)'}} onError={()=>{}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.5) 40%,rgba(14,14,14,0.85) 70%,#0e0e0e 100%)'}}/>
+              </div>
+            )}
+            <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
                 <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600}}>FORTY7</div>
@@ -754,6 +780,7 @@ export default function App(){
                 <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
               </button>
             </div>
+            <div style={{position:'relative',zIndex:1}}>
             {history.length>0&&(
               <div>
                 <SL text={t('recent')}/>
@@ -775,8 +802,9 @@ export default function App(){
             <SL text={t('recommended')}/>
             {recs.length===0&&history.length<2
               ?<div style={{padding:'0 16px',fontSize:12,color:TEXT_MUTED}}>{t('noRecommended')}</div>
-              :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)} showBlockBtn={true}/>)}</div>
+              :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} showBlockBtn={true}/>)}</div>
             }
+            </div>
           </div>
         )}
 
@@ -801,7 +829,7 @@ export default function App(){
             </div>
             <div style={{padding:'0 4px'}}>
               {loading&&<div style={{textAlign:'center',paddingTop:36,color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
-              {results.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+              {results.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1}/>)}
             </div>
           </div>
         )}
@@ -809,7 +837,7 @@ export default function App(){
         {/* ── LIBRARY ──────────────────────────────────────────────────────────── */}
         {screen==='library'&&(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16,paddingBottom:12}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
             <div style={{display:'flex',gap:5,padding:'0 16px 12px',overflowX:'auto'}}>
               {(['liked','playlists','artists','albums'] as const).map(tab=>(
                 <button key={tab} onPointerDown={()=>setLibTab(tab)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:libTab===tab?ACC:ACC_DIM,color:libTab===tab?BG:ACC,fontSize:12,fontWeight:libTab===tab?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
@@ -817,7 +845,7 @@ export default function App(){
                 </button>
               ))}
             </div>
-            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>)}
+            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1}/>)}</div>)}
             {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onPointerDown={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
             {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onPointerDown={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
             {libTab==='playlists'&&(
@@ -849,21 +877,21 @@ export default function App(){
         {/* ── TRENDING ─────────────────────────────────────────────────────────── */}
         {screen==='trending'&&(()=>{const ct=trends[trendGenre]||[];return(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('trending')}</div>
               <button onPointerDown={()=>loadTrend(trendGenre,true)} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
             </div>
             <div style={{display:'flex',gap:6,padding:'0 16px 12px',overflowX:'auto'}}>
               {GENRES.map(g=>(<button key={g.id} onPointerDown={()=>setTrendGenre(g.id)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 11px',borderRadius:12,border:trendGenre===g.id?`1px solid ${ACC}44`:'1px solid #222',background:trendGenre===g.id?ACC_DIM:BG2,color:trendGenre===g.id?ACC:TEXT_SEC,cursor:'pointer',flexShrink:0,minWidth:54,transition:'all 0.15s',...tap}}><span style={{fontSize:19}}>{g.e}</span><span style={{fontSize:9,fontWeight:trendGenre===g.id?600:400,whiteSpace:'nowrap'}}>{g.label}</span></button>))}
             </div>
-            {trendLoading&&ct.length===0?<Spinner/>:ct.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'60px 20px 0',textAlign:'center'}}><div style={{fontSize:38,marginBottom:12}}>📈</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('notFound')}</div><button onPointerDown={()=>loadTrend(trendGenre,true)} style={{marginTop:12,padding:'8px 20px',background:ACC_DIM,border:'none',borderRadius:9,color:ACC,fontSize:12,cursor:'pointer',...tap}}>{t('retry')}</button></div>:<div><div style={{padding:'0 4px'}}>{ct.map((tr,i)=><TRow key={tr.id+i} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div><div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'center'}}><button onPointerDown={()=>loadTrend(trendGenre,false)} disabled={trendLoading} style={{padding:'9px 32px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?.5:1,...tap}}>{trendLoading?t('loading'):t('loadMore')}</button></div></div>}
+            {trendLoading&&ct.length===0?<Spinner/>:ct.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'60px 20px 0',textAlign:'center'}}><div style={{fontSize:38,marginBottom:12}}>📈</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('notFound')}</div><button onPointerDown={()=>loadTrend(trendGenre,true)} style={{marginTop:12,padding:'8px 20px',background:ACC_DIM,border:'none',borderRadius:9,color:ACC,fontSize:12,cursor:'pointer',...tap}}>{t('retry')}</button></div>:<div><div style={{padding:'0 4px'}}>{ct.map((tr,i)=><TRow key={tr.id+i} track={tr} num={i+1}/>)}</div><div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'center'}}><button onPointerDown={()=>loadTrend(trendGenre,false)} disabled={trendLoading} style={{padding:'9px 32px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?.5:1,...tap}}>{trendLoading?t('loading'):t('loadMore')}</button></div></div>}
           </div>
         );})()}
 
         {/* ── PROFILE ──────────────────────────────────────────────────────────── */}
         {screen==='profile'&&(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16,paddingBottom:18,display:'flex',alignItems:'center',gap:4}}>
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:18,display:'flex',alignItems:'center',gap:4}}>
               <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
               <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
               {syncSt==='saving'&&<div style={{marginLeft:'auto',fontSize:10,color:TEXT_MUTED}}>{t('syncing')}</div>}
@@ -944,8 +972,8 @@ export default function App(){
 
       {/* ── NAV ──────────────────────────────────────────────────────────────── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
-        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',padding:'7px 0 13px',display:'flex',justifyContent:'space-around',zIndex:101,height:NAV_H}}>
-          {NAV.map(item=>(<div key={item.id} onPointerDown={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer',padding:'0 8px',...tap}}>{item.icon(screen===item.id)}<span style={{fontSize:9,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span></div>))}
+        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
+          {NAV.map(item=>(<div key={item.id} onPointerDown={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>{item.icon(screen===item.id)}<span style={{fontSize:10,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span></div>))}
         </div>
       )}
     </div>
