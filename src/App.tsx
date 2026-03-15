@@ -363,25 +363,78 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
-  useEffect(()=>{
-    if(history.length<2)return;
-    const topArtists=getTopArtists(history,2,5);
-    const fallback=getTopArtists(history,1,3);
-    const artists=(topArtists.length>=1?topArtists:fallback).filter(a=>!blockedArtists.includes(a));
-    if(!artists.length)return;
-    const counts=getArtistPlayCounts(history);
-    const weighted=artists.sort((a,b)=>(counts[b]||0)-(counts[a]||0));
-    fetch(`${W}/search?q=__recommend__${encodeURIComponent(weighted.join(','))}`)
-      .then(r=>r.json()).then(d=>{
-        if(d.tracks?.length){
-          const histIds=new Set(history.map(h=>h.id));
-          const fresh=d.tracks.filter((tr:Track)=>!histIds.has(tr.id)&&!blockedArtists.includes(tr.artist));
-          const newRecs=fresh.length>0?fresh:d.tracks.filter((tr:Track)=>!blockedArtists.includes(tr.artist));
-          setRecs(newRecs);
-          try{localStorage.setItem('recs47',JSON.stringify(newRecs.slice(0,20)));}catch{}
+  // ── Smart recommendations system ──────────────────────────────────────────
+  const[recsLoading,setRecsLoading]=useState(false);
+
+  // Stable ref to avoid stale closure — always holds latest values
+  const historyRef=useRef<Track[]>([]);
+  const blockedRef=useRef<string[]>([]);
+  useEffect(()=>{historyRef.current=history;},[history]);
+  useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
+
+  const loadRecommendations=useCallback(async()=>{
+    const hist=historyRef.current;
+    const blocked=blockedRef.current;
+    if(hist.length<1)return;
+    setRecsLoading(true);
+    try{
+      // Build weighted artist list — recent 15 tracks get 3x weight
+      const allCounts=getArtistPlayCounts(hist.slice(0,100));
+      const recentCounts=getArtistPlayCounts(hist.slice(0,15));
+      const merged:Record<string,number>={};
+      for(const[a,n] of Object.entries(allCounts))merged[a]=n;
+      for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
+
+      // Sort by weight, filter blocked, take top 8
+      const sortedArtists=Object.entries(merged)
+        .filter(([a])=>!blocked.includes(a))
+        .sort((a,b)=>b[1]-a[1])
+        .map(([a])=>a)
+        .slice(0,8);
+
+      if(!sortedArtists.length){setRecsLoading(false);return;}
+
+      // Exclude recently listened ids (last 30) to avoid duplicates
+      const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
+
+      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`);
+      if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+      const d=await resp.json();
+      if(d.tracks?.length){
+        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist));
+        if(fresh.length>0){
+          setRecs(fresh);
+          try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
+          // Sync recs to server (debounced)
+          if(uid!=='anon'){
+            if(syncTimer.current)clearTimeout(syncTimer.current);
+            syncTimer.current=setTimeout(()=>syncSave({
+              liked,playlists,history:historyRef.current,volume,
+              favArtists,favAlbums,blockedArtists:blockedRef.current,bgCover,
+              recs:fresh.slice(0,20),
+              stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}
+            }),2000);
+          }
         }
-      }).catch(()=>{});
-    },[recsVersion,history.slice(0,5).map(h=>h.id).join(','),blockedArtists.join(',')]);
+      }
+    }catch(e){console.warn('recs failed:',e);}
+    setRecsLoading(false);
+  },[]);
+
+  // Trigger recs load when history or blocked changes
+  useEffect(()=>{
+    if(history.length>=1)loadRecommendations();
+  },[recsVersion,history.length,blockedArtists.join(',')]);
+
+  // Refresh recs when app becomes visible again (tab/app re-open)
+  useEffect(()=>{
+    const onVisible=()=>{
+      if(document.visibilityState==='visible')loadRecommendations();
+    };
+    document.addEventListener('visibilitychange',onVisible);
+    return()=>document.removeEventListener('visibilitychange',onVisible);
+  },[loadRecommendations]);
+
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -1090,10 +1143,17 @@ export default function App(){
                 </div>
               </div>
             )}
-            <SL text={t('recommended')}/>
-            {recs.length===0&&history.length<2
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8}}>{t('recommended')}</div>
+              <button onPointerDown={()=>loadRecommendations()} disabled={recsLoading} style={{background:'none',border:'none',cursor:recsLoading?'default':'pointer',padding:4,...tap,opacity:recsLoading?0.5:1}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:recsLoading?'spin 0.8s linear infinite':undefined}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              </button>
+            </div>
+            {recs.length===0&&history.length<1
               ?<div style={{padding:'0 16px',fontSize:12,color:TEXT_MUTED}}>{t('noRecommended')}</div>
-              :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} showBlockBtn={true}/>)}</div>
+              :recsLoading&&recs.length===0
+                ?<div style={{padding:'0 16px 8px'}}><Spinner/></div>
+                :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} showBlockBtn={true}/>)}</div>
             }
             </div>
           </div>
