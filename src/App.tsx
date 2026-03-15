@@ -791,7 +791,7 @@ export default function App(){
                 <img
                   key={bgCover||history[0]?.cover}
                   src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) saturate(0.8) brightness(0.3)',transform:'scale(1.2)'}}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(5px) saturate(0.8) brightness(0.3)',transform:'scale(1.2)'}}
                   onError={()=>{}}
                 />
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.1) 0%,rgba(14,14,14,0.4) 35%,rgba(14,14,14,0.8) 65%,#0e0e0e 100%)'}}/>
