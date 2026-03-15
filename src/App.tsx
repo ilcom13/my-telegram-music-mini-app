@@ -143,6 +143,18 @@ function greeting(lang:'ru'|'en'|'uk'|'kk'|'pl'|'tr'){
   if(h>=5&&h<12)return'Good morning';if(h>=12&&h<17)return'Good day';if(h>=17&&h<22)return'Good evening';return'Good night';
 }
 
+function calcMaxStreak(days:string[]):number{
+  if(!days.length)return 0;
+  const sorted=[...new Set(days)].sort();
+  let mx=1,cur=1;
+  for(let i=1;i<sorted.length;i++){
+    const prev=new Date(sorted[i-1]),curr=new Date(sorted[i]);
+    const diff=(curr.getTime()-prev.getTime())/(1000*60*60*24);
+    if(diff===1){cur++;mx=Math.max(mx,cur);}else cur=1;
+  }
+  return mx;
+}
+
 function Img({src,size,radius,fb='🎵'}:{src:string;size:number;radius:number;fb?:string}){
   const[e,sE]=useState(false);
   const s:React.CSSProperties={width:size,height:size,borderRadius:radius,flexShrink:0,display:'block'};
@@ -226,6 +238,16 @@ export default function App(){
 
   const[favArtists,setFavArtists]=useState<ArtistInfo[]>([]);
   const[blockedArtists,setBlockedArtists]=useState<string[]>([]);
+  const[showSettings,setShowSettings]=useState(false);
+  const[totalSec,setTotalSec]=useState(0);
+  const[exploredIds,setExploredIds]=useState<string[]>([]);
+  const[listenedIds,setListenedIds]=useState<string[]>([]);
+  const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;count:number}>>({});
+  const[streakDays,setStreakDays]=useState<string[]>([]);
+  const[maxStreak,setMaxStreak]=useState(0);
+  const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
+  const listenSec=useRef(0);
+  const listenTrackId=useRef('');
   const[albumPage,setAlbumPage]=useState<AlbumInfo|null>(null);
   const[albumLoading,setAlbumLoading]=useState(false);
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
@@ -286,6 +308,11 @@ export default function App(){
       const rc=localStorage.getItem('recs47');
       if(rc){const parsed=JSON.parse(rc);setRecs(parsed.filter((tr:Track)=>!blocked_on_load.includes(tr.artist)));}
       const bgc=localStorage.getItem('bgc47');if(bgc)setBgCover(bgc);
+      const tsec=localStorage.getItem('tsec47');if(tsec)setTotalSec(parseInt(tsec)||0);
+      const expIds=localStorage.getItem('exp47');if(expIds)setExploredIds(JSON.parse(expIds));
+      const lstIds=localStorage.getItem('lst47');if(lstIds)setListenedIds(JSON.parse(lstIds));
+      const tpl=localStorage.getItem('tpl47');if(tpl)setTrackPlays(JSON.parse(tpl));
+      const sdays=localStorage.getItem('sdays47');if(sdays){const d=JSON.parse(sdays);setStreakDays(d);setMaxStreak(calcMaxStreak(d));}
     }catch{}};
     if(uid!=='anon'){
       fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
@@ -342,7 +369,7 @@ export default function App(){
           try{localStorage.setItem('recs47',JSON.stringify(newRecs.slice(0,20)));}catch{}
         }
       }).catch(()=>{});
-  },[recsVersion,history.length,blockedArtists.join(',')]);
+    },[recsVersion,history.slice(0,5).map(h=>h.id).join(','),blockedArtists.join(',')]);
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -364,6 +391,12 @@ export default function App(){
   },[current,loop,queue,recs,history,blockedArtists]);
 
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
+  useEffect(()=>{
+    const a=audio.current;if(!a)return;
+    const onVol=()=>{if(Math.abs(a.volume-volume)>0.02)setVol(a.volume);};
+    a.addEventListener('volumechange',onVol);
+    return()=>a.removeEventListener('volumechange',onVol);
+  },[volume]);
   useEffect(()=>{if(screen==='trending'&&!trends[trendGenre])loadTrend(trendGenre,true);},[screen,trendGenre]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
@@ -391,11 +424,25 @@ export default function App(){
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});setProgress(0);setCurTime('0:00');
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
+    setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
+    const today=new Date().toISOString().slice(0,10);
+    setStreakDays(prev=>{if(prev.includes(today))return prev;const n=[...prev,today];try{localStorage.setItem('sdays47',JSON.stringify(n));}catch{}setMaxStreak(calcMaxStreak(n));return n;});
+    if(listenTimer.current)clearInterval(listenTimer.current);
+    listenSec.current=0;listenTrackId.current=track.id;
+    listenTimer.current=setInterval(()=>{
+      listenSec.current+=1;
+      setTotalSec(prev=>{const n=prev+1;try{localStorage.setItem('tsec47',String(n));}catch{}return n;});
+      if(listenSec.current===40){
+        const tid=listenTrackId.current;
+        setListenedIds(prev=>{if(prev.includes(tid))return prev;const n=[...prev,tid];try{localStorage.setItem('lst47',JSON.stringify(n));}catch{}return n;});
+        setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,count:0};const n={...prev,[tid]:{...entry,count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
+      }
+    },1000);
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
       playCountRef.current+=1;
-      if(playCountRef.current>=2){playCountRef.current=0;setRecsVersion(v=>v+1);}
+      setRecsVersion(v=>v+1);
       // Save everything to server on every track play
       triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
       return n;
@@ -596,6 +643,7 @@ export default function App(){
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
     const swipeFired=useRef(false);
+    const wasMenuOpen=useRef(false);
     // Build swipe state as reactive
     const[swipeVis,setSwipeVis]=useState({dx:0,dir:''});
     const swipeHandlers={
@@ -632,9 +680,9 @@ export default function App(){
         {swipeVis.dir==='right'&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(swipeVis.dx,80),background:'rgba(239,191,127,0.15)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:10,pointerEvents:'none',transition:'width 0.05s'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={ACC}/><circle cx="3" cy="12" r="1.2" fill={ACC}/><circle cx="3" cy="18" r="1.2" fill={ACC}/></svg></div>}
         {swipeVis.dir==='left'&&onSwipeLeft&&<div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(-swipeVis.dx,80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:10,pointerEvents:'none'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>}
         <div
-          onPointerDown={e=>{e.stopPropagation();swipeHandlers.onPointerDown(e);if(mOpen){setMenuId(null);return;}setMenuId(null);}}
+          onPointerDown={e=>{e.stopPropagation();swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen)setMenuId(null);}}
           onPointerMove={swipeHandlers.onPointerMove}
-          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!mOpen)playTrack(track);swipeFired.current=false;}}
+          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!wasMenuOpen.current)playTrack(track);swipeFired.current=false;wasMenuOpen.current=false;}}
           onPointerCancel={swipeHandlers.onPointerCancel}
           style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',...tap,transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
@@ -744,7 +792,7 @@ export default function App(){
           </div>
         </div>
       )}
-      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:36,paddingBottom:8,flexShrink:0}}>
+      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
         <button onPointerDown={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,...tap}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
@@ -1062,7 +1110,7 @@ export default function App(){
                 <button onPointerDown={()=>setShowNewPl(true)} style={{width:'100%',padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',marginBottom:9,display:'flex',alignItems:'center',justifyContent:'center',gap:6,...tap}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{t('createPlaylist')}
                 </button>
-                {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:7}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
+                {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
                 {playlists.map(pl=>{const isOpen=openPlId===pl.id;return(
                   <div key={pl.id} style={{background:BG2,border:'1px solid #1e1e1e',borderRadius:12,marginBottom:7,overflow:'hidden'}}>
                     <div onPointerDown={()=>setOpenPlId(isOpen?null:pl.id)} style={{padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,...tap}}>
@@ -1100,12 +1148,37 @@ export default function App(){
         {/* ── PROFILE ──────────────────────────────────────────────────────────── */}
         {screen==='profile'&&(
           <div>
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:18,display:'flex',alignItems:'center',gap:4}}>
+            {/* Settings modal */}
+            {showSettings&&(
+              <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:200,display:'flex',alignItems:'flex-end'}} onPointerDown={()=>setShowSettings(false)}>
+                <div style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px'}} onPointerDown={e=>e.stopPropagation()}>
+                  <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY,marginBottom:16}}>{lang==='ru'?'Настройки':lang==='uk'?'Налаштування':lang==='kk'?'Параметрлер':lang==='pl'?'Ustawienia':lang==='tr'?'Ayarlar':'Settings'}</div>
+                  <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:14}}>
+                    {([['ru','🇷🇺 RU'],['en','🇺🇸 EN'],['uk','🇺🇦 UK'],['kk','🇰🇿 KK'],['pl','🇵🇱 PL'],['tr','🇹🇷 TR']] as const).map(([l,label])=>(
+                      <button key={l} onPointerDown={()=>chgLang(l as any)} style={{padding:'8px 4px',borderRadius:8,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:11,fontWeight:lang===l?600:400,cursor:'pointer',textAlign:'center' as const,...tap}}>{label}</button>
+                    ))}
+                  </div>
+                  {blockedArtists.length>0&&(
+                    <div style={{marginBottom:10}}>
+                      <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:1}}>{lang==='ru'?'Заблокированные артисты':lang==='uk'?'Заблоковані артисти':'Blocked artists'} ({blockedArtists.length})</div>
+                      <button onPointerDown={()=>{setBlockedArtists([]);try{localStorage.setItem('ba47',JSON.stringify([]));}catch{}}} style={{width:'100%',padding:'9px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:9,color:'#c05050',fontSize:12,cursor:'pointer',...tap}}>{lang==='ru'?'Очистить':lang==='uk'?'Очистити':'Clear'}</button>
+                    </div>
+                  )}
+                  <button onPointerDown={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);setBlockedArtists([]);setShowSettings(false);}} style={{width:'100%',padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer',...tap}}>{t('resetData')}</button>
+                </div>
+              </div>
+            )}
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:14,display:'flex',alignItems:'center',gap:4}}>
               <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
               <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
-
+              <div style={{marginLeft:'auto',display:'flex',gap:6}}>
+                <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,borderRadius:'50%',background:BG2,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                </button>
+              </div>
             </div>
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 18px'}}>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 14px'}}>
               {tg?.photo_url
                 ? <img src={tg.photo_url} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',marginBottom:10,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                 : <div style={{width:64,height:64,borderRadius:'50%',background:ACC_DIM,border:`2px solid ${ACC}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:ACC,marginBottom:10}}>{uInit}</div>
@@ -1114,18 +1187,51 @@ export default function App(){
               {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
             </div>
             <div style={{padding:'0 16px'}}>
-              {[{l:t('likedTracks'),v:liked.length},{l:t('playlists'),v:playlists.length},{l:t('listenedTracks'),v:history.length},{l:t('favArtists'),v:favArtists.length},{l:t('albums'),v:favAlbums.length},{l:lang==='ru'?'Заблокировано артистов':'Blocked artists',v:blockedArtists.length}].map(item=>(<div key={item.l} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 0',borderBottom:'1px solid #1e1e1e'}}><span style={{fontSize:13,color:TEXT_SEC}}>{item.l}</span><span style={{fontSize:13,fontWeight:600,color:ACC}}>{item.v}</span></div>))}
-              {blockedArtists.length>0&&<button onPointerDown={()=>{setBlockedArtists([]);try{localStorage.setItem('ba47',JSON.stringify([]));}catch{}}} style={{width:'100%',marginTop:4,padding:'8px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:9,color:'#c05050',fontSize:11,cursor:'pointer',...tap}}>{lang==='ru'?'Очистить заблокированных':'Clear blocked artists'}</button>}
-              <div style={{padding:'14px 0 8px'}}>
-                <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
-                  {([['ru','🇷🇺 RU'],['en','🇺🇸 EN'],['uk','🇺🇦 UK'],['kk','🇰🇿 KK'],['pl','🇵🇱 PL'],['tr','🇹🇷 TR']] as const).map(([l,label])=>(
-                    <button key={l} onPointerDown={()=>chgLang(l as any)} style={{padding:'8px 4px',borderRadius:8,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:11,fontWeight:lang===l?600:400,cursor:'pointer',textAlign:'center' as const,...tap}}>{label}</button>
-                  ))}
-                </div>
-              </div>
-              <button onPointerDown={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',...tap}}>🔄 {t('syncBtn')}</button>
-              <button onPointerDown={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);setBlockedArtists([]);}} style={{width:'100%',marginTop:6,padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer',...tap}}>{t('resetData')}</button>
+              {/* Stats button */}
+              <button onPointerDown={()=>{}} style={{width:'100%',padding:'11px 14px',background:BG2,border:'1px solid #252525',borderRadius:12,color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,marginBottom:14,...tap}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span style={{color:TEXT_PRIMARY}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly stats'}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              {/* Main stats */}
+              {(()=>{
+                const hours=Math.floor(totalSec/3600);
+                const mins=Math.floor((totalSec%3600)/60);
+                const timeStr=hours>0?`${hours}ч ${mins}мин`:`${mins}мин`;
+                const topEntry=Object.values(trackPlays).sort((a,b)=>b.count-a.count)[0];
+                const stats=[
+                  {icon:'🎵',label:lang==='ru'?'Времени в музыке':lang==='uk'?'Часу в музиці':lang==='kk'?'Музыкада уақыт':lang==='pl'?'Czas w muzyce':lang==='tr'?'Müzikte geçen süre':'Time in music',val:timeStr||'0 мин'},
+                  {icon:'👀',label:lang==='ru'?'Изучено треков':lang==='uk'?'Вивчено треків':lang==='kk'?'Зерттелген':lang==='pl'?'Odkryte utwory':lang==='tr'?'Keşfedilen':'Explored',val:String(exploredIds.length)},
+                  {icon:'✅',label:lang==='ru'?'Прослушано треков':lang==='uk'?'Прослухано треків':lang==='kk'?'Тыңдалды':lang==='pl'?'Odsłuchane':lang==='tr'?'Dinlendi':'Listened (40s+)',val:String(listenedIds.length)},
+                  {icon:'🔥',label:lang==='ru'?'Макс. стрик дней':lang==='uk'?'Макс. стрік днів':lang==='kk'?'Макс. күн серия':lang==='pl'?'Maksymalny streak':lang==='tr'?'Maksimum seri':'Max streak',val:`${maxStreak} ${lang==='ru'?'дн':lang==='uk'?'дн':lang==='kk'?'күн':lang==='pl'?'dni':lang==='tr'?'gün':'days'}`},
+                ];
+                return(
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+                    {stats.map(s=>(
+                      <div key={s.label} style={{background:BG2,border:'1px solid #222',borderRadius:12,padding:'12px 12px'}}>
+                        <div style={{fontSize:18,marginBottom:4}}>{s.icon}</div>
+                        <div style={{fontSize:16,fontWeight:700,color:ACC}}>{s.val}</div>
+                        <div style={{fontSize:10,color:TEXT_MUTED,marginTop:3,lineHeight:1.3}}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {/* Most played track */}
+              {(()=>{
+                const top=Object.values(trackPlays).sort((a,b)=>b.count-a.count)[0];
+                if(!top)return null;
+                return(
+                  <div style={{background:BG2,border:`1px solid ${ACC}22`,borderRadius:12,padding:'12px',marginBottom:12}}>
+                    <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:8,textTransform:'uppercase' as const,letterSpacing:0.8}}>{lang==='ru'?'Самый зацикленный трек':lang==='uk'?'Найулюбленіший трек':lang==='kk'?'Ең көп тыңдалған':lang==='pl'?'Najczęściej grany':lang==='tr'?'En çok çalınan':'Most played'}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{top.title}</div>
+                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+                      <span style={{fontSize:11,color:TEXT_SEC}}>{top.artist}</span>
+                      <span style={{fontSize:11,color:ACC,fontWeight:600}}>{top.count}x</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -1135,9 +1241,9 @@ export default function App(){
 
       {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
       {current&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:16,padding:'10px 12px 8px',zIndex:100}}>
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:16,padding:'7px 12px 6px',zIndex:100}}>
           {/* Row 1: cover + title/artist */}
-          <div onPointerDown={()=>setFullPlayer(true)} style={{display:'flex',alignItems:'center',gap:9,marginBottom:8,cursor:'pointer'}}>
+          <div onPointerDown={()=>setFullPlayer(true)} style={{display:'flex',alignItems:'center',gap:9,marginBottom:5,cursor:'pointer'}}>
             <Img src={current.cover} size={36} radius={7}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
@@ -1145,7 +1251,7 @@ export default function App(){
             </div>
           </div>
           {/* Row 2: volume ── Prev · Next ── loop ── play(big) */}
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:7}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
             {/* Volume */}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
             <div {...volSP} ref={volSP.ref} style={{width:44,height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',flexShrink:0}}>
