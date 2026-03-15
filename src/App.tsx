@@ -248,6 +248,19 @@ export default function App(){
   const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
   const listenSec=useRef(0);
   const listenTrackId=useRef('');
+  // Refs for sync — always hold latest values (avoid stale closures)
+  const totalSecRef=useRef(0);
+  const exploredIdsRef=useRef<string[]>([]);
+  const listenedIdsRef=useRef<string[]>([]);
+  const trackPlaysRef=useRef<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
+  const streakDaysRef=useRef<string[]>([]);
+  const maxStreakRef=useRef(0);
+  const likedRef=useRef<Track[]>([]);
+  const playlistsRef=useRef<Playlist[]>([]);
+  const volumeRef=useRef(0.8);
+  const favArtistsRef=useRef<ArtistInfo[]>([]);
+  const favAlbumsRef=useRef<AlbumInfo[]>([]);
+  const bgCoverRef=useRef('');
   const[albumPage,setAlbumPage]=useState<AlbumInfo|null>(null);
   const[albumLoading,setAlbumLoading]=useState(false);
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
@@ -289,8 +302,22 @@ export default function App(){
   const uHandle=tg?.username?`@${tg.username}`:'';
   const uInit=uName.charAt(0).toUpperCase();
 
-  const syncSave=async(data:object)=>{if(uid==='anon')return;setSyncSt('saving');try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});setSyncSt('saved');setTimeout(()=>setSyncSt(''),2500);}catch{setSyncSt('');}};
-  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||'',recs:recs.slice(0,20),stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}}),2000);};
+  const syncSave=async(data:object)=>{if(uid==='anon')return;try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}};
+  const doFullSync=()=>{
+    if(uid==='anon')return;
+    if(syncTimer.current)clearTimeout(syncTimer.current);
+    syncTimer.current=setTimeout(()=>syncSave({
+      liked:likedRef.current,playlists:playlistsRef.current,
+      history:historyRef.current,volume:volumeRef.current,
+      favArtists:favArtistsRef.current,favAlbums:favAlbumsRef.current,
+      blockedArtists:blockedRef.current,bgCover:bgCoverRef.current,
+      recs:recs.slice(0,20),
+      stats:{totalSec:totalSecRef.current,exploredIds:exploredIdsRef.current,
+        listenedIds:listenedIdsRef.current,trackPlays:trackPlaysRef.current,
+        streakDays:streakDaysRef.current,maxStreak:maxStreakRef.current}
+    }),1500);
+  };
+  const triggerSync=(..._args:any[])=>doFullSync();
 
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
@@ -371,6 +398,18 @@ export default function App(){
   const blockedRef=useRef<string[]>([]);
   useEffect(()=>{historyRef.current=history;},[history]);
   useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
+  useEffect(()=>{totalSecRef.current=totalSec;},[totalSec]);
+  useEffect(()=>{exploredIdsRef.current=exploredIds;},[exploredIds]);
+  useEffect(()=>{listenedIdsRef.current=listenedIds;},[listenedIds]);
+  useEffect(()=>{trackPlaysRef.current=trackPlays;},[trackPlays]);
+  useEffect(()=>{streakDaysRef.current=streakDays;},[streakDays]);
+  useEffect(()=>{maxStreakRef.current=maxStreak;},[maxStreak]);
+  useEffect(()=>{likedRef.current=liked;},[liked]);
+  useEffect(()=>{playlistsRef.current=playlists;},[playlists]);
+  useEffect(()=>{volumeRef.current=volume;},[volume]);
+  useEffect(()=>{favArtistsRef.current=favArtists;},[favArtists]);
+  useEffect(()=>{favAlbumsRef.current=favAlbums;},[favAlbums]);
+  useEffect(()=>{bgCoverRef.current=bgCover;},[bgCover]);
 
   const loadRecommendations=useCallback(async()=>{
     const hist=historyRef.current;
@@ -405,16 +444,8 @@ export default function App(){
         if(fresh.length>0){
           setRecs(fresh);
           try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
-          // Sync recs to server (debounced)
-          if(uid!=='anon'){
-            if(syncTimer.current)clearTimeout(syncTimer.current);
-            syncTimer.current=setTimeout(()=>syncSave({
-              liked,playlists,history:historyRef.current,volume,
-              favArtists,favAlbums,blockedArtists:blockedRef.current,bgCover,
-              recs:fresh.slice(0,20),
-              stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}
-            }),2000);
-          }
+          // Sync everything to server after recs load
+          doFullSync();
         }
       }
     }catch(e){console.warn('recs failed:',e);}
@@ -461,10 +492,7 @@ export default function App(){
   useEffect(()=>{
     if(uid==='anon'||!Object.keys(trackPlays).length)return;
     if(statsTimer.current)clearTimeout(statsTimer.current);
-    statsTimer.current=setTimeout(()=>{
-      syncSave({liked,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover,recs:recs.slice(0,20),
-        stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}});
-    },3000);
+    statsTimer.current=setTimeout(()=>doFullSync(),3000);
   },[trackPlays,totalSec,maxStreak]);
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -565,7 +593,7 @@ export default function App(){
   const rmQ=(i:number)=>setQueue(prev=>{const n=[...prev];n.splice(i,1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   const inQ=(id:string)=>queue.some(t=>t.id===id);
   const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
-  const setVol=(v:number)=>{setVolume(v);try{localStorage.setItem('v47',String(v));}catch{}};
+  const setVol=(v:number)=>{setVolume(v);volumeRef.current=v;try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
   const blockArtist=(artist:string)=>{
