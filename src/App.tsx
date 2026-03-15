@@ -29,6 +29,74 @@ interface ArtistInfo {
 }
 
 const T: Record<string,Record<string,string>> = {
+  uk: {
+    home:'Головна',search:'Пошук',library:'Бібліотека',trending:'Тренди',profile:'Профіль',
+    find:'Знайти',notFound:'Нічого не знайдено',recent:'Недавнє',recommended:'Рекомендовані',
+    likedTracks:'Лайки',playlists:'Плейлисти',albums:'Альбоми',createPlaylist:'Створити плейлист',
+    playlistName:'Назва',create:'Створити',cancel:'Скасувати',addToPlaylist:'До плейлиста',
+    noPlaylists:'Немає плейлистів.',noLiked:'Немає лайків',loading:'Завантаження...',loadMore:'Ще',
+    retry:'Повторити',nowPlaying:'Зараз грає',plays:'прослуховувань',resetData:'Скинути дані',
+    language:'Мова',listenedTracks:'Прослухано',share:'Поділитися',copied:'Скопійовано!',
+    queue:'Черга',sound:'Sound',remix:'Remix',artists:'Артисти',albumsTab:'Альбоми',
+    shuffle:'Перемішати',repeatPl:'Повторювати',syncSaved:'Синхронізовано ✓',syncing:'Синхронізація...',
+    syncBtn:'Синхронізувати між пристроями',favArtists:'Артисти',addFav:'Підписатися',
+    removeFav:'Підписаний',backToSearch:'Назад',searchPlaceholder:'Пісні або артист',
+    noRecommended:'Послухай кілька треків',goToAlbum:'До альбому',
+    tracks:'Треки',discography:'Дискографія',popular:'Популярне',
+    latestRelease:'Останній реліз',noTracks:'Треки не знайдені',showMore:'Показати більше',
+    blockArtist:'Не рекомендувати',
+  },
+  kk: {
+    home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Трендтер',profile:'Профиль',
+    find:'Табу',notFound:'Ештеңе табылмады',recent:'Жақында',recommended:'Ұсынылған',
+    likedTracks:'Ұнатқандар',playlists:'Ойнату тізімдері',albums:'Альбомдар',createPlaylist:'Тізім жасау',
+    playlistName:'Атауы',create:'Жасау',cancel:'Болдырмау',addToPlaylist:'Тізімге қосу',
+    noPlaylists:'Тізім жоқ.',noLiked:'Ұнатқан жоқ',loading:'Жүктелуде...',loadMore:'Тағы',
+    retry:'Қайталау',nowPlaying:'Қазір ойнатылуда',plays:'тыңдалым',resetData:'Деректерді тазалау',
+    language:'Тіл',listenedTracks:'Тыңдалды',share:'Бөлісу',copied:'Көшірілді!',
+    queue:'Кезек',sound:'Sound',remix:'Remix',artists:'Орындаушылар',albumsTab:'Альбомдар',
+    shuffle:'Кездейсоқ',repeatPl:'Қайталау',syncSaved:'Синхронизацияланды ✓',syncing:'Синхронизация...',
+    syncBtn:'Құрылғылар арасында синхрондау',favArtists:'Орындаушылар',addFav:'Жазылу',
+    removeFav:'Жазылған',backToSearch:'Артқа',searchPlaceholder:'Ән немесе орындаушы',
+    noRecommended:'Бірнеше трек тыңда',goToAlbum:'Альбомға өту',
+    tracks:'Треки',discography:'Дискография',popular:'Танымал',
+    latestRelease:'Соңғы шығарылым',noTracks:'Треки табылмады',showMore:'Көбірек',
+    blockArtist:'Ұсынбау',
+  },
+  pl: {
+    home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Trendy',profile:'Profil',
+    find:'Szukaj',notFound:'Nic nie znaleziono',recent:'Ostatnie',recommended:'Polecane',
+    likedTracks:'Polubione',playlists:'Playlisty',albums:'Albumy',createPlaylist:'Utwórz playlistę',
+    playlistName:'Nazwa',create:'Utwórz',cancel:'Anuluj',addToPlaylist:'Do playlisty',
+    noPlaylists:'Brak playlist.',noLiked:'Brak polubionych',loading:'Ładowanie...',loadMore:'Więcej',
+    retry:'Ponów',nowPlaying:'Teraz gra',plays:'odtworzeń',resetData:'Resetuj dane',
+    language:'Język',listenedTracks:'Odsłuchane',share:'Udostępnij',copied:'Skopiowano!',
+    queue:'Kolejka',sound:'Sound',remix:'Remix',artists:'Artyści',albumsTab:'Albumy',
+    shuffle:'Losowo',repeatPl:'Powtarzaj',syncSaved:'Zsynchronizowano ✓',syncing:'Synchronizacja...',
+    syncBtn:'Synchronizuj między urządzeniami',favArtists:'Artyści',addFav:'Obserwuj',
+    removeFav:'Obserwujesz',backToSearch:'Wróć',searchPlaceholder:'Piosenki lub artysta',
+    noRecommended:'Posłuchaj kilku utworów',goToAlbum:'Do albumu',
+    tracks:'Utwory',discography:'Dyskografia',popular:'Popularne',
+    latestRelease:'Ostatnia premiera',noTracks:'Brak utworów',showMore:'Pokaż więcej',
+    blockArtist:'Nie polecaj',
+  },
+  tr: {
+    home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Trendler',profile:'Profil',
+    find:'Ara',notFound:'Hiçbir şey bulunamadı',recent:'Son Dinlenen',recommended:'Önerilen',
+    likedTracks:'Beğenilenler',playlists:'Çalma Listeleri',albums:'Albümler',createPlaylist:'Liste Oluştur',
+    playlistName:'İsim',create:'Oluştur',cancel:'İptal',addToPlaylist:'Listeye Ekle',
+    noPlaylists:'Liste yok.',noLiked:'Beğenilen yok',loading:'Yükleniyor...',loadMore:'Daha Fazla',
+    retry:'Tekrar',nowPlaying:'Şu an çalıyor',plays:'dinlenme',resetData:'Verileri Sıfırla',
+    language:'Dil',listenedTracks:'Dinlendi',share:'Paylaş',copied:'Kopyalandı!',
+    queue:'Sıra',sound:'Sound',remix:'Remix',artists:'Sanatçılar',albumsTab:'Albümler',
+    shuffle:'Karıştır',repeatPl:'Tekrarla',syncSaved:'Senkronize edildi ✓',syncing:'Senkronizasyon...',
+    syncBtn:'Cihazlar arasında senkronize et',favArtists:'Sanatçılar',addFav:'Takip Et',
+    removeFav:'Takip Ediliyor',backToSearch:'Geri',searchPlaceholder:'Şarkı veya sanatçı',
+    noRecommended:'Birkaç parça dinle',goToAlbum:'Albüme git',
+    tracks:'Parçalar',discography:'Diskografi',popular:'Popüler',
+    latestRelease:'Son çıkan',noTracks:'Parça bulunamadı',showMore:'Daha fazla göster',
+    blockArtist:'Önerme',
+  },
   en: {
     home:'Home',search:'Search',library:'Library',trending:'Trending',profile:'Profile',
     find:'Find',notFound:'Nothing found',recent:'Recent',recommended:'Recommended',
@@ -128,7 +196,7 @@ function getTopArtists(history:Track[],min=2,limit=5):string[]{const c=getArtist
 
 export default function App(){
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('home');
-  const[lang,setLang]=useState<'ru'|'en'>('ru');
+  const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'remix'|'artists'>('sound');
@@ -192,7 +260,7 @@ export default function App(){
   const uInit=uName.charAt(0).toUpperCase();
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;setSyncSt('saving');try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});setSyncSt('saved');setTimeout(()=>setSyncSt(''),2500);}catch{setSyncSt('');}};
-  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||''}),2000);};
+  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||'',recs:recs.slice(0,20)}),2000);};
 
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
@@ -225,17 +293,27 @@ export default function App(){
             setBlockedArtists(d.data.blockedArtists);
             try{localStorage.setItem('ba47',JSON.stringify(d.data.blockedArtists));}catch{}
           }
-          // Restore bgCover from server
-          if(d.data.bgCover){
-            setBgCover(d.data.bgCover);
-            try{localStorage.setItem('bgc47',d.data.bgCover);}catch{}
+          if(d.data.bgCover){setBgCover(d.data.bgCover);try{localStorage.setItem('bgc47',d.data.bgCover);}catch{}}
+          // Restore recs from server
+          if(d.data.recs?.length){
+            const blocked=d.data.blockedArtists||[];
+            const freshRecs=d.data.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
+            setRecs(freshRecs);
+            try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}
           }
-          // Always also load local fallbacks for things not in server
-          ll();
+          // Save everything to localStorage too for offline
+          try{
+            if(d.data.liked)localStorage.setItem('l47',JSON.stringify(d.data.liked));
+            if(d.data.history)localStorage.setItem('h47',JSON.stringify(d.data.history));
+            if(d.data.playlists)localStorage.setItem('p47',JSON.stringify(d.data.playlists));
+            if(d.data.favArtists)localStorage.setItem('fa47',JSON.stringify(d.data.favArtists));
+            if(d.data.favAlbums)localStorage.setItem('fal47',JSON.stringify(d.data.favAlbums));
+            if(d.data.blockedArtists)localStorage.setItem('ba47',JSON.stringify(d.data.blockedArtists));
+          }catch{}
         }else ll();
       }).catch(ll);
     }else ll();
-    try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en');}catch{}
+    try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
   useEffect(()=>{
@@ -461,7 +539,7 @@ export default function App(){
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
-  const chgLang=(l:'ru'|'en')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
+  const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
   const miniSeekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
@@ -884,7 +962,7 @@ export default function App(){
                 <img
                   key={bgCover||history[0]?.cover}
                   src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(12px) saturate(0.9) brightness(0.55)',transform:'scale(1.08)'}}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(6px) saturate(0.85) brightness(0.6)',transform:'scale(1.08)'}}
                   onError={()=>{}}
                 />
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,#0e0e0e 100%)'}}/>
@@ -895,8 +973,11 @@ export default function App(){
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
                 <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600}}>FORTY7</div>
               </div>
-              <button onPointerDown={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 11px',borderRadius:18,background:BG2,border:`1px solid #2e2e2e`,cursor:'pointer',flexShrink:0,maxWidth:140,...tap}}>
-                <div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,border:`1px solid ${ACC}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC,flexShrink:0}}>{uInit}</div>
+              <button onPointerDown={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 11px',borderRadius:18,background:BG2,border:`1px solid #2a2a2a`,cursor:'pointer',flexShrink:0,maxWidth:140,...tap}}>
+                {tg?.photo_url
+                  ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                  :<div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC,flexShrink:0}}>{uInit}</div>
+                }
                 <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
               </button>
             </div>
@@ -1014,18 +1095,27 @@ export default function App(){
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:18,display:'flex',alignItems:'center',gap:4}}>
               <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
               <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
-              {syncSt==='saving'&&<div style={{marginLeft:'auto',fontSize:10,color:TEXT_MUTED}}>{t('syncing')}</div>}
-              {syncSt==='saved'&&<div style={{marginLeft:'auto',fontSize:10,color:ACC}}>{t('syncSaved')}</div>}
+
             </div>
             <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 18px'}}>
-              <div style={{width:64,height:64,borderRadius:'50%',background:ACC_DIM,border:`2px solid ${ACC}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:ACC,marginBottom:10}}>{uInit}</div>
+              {tg?.photo_url
+                ? <img src={tg.photo_url} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',marginBottom:10,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                : <div style={{width:64,height:64,borderRadius:'50%',background:ACC_DIM,border:`2px solid ${ACC}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:ACC,marginBottom:10}}>{uInit}</div>
+              }
               <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
               {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
             </div>
             <div style={{padding:'0 16px'}}>
               {[{l:t('likedTracks'),v:liked.length},{l:t('playlists'),v:playlists.length},{l:t('listenedTracks'),v:history.length},{l:t('favArtists'),v:favArtists.length},{l:t('albums'),v:favAlbums.length},{l:lang==='ru'?'Заблокировано артистов':'Blocked artists',v:blockedArtists.length}].map(item=>(<div key={item.l} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 0',borderBottom:'1px solid #1e1e1e'}}><span style={{fontSize:13,color:TEXT_SEC}}>{item.l}</span><span style={{fontSize:13,fontWeight:600,color:ACC}}>{item.v}</span></div>))}
               {blockedArtists.length>0&&<button onPointerDown={()=>{setBlockedArtists([]);try{localStorage.setItem('ba47',JSON.stringify([]));}catch{}}} style={{width:'100%',marginTop:4,padding:'8px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:9,color:'#c05050',fontSize:11,cursor:'pointer',...tap}}>{lang==='ru'?'Очистить заблокированных':'Clear blocked artists'}</button>}
-              <div style={{padding:'14px 0 8px'}}><div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div><div style={{display:'flex',gap:6}}>{(['ru','en'] as const).map(l=>(<button key={l} onPointerDown={()=>chgLang(l)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:13,fontWeight:lang===l?600:400,cursor:'pointer',...tap}}>{l==='ru'?'🇷🇺 Русский':'🇺🇸 English'}</button>))}</div></div>
+              <div style={{padding:'14px 0 8px'}}>
+                <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
+                  {([['ru','🇷🇺 RU'],['en','🇺🇸 EN'],['uk','🇺🇦 UK'],['kk','🇰🇿 KK'],['pl','🇵🇱 PL'],['tr','🇹🇷 TR']] as const).map(([l,label])=>(
+                    <button key={l} onPointerDown={()=>chgLang(l as any)} style={{padding:'8px 4px',borderRadius:8,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:11,fontWeight:lang===l?600:400,cursor:'pointer',textAlign:'center' as const,...tap}}>{label}</button>
+                  ))}
+                </div>
+              </div>
               <button onPointerDown={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',...tap}}>🔄 {t('syncBtn')}</button>
               <button onPointerDown={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);setBlockedArtists([]);}} style={{width:'100%',marginTop:6,padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer',...tap}}>{t('resetData')}</button>
             </div>
@@ -1037,55 +1127,55 @@ export default function App(){
 
       {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
       {current&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(28,28,28,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2e2e2e',borderRadius:14,padding:'8px 12px 8px',zIndex:100}}>
-          {/* Строка 1: обложка + инфо + громкость + play */}
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-            <div onPointerDown={()=>setFullPlayer(true)} style={{cursor:'pointer',flexShrink:0}}><Img src={current.cover} size={38} radius={7}/></div>
-            <div onPointerDown={()=>setFullPlayer(true)} style={{flex:1,minWidth:0,cursor:'pointer'}}>
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:16,padding:'10px 12px 8px',zIndex:100}}>
+          {/* Row 1: cover + title/artist */}
+          <div onPointerDown={()=>setFullPlayer(true)} style={{display:'flex',alignItems:'center',gap:9,marginBottom:8,cursor:'pointer'}}>
+            <Img src={current.cover} size={36} radius={7}/>
+            <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
               <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{current.artist}</div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
-              <div {...volSP} ref={volSP.ref} style={{width:38,height:20,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
-                <div style={{width:'100%',height:2.5,background:'rgba(255,255,255,0.08)',borderRadius:2,position:'relative'}}>
-                  <div style={{width:`${volume*100}%`,height:'100%',background:'#555',borderRadius:2}}/>
-                  <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#888',borderRadius:'50%'}}/>
-                </div>
+          </div>
+          {/* Row 2: volume ── Prev · Next ── loop ── play(big) */}
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:7}}>
+            {/* Volume */}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+            <div {...volSP} ref={volSP.ref} style={{width:44,height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',flexShrink:0}}>
+              <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.07)',borderRadius:2,position:'relative'}}>
+                <div style={{width:`${volume*100}%`,height:'100%',background:'#666',borderRadius:2}}/>
+                <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#999',borderRadius:'50%'}}/>
               </div>
-              {/* Play/Pause — onPointerDown для надёжного срабатывания */}
-              <button
-                onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}}
-                style={{width:38,height:38,minWidth:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,...tap}}>
-                <PP sz="sm" col={BG}/>
+            </div>
+            {/* Prev · Next — centered */}
+            <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',gap:2}}>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px',display:'flex',alignItems:'center',gap:3,...tap,opacity:playHistory.length>0?1:0.3}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                <span style={{fontSize:9,color:'#666'}}>{lang==='ru'||lang==='uk'?'Назад':lang==='kk'?'Артқа':lang==='pl'?'Wstecz':lang==='tr'?'Geri':'Prev'}</span>
+              </button>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px',display:'flex',alignItems:'center',gap:3,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
+                <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Вперёд':lang==='uk'?'Далі':lang==='kk'?'Алға':lang==='pl'?'Dalej':lang==='tr'?'İleri':'Next'}</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
-          </div>
-          {/* Строка 2: Prev / Next */}
-          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:20,marginBottom:3}}>
-            <button
-              onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 12px',display:'flex',alignItems:'center',gap:5,...tap,opacity:playHistory.length>0?1:0.3}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-              <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Назад':'Prev'}</span>
+            {/* Loop */}
+            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();setLoop(!loop);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 3px',flexShrink:0,...tap}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#555'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
             </button>
-            <button
-              onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 12px',display:'flex',alignItems:'center',gap:5,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
-              <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Вперёд':'Next'}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            {/* Play/Pause — big, right side */}
+            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,...tap}}>
+              <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Строка 3: timeline */}
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:9,color:'#555',minWidth:24,textAlign:'right'}}>{curTime}</span>
-            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+          {/* Row 3: timeline */}
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{fontSize:9,color:'#4a4a4a',minWidth:24,textAlign:'right'}}>{curTime}</span>
+            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:14,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
               <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.06)',borderRadius:2,position:'relative'}}>
                 <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:2,transition:'width 0.3s linear'}}/>
-                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:9,height:9,background:ACC,borderRadius:'50%'}}/>
+                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:ACC,borderRadius:'50%'}}/>
               </div>
             </div>
-            <span style={{fontSize:9,color:'#555',minWidth:24}}>{current.duration}</span>
+            <span style={{fontSize:9,color:'#4a4a4a',minWidth:24}}>{current.duration}</span>
           </div>
         </div>
       )}
