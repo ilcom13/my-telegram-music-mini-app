@@ -187,8 +187,11 @@ export default function App(){
       const fal=localStorage.getItem('fal47');if(fal)setFavAlbums(JSON.parse(fal));
       const v=localStorage.getItem('v47');if(v)setVolume(parseFloat(v));
       const q=localStorage.getItem('q47');if(q)setQueue(JSON.parse(q));
-      const ba=localStorage.getItem('ba47');if(ba)setBlockedArtists(JSON.parse(ba));
-      const rc=localStorage.getItem('recs47');if(rc)setRecs(JSON.parse(rc));
+      setBlockedArtists(blocked_on_load);
+      const ba_raw=localStorage.getItem('ba47');
+      const blocked_on_load:string[]=ba_raw?JSON.parse(ba_raw):[];
+      const rc=localStorage.getItem('recs47');
+      if(rc){const parsed=JSON.parse(rc);setRecs(parsed.filter((tr:Track)=>!blocked_on_load.includes(tr.artist)));}
       const bgc=localStorage.getItem('bgc47');if(bgc)setBgCover(bgc);
     }catch{}};
     if(uid!=='anon'){fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{if(d.data){if(d.data.liked)setLiked(d.data.liked);if(d.data.playlists)setPlaylists(d.data.playlists);if(d.data.history)setHistory(d.data.history);if(d.data.favArtists)setFavArtists(d.data.favArtists);if(d.data.favAlbums)setFavAlbums(d.data.favAlbums);if(d.data.volume!==undefined)setVolume(d.data.volume);}else ll();}).catch(ll);}else ll();
@@ -213,7 +216,7 @@ export default function App(){
           try{localStorage.setItem('recs47',JSON.stringify(newRecs.slice(0,20)));}catch{}
         }
       }).catch(()=>{});
-  },[recsVersion,history.length,blockedArtists.length]);
+  },[recsVersion,history.length,blockedArtists.join(',')]);
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -238,26 +241,36 @@ export default function App(){
   useEffect(()=>{if(screen==='trending'&&!trends[trendGenre])loadTrend(trendGenre,true);},[screen,trendGenre]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
-  const playDirect=(track:Track)=>{
-    if(!track.mp3)return;
-    if(audio.current){
-      audio.current.pause();
-      audio.current.src=`${W}/stream?url=${encodeURIComponent(track.mp3)}`;
-      audio.current.load();
-      const tryPlay=()=>{
-        const p=audio.current?.play();
-        if(p){p.then(()=>setPlaying(true)).catch(()=>{setTimeout(()=>{audio.current?.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);});}
-      };
-      tryPlay();
+  const playDirect=async(track:Track)=>{
+    // Always resolve a FRESH mp3 URL — SoundCloud URLs expire in ~1 minute
+    let freshMp3=track.mp3;
+    if(track.id&&!track.isArtist&&!track.isAlbum){
+      try{
+        const r=await fetch(`${W}/resolve?id=${track.id}`);
+        const d=await r.json();
+        if(d.mp3)freshMp3=d.mp3;
+      }catch{}
+    }
+    if(!freshMp3)return;
+    const a=audio.current;
+    if(a){
+      a.pause();
+      a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      a.load();
+      a.play().then(()=>setPlaying(true)).catch(err=>{
+        console.warn('play failed, retry:',err);
+        setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
+      });
     }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
-    setCurrent(track);setProgress(0);setCurTime('0:00');
+    setCurrent({...track,mp3:freshMp3});setProgress(0);setCurTime('0:00');
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
       playCountRef.current+=1;
-      if(playCountRef.current>=3){playCountRef.current=0;setRecsVersion(v=>v+1);}
+      // Update recs every 2 plays
+      if(playCountRef.current>=2){playCountRef.current=0;setRecsVersion(v=>v+1);}
       return n;
     });
   };
@@ -307,7 +320,12 @@ export default function App(){
   const setVol=(v:number)=>{setVolume(v);try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums);return n;});};
-  const blockArtist=(artist:string)=>{setBlockedArtists(prev=>{const n=[...new Set([...prev,artist])];try{localStorage.setItem('ba47',JSON.stringify(n));}catch{}return n;});setRecs(prev=>prev.filter(tr=>tr.artist!==artist));};
+  const blockArtist=(artist:string)=>{
+    setBlockedArtists(prev=>{const n=[...new Set([...prev,artist])];try{localStorage.setItem('ba47',JSON.stringify(n));}catch{}return n;});
+    setRecs(prev=>{const filtered=prev.filter(tr=>tr.artist!==artist);try{localStorage.setItem('recs47',JSON.stringify(filtered));}catch{}return filtered;});
+    // Refresh recommendations immediately
+    setRecsVersion(v=>v+1);
+  };
 
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
