@@ -188,6 +188,8 @@ export default function App(){
       const v=localStorage.getItem('v47');if(v)setVolume(parseFloat(v));
       const q=localStorage.getItem('q47');if(q)setQueue(JSON.parse(q));
       const ba=localStorage.getItem('ba47');if(ba)setBlockedArtists(JSON.parse(ba));
+      const rc=localStorage.getItem('recs47');if(rc)setRecs(JSON.parse(rc));
+      const bgc=localStorage.getItem('bgc47');if(bgc)setBgCover(bgc);
     }catch{}};
     if(uid!=='anon'){fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{if(d.data){if(d.data.liked)setLiked(d.data.liked);if(d.data.playlists)setPlaylists(d.data.playlists);if(d.data.history)setHistory(d.data.history);if(d.data.favArtists)setFavArtists(d.data.favArtists);if(d.data.favAlbums)setFavAlbums(d.data.favAlbums);if(d.data.volume!==undefined)setVolume(d.data.volume);}else ll();}).catch(ll);}else ll();
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en');}catch{}
@@ -206,7 +208,9 @@ export default function App(){
         if(d.tracks?.length){
           const histIds=new Set(history.map(h=>h.id));
           const fresh=d.tracks.filter((tr:Track)=>!histIds.has(tr.id)&&!blockedArtists.includes(tr.artist));
-          setRecs(fresh.length>0?fresh:d.tracks.filter((tr:Track)=>!blockedArtists.includes(tr.artist)));
+          const newRecs=fresh.length>0?fresh:d.tracks.filter((tr:Track)=>!blockedArtists.includes(tr.artist));
+          setRecs(newRecs);
+          try{localStorage.setItem('recs47',JSON.stringify(newRecs.slice(0,20)));}catch{}
         }
       }).catch(()=>{});
   },[recsVersion,history.length,blockedArtists.length]);
@@ -248,7 +252,7 @@ export default function App(){
     }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent(track);setProgress(0);setCurTime('0:00');
-    if(track.cover)setBgCover(track.cover);
+    if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
@@ -543,15 +547,15 @@ export default function App(){
           </div>
         </div>
       )}
-      <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:36,paddingBottom:8,flexShrink:0}}>
-        <button onPointerDown={()=>setFullPlayer(false)} style={{background:'rgba(255,255,255,0.07)',border:'none',cursor:'pointer',padding:'10px 16px',borderRadius:24,display:'flex',alignItems:'center',gap:6,...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          <span style={{fontSize:12,color:'#bbb',fontWeight:500}}>{lang==='ru'?'Назад':'Back'}</span>
+      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:36,paddingBottom:8,flexShrink:0}}>
+        <button onPointerDown={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,...tap}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
-        <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase'}}>{t('nowPlaying')}</span>
-        <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:8,margin:-8,position:'relative',...tap}}>
+        <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>{t('nowPlaying')}</span>
+        <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 0 8px 8px',position:'relative',display:'flex',justifyContent:'flex-end',...tap}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-          {queue.length>0&&<span style={{position:'absolute',top:3,right:3,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center'}}>{queue.length}</span>}
+          {queue.length>0&&<span style={{position:'absolute',top:4,right:0,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center'}}>{queue.length}</span>}
         </button>
       </div>
       <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:14}}>
@@ -762,12 +766,17 @@ export default function App(){
 
         {/* ── HOME ─────────────────────────────────────────────────────────────── */}
         {screen==='home'&&(
-          <div>
-            {/* Blurred cover background */}
-            {(bgCover||(history.length>0&&history[0].cover))&&(
-              <div style={{position:'absolute',top:0,left:0,right:0,height:220,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
-                <img src={bgCover||history[0].cover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(28px) saturate(0.7) brightness(0.35)',transform:'scale(1.15)'}} onError={()=>{}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.5) 40%,rgba(14,14,14,0.85) 70%,#0e0e0e 100%)'}}/>
+          <div style={{position:'relative'}}>
+            {/* Blurred cover background — always uses current bgCover, updates live */}
+            {(bgCover||(history.length>0&&history[0]?.cover))&&(
+              <div style={{position:'absolute',top:0,left:0,right:0,height:240,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
+                <img
+                  key={bgCover||history[0]?.cover}
+                  src={bgCover||history[0]?.cover}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) saturate(0.8) brightness(0.3)',transform:'scale(1.2)'}}
+                  onError={()=>{}}
+                />
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.1) 0%,rgba(14,14,14,0.4) 35%,rgba(14,14,14,0.8) 65%,#0e0e0e 100%)'}}/>
               </div>
             )}
             <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
