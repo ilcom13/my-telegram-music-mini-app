@@ -187,9 +187,9 @@ export default function App(){
       const fal=localStorage.getItem('fal47');if(fal)setFavAlbums(JSON.parse(fal));
       const v=localStorage.getItem('v47');if(v)setVolume(parseFloat(v));
       const q=localStorage.getItem('q47');if(q)setQueue(JSON.parse(q));
-      setBlockedArtists(blocked_on_load);
       const ba_raw=localStorage.getItem('ba47');
       const blocked_on_load:string[]=ba_raw?JSON.parse(ba_raw):[];
+      setBlockedArtists(blocked_on_load);
       const rc=localStorage.getItem('recs47');
       if(rc){const parsed=JSON.parse(rc);setRecs(parsed.filter((tr:Track)=>!blocked_on_load.includes(tr.artist)));}
       const bgc=localStorage.getItem('bgc47');if(bgc)setBgCover(bgc);
