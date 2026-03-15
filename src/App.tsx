@@ -242,7 +242,7 @@ export default function App(){
   const[totalSec,setTotalSec]=useState(0);
   const[exploredIds,setExploredIds]=useState<string[]>([]);
   const[listenedIds,setListenedIds]=useState<string[]>([]);
-  const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;count:number}>>({});
+  const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
   const[streakDays,setStreakDays]=useState<string[]>([]);
   const[maxStreak,setMaxStreak]=useState(0);
   const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
@@ -435,7 +435,7 @@ export default function App(){
       if(listenSec.current===40){
         const tid=listenTrackId.current;
         setListenedIds(prev=>{if(prev.includes(tid))return prev;const n=[...prev,tid];try{localStorage.setItem('lst47',JSON.stringify(n));}catch{}return n;});
-        setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,count:0};const n={...prev,[tid]:{...entry,count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
+        setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
       }
     },1000);
     setHistory(prev=>{
@@ -1169,70 +1169,98 @@ export default function App(){
                 </div>
               </div>
             )}
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:14,display:'flex',alignItems:'center',gap:4}}>
-              <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-              <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
-              <div style={{marginLeft:'auto',display:'flex',gap:6}}>
-                <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,borderRadius:'50%',background:BG2,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                </button>
-              </div>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 14px'}}>
-              {tg?.photo_url
-                ? <img src={tg.photo_url} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',marginBottom:10,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                : <div style={{width:64,height:64,borderRadius:'50%',background:ACC_DIM,border:`2px solid ${ACC}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:ACC,marginBottom:10}}>{uInit}</div>
-              }
-              <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
-              {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
-            </div>
-            <div style={{padding:'0 16px'}}>
-              {/* Stats button */}
-              <button onPointerDown={()=>{}} style={{width:'100%',padding:'11px 14px',background:BG2,border:'1px solid #252525',borderRadius:12,color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,marginBottom:14,...tap}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                <span style={{color:TEXT_PRIMARY}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly stats'}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              {/* Main stats */}
-              {(()=>{
-                const hours=Math.floor(totalSec/3600);
-                const mins=Math.floor((totalSec%3600)/60);
-                const timeStr=hours>0?`${hours}ч ${mins}мин`:`${mins}мин`;
-                const topEntry=Object.values(trackPlays).sort((a,b)=>b.count-a.count)[0];
-                const stats=[
-                  {icon:'🎵',label:lang==='ru'?'Времени в музыке':lang==='uk'?'Часу в музиці':lang==='kk'?'Музыкада уақыт':lang==='pl'?'Czas w muzyce':lang==='tr'?'Müzikte geçen süre':'Time in music',val:timeStr||'0 мин'},
-                  {icon:'👀',label:lang==='ru'?'Изучено треков':lang==='uk'?'Вивчено треків':lang==='kk'?'Зерттелген':lang==='pl'?'Odkryte utwory':lang==='tr'?'Keşfedilen':'Explored',val:String(exploredIds.length)},
-                  {icon:'✅',label:lang==='ru'?'Прослушано треков':lang==='uk'?'Прослухано треків':lang==='kk'?'Тыңдалды':lang==='pl'?'Odsłuchane':lang==='tr'?'Dinlendi':'Listened (40s+)',val:String(listenedIds.length)},
-                  {icon:'🔥',label:lang==='ru'?'Макс. стрик дней':lang==='uk'?'Макс. стрік днів':lang==='kk'?'Макс. күн серия':lang==='pl'?'Maksymalny streak':lang==='tr'?'Maksimum seri':'Max streak',val:`${maxStreak} ${lang==='ru'?'дн':lang==='uk'?'дн':lang==='kk'?'күн':lang==='pl'?'dni':lang==='tr'?'gün':'days'}`},
-                ];
-                return(
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-                    {stats.map(s=>(
-                      <div key={s.label} style={{background:BG2,border:'1px solid #222',borderRadius:12,padding:'12px 12px'}}>
-                        <div style={{fontSize:18,marginBottom:4}}>{s.icon}</div>
-                        <div style={{fontSize:16,fontWeight:700,color:ACC}}>{s.val}</div>
-                        <div style={{fontSize:10,color:TEXT_MUTED,marginTop:3,lineHeight:1.3}}>{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-              {/* Most played track */}
-              {(()=>{
-                const top=Object.values(trackPlays).sort((a,b)=>b.count-a.count)[0];
-                if(!top)return null;
-                return(
-                  <div style={{background:BG2,border:`1px solid ${ACC}22`,borderRadius:12,padding:'12px',marginBottom:12}}>
-                    <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:8,textTransform:'uppercase' as const,letterSpacing:0.8}}>{lang==='ru'?'Самый зацикленный трек':lang==='uk'?'Найулюбленіший трек':lang==='kk'?'Ең көп тыңдалған':lang==='pl'?'Najczęściej grany':lang==='tr'?'En çok çalınan':'Most played'}</div>
-                    <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{top.title}</div>
-                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
-                      <span style={{fontSize:11,color:TEXT_SEC}}>{top.artist}</span>
-                      <span style={{fontSize:11,color:ACC,fontWeight:600}}>{top.count}x</span>
+            {(()=>{
+              // Top track for bg cover
+              const topTrack=Object.entries(trackPlays).sort((a,b)=>b[1].count-a[1].count)[0];
+              const topCover=topTrack?trackPlays[topTrack[0]].cover||bgCover:bgCover;
+              const topTrackData=topTrack?{...trackPlays[topTrack[0]],id:topTrack[0]}:null;
+              // Time formatted per language
+              const hours=Math.floor(totalSec/3600);
+              const mins=Math.floor((totalSec%3600)/60);
+              const fmtTime=()=>{
+                if(lang==='ru'||lang==='uk'){return hours>0?`${hours} ч ${mins} мин`:`${mins} мин`;}
+                if(lang==='kk'){return hours>0?`${hours} сағ ${mins} мин`:`${mins} мин`;}
+                if(lang==='pl'){return hours>0?`${hours} godz ${mins} min`:`${mins} min`;}
+                if(lang==='tr'){return hours>0?`${hours} sa ${mins} dk`:`${mins} dk`;}
+                return hours>0?`${hours}h ${mins}m`:`${mins}m`;
+              };
+              return(
+                <div style={{position:'relative'}}>
+                  {/* Blurred bg cover — top track */}
+                  {topCover&&(
+                    <div style={{position:'absolute',top:0,left:0,right:0,height:200,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
+                      <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(6px) saturate(0.85) brightness(0.55)',transform:'scale(1.08)'}} onError={()=>{}}/>
+                      <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,${BG} 100%)`}}/>
+                    </div>
+                  )}
+                  {/* Header */}
+                  <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:8,display:'flex',alignItems:'center',gap:4}}>
+                    <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+                    <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
+                    <div style={{marginLeft:'auto'}}>
+                      <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                      </button>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
+                  {/* Avatar + name */}
+                  <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 14px'}}>
+                    {tg?.photo_url
+                      ?<img src={tg.photo_url} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',marginBottom:10,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                      :<div style={{width:64,height:64,borderRadius:'50%',background:ACC_DIM,border:`2px solid ${ACC}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:ACC,marginBottom:10}}>{uInit}</div>
+                    }
+                    <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
+                    {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
+                  </div>
+                  {/* Stats content */}
+                  <div style={{position:'relative',zIndex:1,padding:'0 16px'}}>
+                    {/* Monthly stats button */}
+                    <button onPointerDown={()=>{}} style={{width:'100%',padding:'11px 14px',background:'rgba(30,30,30,0.8)',border:'1px solid #252525',borderRadius:12,color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,marginBottom:12,...tap}}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      <span style={{color:TEXT_PRIMARY,fontSize:13}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly stats'}</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    {/* Row 1: Time + Streak */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
+                        <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Времени в музыке':lang==='uk'?'В музиці':lang==='kk'?'Музыкада':lang==='pl'?'W muzyce':lang==='tr'?'Müzikte':'Time in music'}</div>
+                        <div style={{fontSize:18,fontWeight:700,color:ACC}}>{fmtTime()}</div>
+                      </div>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
+                        <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Макс. стрик 🔥':lang==='uk'?'Макс. стрік 🔥':lang==='kk'?'Серия 🔥':lang==='pl'?'Streak 🔥':lang==='tr'?'Seri 🔥':'Max streak 🔥'}</div>
+                        <div style={{fontSize:18,fontWeight:700,color:ACC}}>{maxStreak} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'?'дн':lang==='uk'?'дн':lang==='kk'?'күн':lang==='pl'?'dni':lang==='tr'?'gün':'d'}</span></div>
+                      </div>
+                    </div>
+                    {/* Row 2: Explored + Listened */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
+                        <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Изучено':lang==='uk'?'Вивчено':lang==='kk'?'Зерттелген':lang==='pl'?'Odkryte':lang==='tr'?'Keşfedilen':'Explored'}</div>
+                        <div style={{fontSize:18,fontWeight:700,color:ACC}}>{exploredIds.length} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'||lang==='uk'?'тр':'tr'}</span></div>
+                      </div>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
+                        <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Прослушано':lang==='uk'?'Прослухано':lang==='kk'?'Тыңдалды':lang==='pl'?'Odsłuchane':lang==='tr'?'Dinlendi':'Listened'}</div>
+                        <div style={{fontSize:18,fontWeight:700,color:ACC}}>{listenedIds.length} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'||lang==='uk'?'тр':'tr'}</span></div>
+                      </div>
+                    </div>
+                    {/* Most played track — full width card with cover */}
+                    {topTrackData&&(
+                      <div style={{background:'rgba(25,25,25,0.85)',border:`1px solid ${ACC}22`,borderRadius:12,padding:'12px',marginBottom:14,display:'flex',alignItems:'center',gap:12}}>
+                        <Img src={topTrackData.cover||''} size={48} radius={8}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:4,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Самый зацикленный':lang==='uk'?'Найулюбленіший':lang==='kk'?'Ең көп тыңдалған':lang==='pl'?'Najczęściej grany':lang==='tr'?'En çok çalınan':'Most played'}</div>
+                          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTrackData.title}</div>
+                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{topTrackData.artist}</div>
+                        </div>
+                        <div style={{flexShrink:0,textAlign:'center' as const}}>
+                          <div style={{fontSize:20,fontWeight:700,color:ACC}}>{topTrackData.count}</div>
+                          <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'раз':lang==='uk'?'разів':lang==='kk'?'рет':lang==='pl'?'razy':lang==='tr'?'kez':'times'}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
