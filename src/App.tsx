@@ -290,7 +290,7 @@ export default function App(){
   const uInit=uName.charAt(0).toUpperCase();
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;setSyncSt('saving');try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});setSyncSt('saved');setTimeout(()=>setSyncSt(''),2500);}catch{setSyncSt('');}};
-  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||'',recs:recs.slice(0,20)}),2000);};
+  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||'',recs:recs.slice(0,20),stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}}),2000);};
 
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
@@ -335,6 +335,16 @@ export default function App(){
             const freshRecs=d.data.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
             setRecs(freshRecs);
             try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}
+          }
+          // Restore stats from server
+          if(d.data.stats){
+            const s=d.data.stats;
+            if(s.totalSec!==undefined){setTotalSec(s.totalSec);try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}}
+            if(s.exploredIds?.length){setExploredIds(s.exploredIds);try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}}
+            if(s.listenedIds?.length){setListenedIds(s.listenedIds);try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}}
+            if(s.trackPlays&&Object.keys(s.trackPlays).length){setTrackPlays(s.trackPlays);try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}}
+            if(s.streakDays?.length){setStreakDays(s.streakDays);setMaxStreak(calcMaxStreak(s.streakDays));try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}}
+            if(s.maxStreak!==undefined)setMaxStreak(s.maxStreak);
           }
           // Save everything to localStorage too for offline
           try{
@@ -444,7 +454,7 @@ export default function App(){
       playCountRef.current+=1;
       setRecsVersion(v=>v+1);
       // Save everything to server on every track play
-      triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
+      triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover); // stats included via closure
       return n;
     });
   };
@@ -640,6 +650,7 @@ export default function App(){
   );
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
+    const btnBlocked=useRef(false); // blocks play when action btn pressed
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
     const swipeFired=useRef(false);
@@ -682,7 +693,7 @@ export default function App(){
         <div
           onPointerDown={e=>{e.stopPropagation();swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen)setMenuId(null);}}
           onPointerMove={swipeHandlers.onPointerMove}
-          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!wasMenuOpen.current)playTrack(track);swipeFired.current=false;wasMenuOpen.current=false;}}
+          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!wasMenuOpen.current&&!btnBlocked.current)playTrack(track);swipeFired.current=false;wasMenuOpen.current=false;btnBlocked.current=false;}}
           onPointerCancel={swipeHandlers.onPointerCancel}
           style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',...tap,transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
@@ -702,10 +713,10 @@ export default function App(){
           </div>
           {!track.isArtist&&!track.isAlbum&&(
             <div style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
-              <button onPointerDown={e=>addQ(track,e)} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();btnBlocked.current=true;addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();btnBlocked.current=true;setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -1198,7 +1209,7 @@ export default function App(){
                     <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
                     <div style={{marginLeft:'auto'}}>
-                      <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+                      <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                       </button>
                     </div>
@@ -1268,10 +1279,10 @@ export default function App(){
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
       {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
-      {current&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:16,padding:'7px 12px 6px',zIndex:100}}>
+      {current&&screen!=='profile'&&(
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:14,padding:'6px 11px 5px',zIndex:100}}>
           {/* Row 1: cover + title/artist */}
-          <div onPointerDown={()=>setFullPlayer(true)} style={{display:'flex',alignItems:'center',gap:9,marginBottom:5,cursor:'pointer'}}>
+          <div onPointerDown={()=>setFullPlayer(true)} style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,cursor:'pointer'}}>
             <Img src={current.cover} size={36} radius={7}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
@@ -1279,10 +1290,10 @@ export default function App(){
             </div>
           </div>
           {/* Row 2: volume ── Prev · Next ── loop ── play(big) */}
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+          <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:3}}>
             {/* Volume */}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-            <div {...volSP} ref={volSP.ref} style={{width:44,height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',flexShrink:0}}>
+            <div {...volSP} ref={volSP.ref} style={{width:38,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',flexShrink:0}}>
               <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.07)',borderRadius:2,position:'relative'}}>
                 <div style={{width:`${volume*100}%`,height:'100%',background:'#666',borderRadius:2}}/>
                 <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#999',borderRadius:'50%'}}/>
@@ -1290,11 +1301,11 @@ export default function App(){
             </div>
             {/* Prev · Next — centered */}
             <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',gap:2}}>
-              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px',display:'flex',alignItems:'center',gap:3,...tap,opacity:playHistory.length>0?1:0.3}}>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:'3px 6px',display:'flex',alignItems:'center',gap:2,...tap,opacity:playHistory.length>0?1:0.3}}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
                 <span style={{fontSize:9,color:'#666'}}>{lang==='ru'||lang==='uk'?'Назад':lang==='kk'?'Артқа':lang==='pl'?'Wstecz':lang==='tr'?'Geri':'Prev'}</span>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px',display:'flex',alignItems:'center',gap:3,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:'3px 6px',display:'flex',alignItems:'center',gap:2,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
                 <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Вперёд':lang==='uk'?'Далі':lang==='kk'?'Алға':lang==='pl'?'Dalej':lang==='tr'?'İleri':'Next'}</span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
@@ -1304,12 +1315,12 @@ export default function App(){
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#555'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
             </button>
             {/* Play/Pause — big, right side */}
-            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,...tap}}>
+            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}} style={{width:38,height:38,minWidth:38,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
           {/* Row 3: timeline */}
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
+          <div style={{display:'flex',alignItems:'center',gap:4}}>
             <span style={{fontSize:9,color:'#4a4a4a',minWidth:24,textAlign:'right'}}>{curTime}</span>
             <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:14,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
               <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.06)',borderRadius:2,position:'relative'}}>
