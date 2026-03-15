@@ -401,6 +401,16 @@ export default function App(){
   },[current,loop,queue,recs,history,blockedArtists]);
 
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
+  // Sync stats to server when trackPlays changes (catches most-played track)
+  const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  useEffect(()=>{
+    if(uid==='anon'||!Object.keys(trackPlays).length)return;
+    if(statsTimer.current)clearTimeout(statsTimer.current);
+    statsTimer.current=setTimeout(()=>{
+      syncSave({liked,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover,recs:recs.slice(0,20),
+        stats:{totalSec,exploredIds,listenedIds,trackPlays,streakDays,maxStreak}});
+    },3000);
+  },[trackPlays,totalSec,maxStreak]);
   useEffect(()=>{
     const a=audio.current;if(!a)return;
     const onVol=()=>{if(Math.abs(a.volume-volume)>0.02)setVol(a.volume);};
@@ -690,33 +700,44 @@ export default function App(){
         {/* Swipe indicator */}
         {swipeVis.dir==='right'&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(swipeVis.dx,80),background:'rgba(239,191,127,0.15)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:10,pointerEvents:'none',transition:'width 0.05s'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={ACC}/><circle cx="3" cy="12" r="1.2" fill={ACC}/><circle cx="3" cy="18" r="1.2" fill={ACC}/></svg></div>}
         {swipeVis.dir==='left'&&onSwipeLeft&&<div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(-swipeVis.dx,80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:10,pointerEvents:'none'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>}
+        {/* Outer row container — handles swipe only, NOT click-to-play */}
         <div
-          onPointerDown={e=>{e.stopPropagation();swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen)setMenuId(null);}}
+          onPointerDown={e=>{swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen){e.stopPropagation();setMenuId(null);}}}
           onPointerMove={swipeHandlers.onPointerMove}
-          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!wasMenuOpen.current&&!btnBlocked.current)playTrack(track);swipeFired.current=false;wasMenuOpen.current=false;btnBlocked.current=false;}}
+          onPointerUp={e=>{swipeHandlers.onPointerUp(e);}}
           onPointerCancel={swipeHandlers.onPointerCancel}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',...tap,transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
+          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
-          <div style={{position:'relative',flexShrink:0}}>
-            <Img src={track.cover} size={44} radius={track.isArtist?22:8}/>
-            {active&&!track.isArtist&&!track.isAlbum&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
-          </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13,fontWeight:500,color:active?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{track.title}</div>
-            <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
-              {!track.isArtist&&!track.isAlbum&&onArtistClick
-                ?<button onPointerDown={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...tap}}>{track.artist}</button>
-                :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:track.artist}</span>
-              }
-              {!track.isArtist&&!track.isAlbum&&track.plays>0&&<span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>· {fmtP(track.plays)}</span>}
+          {/* LEFT ZONE — clicking here plays the track */}
+          <div
+            onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);return;}}}
+            onPointerUp={e=>{e.stopPropagation();if(!swipeFired.current&&!mOpen)playTrack(track);swipeFired.current=false;}}
+            style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,...tap}}>
+            <div style={{position:'relative',flexShrink:0}}>
+              <Img src={track.cover} size={44} radius={track.isArtist?22:8}/>
+              {active&&!track.isArtist&&!track.isAlbum&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,color:active?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{track.title}</div>
+              <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
+                {!track.isArtist&&!track.isAlbum&&onArtistClick
+                  ?<button onPointerDown={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...tap}}>{track.artist}</button>
+                  :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:track.artist}</span>
+                }
+                {!track.isArtist&&!track.isAlbum&&track.plays>0&&<span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>· {fmtP(track.plays)}</span>}
+              </div>
             </div>
           </div>
+          {/* RIGHT ZONE — action buttons, clicking here NEVER plays track */}
           {!track.isArtist&&!track.isAlbum&&(
-            <div style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
-              <button onPointerDown={e=>{e.stopPropagation();btnBlocked.current=true;addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
+            <div
+              onPointerDown={e=>e.stopPropagation()}
+              onPointerUp={e=>e.stopPropagation()}
+              style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
+              <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();btnBlocked.current=true;setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
