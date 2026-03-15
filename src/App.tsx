@@ -175,7 +175,7 @@ export default function App(){
   const uInit=uName.charAt(0).toUpperCase();
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;setSyncSt('saving');try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});setSyncSt('saved');setTimeout(()=>setSyncSt(''),2500);}catch{setSyncSt('');}};
-  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[])=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal}),2000);};
+  const triggerSync=(l:Track[],p:Playlist[],h:Track[],v:number,fa:ArtistInfo[],fal:AlbumInfo[],ba?:string[],bg?:string)=>{if(syncTimer.current)clearTimeout(syncTimer.current);syncTimer.current=setTimeout(()=>syncSave({liked:l,playlists:p,history:h,volume:v,favArtists:fa,favAlbums:fal,blockedArtists:ba||[],bgCover:bg||''}),2000);};
 
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
@@ -194,7 +194,30 @@ export default function App(){
       if(rc){const parsed=JSON.parse(rc);setRecs(parsed.filter((tr:Track)=>!blocked_on_load.includes(tr.artist)));}
       const bgc=localStorage.getItem('bgc47');if(bgc)setBgCover(bgc);
     }catch{}};
-    if(uid!=='anon'){fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{if(d.data){if(d.data.liked)setLiked(d.data.liked);if(d.data.playlists)setPlaylists(d.data.playlists);if(d.data.history)setHistory(d.data.history);if(d.data.favArtists)setFavArtists(d.data.favArtists);if(d.data.favAlbums)setFavAlbums(d.data.favAlbums);if(d.data.volume!==undefined)setVolume(d.data.volume);}else ll();}).catch(ll);}else ll();
+    if(uid!=='anon'){
+      fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
+        if(d.data){
+          if(d.data.liked)setLiked(d.data.liked);
+          if(d.data.playlists)setPlaylists(d.data.playlists);
+          if(d.data.history)setHistory(d.data.history);
+          if(d.data.favArtists)setFavArtists(d.data.favArtists);
+          if(d.data.favAlbums)setFavAlbums(d.data.favAlbums);
+          if(d.data.volume!==undefined)setVolume(d.data.volume);
+          // Restore blocked artists from server
+          if(d.data.blockedArtists){
+            setBlockedArtists(d.data.blockedArtists);
+            try{localStorage.setItem('ba47',JSON.stringify(d.data.blockedArtists));}catch{}
+          }
+          // Restore bgCover from server
+          if(d.data.bgCover){
+            setBgCover(d.data.bgCover);
+            try{localStorage.setItem('bgc47',d.data.bgCover);}catch{}
+          }
+          // Always also load local fallbacks for things not in server
+          ll();
+        }else ll();
+      }).catch(ll);
+    }else ll();
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en');}catch{}
   },[]);
 
@@ -269,8 +292,9 @@ export default function App(){
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
       playCountRef.current+=1;
-      // Update recs every 2 plays
       if(playCountRef.current>=2){playCountRef.current=0;setRecsVersion(v=>v+1);}
+      // Save everything to server on every track play
+      triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
       return n;
     });
   };
@@ -319,11 +343,16 @@ export default function App(){
   const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
   const setVol=(v:number)=>{setVolume(v);try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
-  const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums);return n;});};
+  const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
   const blockArtist=(artist:string)=>{
-    setBlockedArtists(prev=>{const n=[...new Set([...prev,artist])];try{localStorage.setItem('ba47',JSON.stringify(n));}catch{}return n;});
+    setBlockedArtists(prev=>{
+      const n=[...new Set([...prev,artist])];
+      try{localStorage.setItem('ba47',JSON.stringify(n));}catch{}
+      // Save to server immediately
+      triggerSync(liked,playlists,history,volume,favArtists,favAlbums,n,bgCover);
+      return n;
+    });
     setRecs(prev=>{const filtered=prev.filter(tr=>tr.artist!==artist);try{localStorage.setItem('recs47',JSON.stringify(filtered));}catch{}return filtered;});
-    // Refresh recommendations immediately
     setRecsVersion(v=>v+1);
   };
 
@@ -407,9 +436,9 @@ export default function App(){
   };
 
   const isFavA=(a:ArtistInfo)=>favArtists.some(x=>x.id===a.id||x.name===a.name);
-  const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[],albums:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums);return n;});};
+  const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[],albums:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums,blockedArtists,bgCover);return n;});};
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
-  const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n);return n;});};
+  const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
   const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
@@ -791,7 +820,7 @@ export default function App(){
                 <img
                   key={bgCover||history[0]?.cover}
                   src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(5px) saturate(0.8) brightness(0.3)',transform:'scale(1.2)'}}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(1.0) brightness(0.45)',transform:'scale(1.15)'}}
                   onError={()=>{}}
                 />
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.1) 0%,rgba(14,14,14,0.4) 35%,rgba(14,14,14,0.8) 65%,#0e0e0e 100%)'}}/>
@@ -838,7 +867,7 @@ export default function App(){
         {/* ── SEARCH ───────────────────────────────────────────────────────────── */}
         {screen==='search'&&(
           <div>
-            <div style={{paddingTop:44,paddingLeft:16,paddingRight:16,paddingBottom:12}}>
+            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}>
               <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{t('search')}</div>
               <div style={{display:'flex',gap:8}}>
                 <input type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
@@ -933,7 +962,7 @@ export default function App(){
               {[{l:t('likedTracks'),v:liked.length},{l:t('playlists'),v:playlists.length},{l:t('listenedTracks'),v:history.length},{l:t('favArtists'),v:favArtists.length},{l:t('albums'),v:favAlbums.length},{l:lang==='ru'?'Заблокировано артистов':'Blocked artists',v:blockedArtists.length}].map(item=>(<div key={item.l} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 0',borderBottom:'1px solid #1e1e1e'}}><span style={{fontSize:13,color:TEXT_SEC}}>{item.l}</span><span style={{fontSize:13,fontWeight:600,color:ACC}}>{item.v}</span></div>))}
               {blockedArtists.length>0&&<button onPointerDown={()=>{setBlockedArtists([]);try{localStorage.setItem('ba47',JSON.stringify([]));}catch{}}} style={{width:'100%',marginTop:4,padding:'8px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:9,color:'#c05050',fontSize:11,cursor:'pointer',...tap}}>{lang==='ru'?'Очистить заблокированных':'Clear blocked artists'}</button>}
               <div style={{padding:'14px 0 8px'}}><div style={{fontSize:10,color:TEXT_MUTED,marginBottom:7,textTransform:'uppercase' as const,letterSpacing:1}}>{t('language')}</div><div style={{display:'flex',gap:6}}>{(['ru','en'] as const).map(l=>(<button key={l} onPointerDown={()=>chgLang(l)} style={{flex:1,padding:'9px',borderRadius:9,border:'none',background:lang===l?ACC:BG2,color:lang===l?BG:TEXT_SEC,fontSize:13,fontWeight:lang===l?600:400,cursor:'pointer',...tap}}>{l==='ru'?'🇷🇺 Русский':'🇺🇸 English'}</button>))}</div></div>
-              <button onPointerDown={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',...tap}}>🔄 {t('syncBtn')}</button>
+              <button onPointerDown={()=>syncSave({liked,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover})} style={{width:'100%',marginTop:9,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',...tap}}>🔄 {t('syncBtn')}</button>
               <button onPointerDown={()=>{try{localStorage.clear();}catch{}setLiked([]);setPlaylists([]);setHistory([]);setRecs([]);setQueue([]);setFavArtists([]);setFavAlbums([]);setBlockedArtists([]);}} style={{width:'100%',marginTop:6,padding:'11px',background:'#1a0a0a',border:'1px solid #2a1010',borderRadius:11,color:'#c05050',fontSize:12,cursor:'pointer',...tap}}>{t('resetData')}</button>
             </div>
           </div>
