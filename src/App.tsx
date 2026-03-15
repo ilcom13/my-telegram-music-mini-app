@@ -1052,7 +1052,7 @@ export default function App(){
                 <img
                   key={bgCover||history[0]?.cover}
                   src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(6px) saturate(0.85) brightness(0.6)',transform:'scale(1.08)'}}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.65)',transform:'scale(1.05)'}}
                   onError={()=>{}}
                 />
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,#0e0e0e 100%)'}}/>
@@ -1223,7 +1223,7 @@ export default function App(){
                   {/* Blurred bg cover — top track */}
                   {topCover&&(
                     <div style={{position:'absolute',top:0,left:0,right:0,height:200,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
-                      <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(6px) saturate(0.85) brightness(0.55)',transform:'scale(1.08)'}} onError={()=>{}}/>
+                      <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.6)',transform:'scale(1.05)'}} onError={()=>{}}/>
                       <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,${BG} 100%)`}}/>
                     </div>
                   )}
@@ -1303,47 +1303,45 @@ export default function App(){
 
       {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
       {current&&screen!=='profile'&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(20,20,20,0.97)',backdropFilter:'blur(20px)',border:'1px solid #282828',borderRadius:14,padding:'8px 11px 7px',zIndex:100}}>
-          {/* Row 1: cover + title/artist + play button right */}
-          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:5}}>
-            {/* Cover — click opens full player */}
-            <div onPointerDown={()=>setFullPlayer(true)} style={{flexShrink:0,cursor:'pointer'}}>
-              <Img src={current.cover} size={40} radius={8}/>
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 10px',zIndex:100}}>
+          {/* Main row: [cover] [title+artist / prev·next] [play] */}
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+            {/* Cover */}
+            <div onPointerDown={()=>setFullPlayer(true)} style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden'}}>
+              <Img src={current.cover} size={52} radius={10}/>
             </div>
-            {/* Title/artist — click opens full player */}
+            {/* Center: top=title+artist, bottom=prev/next */}
             <div onPointerDown={()=>setFullPlayer(true)} style={{flex:1,minWidth:0,cursor:'pointer'}}>
-              <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2}}>{current.title}</div>
-              <div style={{fontSize:11,color:TEXT_SEC,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.2}}>{current.title}</div>
+              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:0.2,textTransform:'uppercase' as const}}>{current.artist}</div>
             </div>
-            {/* Play/pause — right side, vertically centered with row */}
+            {/* Prev / Next icons */}
+            <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',...tap,opacity:playHistory.length>0?1:0.35}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+              </button>
+              <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+              </button>
+            </div>
+            {/* Play/pause — big round right */}
             <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}}
-              style={{width:40,height:40,minWidth:40,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,...tap}}>
+              style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Row 2: Prev · Next centered */}
-          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:4,marginBottom:4}}>
-            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'3px 12px',display:'flex',alignItems:'center',gap:3,...tap,opacity:playHistory.length>0?1:0.3}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-              <span style={{fontSize:10,color:'#777'}}>{lang==='ru'||lang==='uk'?'Назад':lang==='kk'?'Артқа':lang==='pl'?'Wstecz':lang==='tr'?'Geri':'Prev'}</span>
-            </button>
-            <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'3px 12px',display:'flex',alignItems:'center',gap:3,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
-              <span style={{fontSize:10,color:'#777'}}>{lang==='ru'?'Вперёд':lang==='uk'?'Далі':lang==='kk'?'Алға':lang==='pl'?'Dalej':lang==='tr'?'İleri':'Next'}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-            </button>
-          </div>
-          {/* Row 3: timeline */}
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <span style={{fontSize:9,color:'#484848',minWidth:26,textAlign:'right'}}>{curTime}</span>
-            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:14,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
-              <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.07)',borderRadius:2,position:'relative'}}>
-                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:2,transition:'width 0.3s linear'}}/>
-                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:9,height:9,background:ACC,borderRadius:'50%'}}/>
+          {/* Timeline — full width */}
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
+            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+              <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.08)',borderRadius:3,position:'relative'}}>
+                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:3,transition:'width 0.3s linear'}}/>
+                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:11,height:11,background:ACC,borderRadius:'50%',boxShadow:`0 0 6px ${ACC}88`}}/>
               </div>
             </div>
-            <span style={{fontSize:9,color:'#484848',minWidth:26}}>{current.duration}</span>
+            <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
           </div>
         </div>
       )}
