@@ -311,7 +311,7 @@ export default function App(){
       history:historyRef.current,volume:volumeRef.current,
       favArtists:favArtistsRef.current,favAlbums:favAlbumsRef.current,
       blockedArtists:blockedRef.current,bgCover:bgCoverRef.current,
-      recs:recs.slice(0,20),
+      recs:recsRef.current.slice(0,20),
       stats:{totalSec:totalSecRef.current,exploredIds:exploredIdsRef.current,
         listenedIds:listenedIdsRef.current,trackPlays:trackPlaysRef.current,
         streakDays:streakDaysRef.current,maxStreak:maxStreakRef.current}
@@ -345,47 +345,83 @@ export default function App(){
     ll();
     if(uid!=='anon'){
       fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
-        if(d.data){
-          if(d.data.liked)setLiked(d.data.liked);
-          if(d.data.playlists)setPlaylists(d.data.playlists);
-          if(d.data.history)setHistory(d.data.history);
-          if(d.data.favArtists)setFavArtists(d.data.favArtists);
-          if(d.data.favAlbums)setFavAlbums(d.data.favAlbums);
-          if(d.data.volume!==undefined)setVolume(d.data.volume);
-          // Restore blocked artists from server
-          if(d.data.blockedArtists){
-            setBlockedArtists(d.data.blockedArtists);
-            try{localStorage.setItem('ba47',JSON.stringify(d.data.blockedArtists));}catch{}
-          }
-          if(d.data.bgCover){setBgCover(d.data.bgCover);try{localStorage.setItem('bgc47',d.data.bgCover);}catch{}}
-          // Restore recs from server
-          if(d.data.recs?.length){
-            const blocked=d.data.blockedArtists||[];
-            const freshRecs=d.data.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
-            setRecs(freshRecs);
-            try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}
-          }
-          // Restore stats from server
-          if(d.data.stats){
-            const s=d.data.stats;
-            if(s.totalSec!==undefined){setTotalSec(s.totalSec);try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}}
-            if(s.exploredIds?.length){setExploredIds(s.exploredIds);try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}}
-            if(s.listenedIds?.length){setListenedIds(s.listenedIds);try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}}
-            if(s.trackPlays&&Object.keys(s.trackPlays).length){setTrackPlays(s.trackPlays);try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}}
-            if(s.streakDays?.length){setStreakDays(s.streakDays);setMaxStreak(calcMaxStreak(s.streakDays));try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}}
-            if(s.maxStreak!==undefined)setMaxStreak(s.maxStreak);
-          }
-          // Save everything to localStorage too for offline
-          try{
-            if(d.data.liked)localStorage.setItem('l47',JSON.stringify(d.data.liked));
-            if(d.data.history)localStorage.setItem('h47',JSON.stringify(d.data.history));
-            if(d.data.playlists)localStorage.setItem('p47',JSON.stringify(d.data.playlists));
-            if(d.data.favArtists)localStorage.setItem('fa47',JSON.stringify(d.data.favArtists));
-            if(d.data.favAlbums)localStorage.setItem('fal47',JSON.stringify(d.data.favAlbums));
-            if(d.data.blockedArtists)localStorage.setItem('ba47',JSON.stringify(d.data.blockedArtists));
-          }catch{}
+        if(!d.data)return; // server has nothing — keep localStorage data
+        const sv=d.data;
+        // Merge rule: take whichever array is LONGER (more data = more recent)
+        // For volume and bgCover — take server value if exists
+        const merge=<T,>(local:T[]|null,server:T[]|null):T[]|null=>{
+          if(!server?.length)return local;
+          if(!local?.length)return server;
+          return server.length>=local.length?server:local;
+        };
+        // Liked
+        const localLiked=likedRef.current;
+        const merged_liked=merge(localLiked,sv.liked)||localLiked;
+        if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
+        // Playlists — merge by taking longer list
+        const localPl=playlistsRef.current;
+        const merged_pl=merge(localPl,sv.playlists)||localPl;
+        if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
+        // History
+        const localH=historyRef.current;
+        const merged_h=merge(localH,sv.history)||localH;
+        if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
+        // FavArtists
+        const localFA=favArtistsRef.current;
+        const merged_fa=merge(localFA,sv.favArtists)||localFA;
+        if(merged_fa!==localFA){setFavArtists(merged_fa);try{localStorage.setItem('fa47',JSON.stringify(merged_fa));}catch{}}
+        // FavAlbums
+        const localFAl=favAlbumsRef.current;
+        const merged_fal=merge(localFAl,sv.favAlbums)||localFAl;
+        if(merged_fal!==localFAl){setFavAlbums(merged_fal);try{localStorage.setItem('fal47',JSON.stringify(merged_fal));}catch{}}
+        // Volume — take server only if local is still default (1)
+        if(sv.volume!==undefined&&volumeRef.current===1&&sv.volume!==1){
+          setVolume(sv.volume);volumeRef.current=sv.volume;
+          try{localStorage.setItem('v47',String(sv.volume));}catch{}
         }
-      }).catch(()=>{});
+        // Blocked artists — merge unique
+        if(sv.blockedArtists?.length){
+          const merged_ba=[...new Set([...blockedRef.current,...sv.blockedArtists])];
+          setBlockedArtists(merged_ba);try{localStorage.setItem('ba47',JSON.stringify(merged_ba));}catch{}
+        }
+        // BgCover
+        if(sv.bgCover&&!bgCoverRef.current){setBgCover(sv.bgCover);try{localStorage.setItem('bgc47',sv.bgCover);}catch{}}
+        // Recs
+        if(sv.recs?.length){
+          const blocked=sv.blockedArtists||blockedRef.current||[];
+          const freshRecs=sv.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
+          if(freshRecs.length>recsRef.current.length){setRecs(freshRecs);try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}}
+        }
+        // Stats — always take the MAX value (never go backwards)
+        if(sv.stats){
+          const s=sv.stats;
+          const localTsec=totalSecRef.current;
+          if((s.totalSec||0)>localTsec){
+            setTotalSec(s.totalSec);totalSecRef.current=s.totalSec;
+            try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}
+          }
+          if((s.exploredIds?.length||0)>exploredIdsRef.current.length){
+            setExploredIds(s.exploredIds);exploredIdsRef.current=s.exploredIds;
+            try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}
+          }
+          if((s.listenedIds?.length||0)>listenedIdsRef.current.length){
+            setListenedIds(s.listenedIds);listenedIdsRef.current=s.listenedIds;
+            try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}
+          }
+          if(s.trackPlays&&Object.keys(s.trackPlays).length>Object.keys(trackPlaysRef.current).length){
+            setTrackPlays(s.trackPlays);trackPlaysRef.current=s.trackPlays;
+            try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}
+          }
+          if((s.streakDays?.length||0)>streakDaysRef.current.length){
+            setStreakDays(s.streakDays);streakDaysRef.current=s.streakDays;
+            const mx=calcMaxStreak(s.streakDays);
+            setMaxStreak(mx);maxStreakRef.current=mx;
+            try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}
+          }
+        }
+        // After merging — save the merged result back to server
+        setTimeout(()=>doFullSync(),3000);
+      }).catch(()=>{}); // on network error — localStorage data already loaded
     }
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
@@ -396,8 +432,10 @@ export default function App(){
   // Stable ref to avoid stale closure — always holds latest values
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
+  const recsRef=useRef<Track[]>([]);
   useEffect(()=>{historyRef.current=history;},[history]);
   useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
+  useEffect(()=>{recsRef.current=recs;},[recs]);
   useEffect(()=>{totalSecRef.current=totalSec;},[totalSec]);
   useEffect(()=>{exploredIdsRef.current=exploredIds;},[exploredIds]);
   useEffect(()=>{listenedIdsRef.current=listenedIds;},[listenedIds]);
