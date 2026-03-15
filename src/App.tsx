@@ -133,7 +133,15 @@ const T: Record<string,Record<string,string>> = {
 };
 
 function fmtP(n:number){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return Math.round(n/1000)+'K';return n>0?String(n):'';}
-function greeting(lang:'ru'|'en'){const h=new Date().getHours();if(lang==='ru'){if(h>=5&&h<12)return'Доброе утро';if(h>=12&&h<17)return'Добрый день';if(h>=17&&h<22)return'Добрый вечер';return'Доброй ночи';}if(h>=5&&h<12)return'Good morning';if(h>=12&&h<17)return'Good day';if(h>=17&&h<22)return'Good evening';return'Good night';}
+function greeting(lang:'ru'|'en'|'uk'|'kk'|'pl'|'tr'){
+  const h=new Date().getHours();
+  if(lang==='ru'){if(h>=5&&h<12)return'Доброе утро';if(h>=12&&h<17)return'Добрый день';if(h>=17&&h<22)return'Добрый вечер';return'Доброй ночи';}
+  if(lang==='uk'){if(h>=5&&h<12)return'Доброго ранку';if(h>=12&&h<17)return'Добрий день';if(h>=17&&h<22)return'Добрий вечір';return'На добраніч';}
+  if(lang==='kk'){if(h>=5&&h<12)return'Қайырлы таң';if(h>=12&&h<17)return'Қайырлы күн';if(h>=17&&h<22)return'Қайырлы кеш';return'Түні жарық болсын';}
+  if(lang==='pl'){if(h>=5&&h<12)return'Dzień dobry';if(h>=12&&h<17)return'Dzień dobry';if(h>=17&&h<22)return'Dobry wieczór';return'Dobranoc';}
+  if(lang==='tr'){if(h>=5&&h<12)return'Günaydın';if(h>=12&&h<17)return'İyi günler';if(h>=17&&h<22)return'İyi akşamlar';return'İyi geceler';}
+  if(h>=5&&h<12)return'Good morning';if(h>=12&&h<17)return'Good day';if(h>=17&&h<22)return'Good evening';return'Good night';
+}
 
 function Img({src,size,radius,fb='🎵'}:{src:string;size:number;radius:number;fb?:string}){
   const[e,sE]=useState(false);
