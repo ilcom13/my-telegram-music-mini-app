@@ -104,6 +104,23 @@ function SliderTrack({val,sp,h=3}:{val:number;sp:ReturnType<typeof useSlider>;h?
   );
 }
 
+// Swipe hook — returns handlers to attach to a row element
+function useSwipe(onSwipeLeft?:()=>void, onSwipeRight?:()=>void){
+  const startX=useRef<number|null>(null);
+  const startY=useRef<number|null>(null);
+  const onDown=(e:React.PointerEvent)=>{startX.current=e.clientX;startY.current=e.clientY;};
+  const onUp=(e:React.PointerEvent)=>{
+    if(startX.current===null||startY.current===null)return;
+    const dx=e.clientX-startX.current;
+    const dy=Math.abs(e.clientY-startY.current);
+    if(dy>30){startX.current=null;return;} // vertical scroll — ignore
+    if(dx>55&&onSwipeRight)onSwipeRight();
+    if(dx<-55&&onSwipeLeft)onSwipeLeft();
+    startX.current=null;
+  };
+  return{onPointerDown:onDown,onPointerUp:onUp};
+}
+
 function Spinner(){return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'40px 0'}}><div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>);}
 
 function getArtistPlayCounts(history:Track[]):Record<string,number>{const c:Record<string,number>={};for(const tr of history){if(!tr.artist||REMIX_W.some(w=>tr.artist.toLowerCase().includes(w)))continue;c[tr.artist]=(c[tr.artist]||0)+1;}return c;}
@@ -303,8 +320,7 @@ export default function App(){
     if(playHistory.length>0){
       const prev=playHistory[0];
       setPlayHistory(p=>p.slice(1));
-      // Push current back to front of queue so Next still works
-      if(current){setQueue(q=>{const n=[current,...q];try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});}
+      // Do NOT touch queue — it stays as is
       if(audio.current&&prev.mp3){
         audio.current.pause();
         audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
@@ -490,8 +506,33 @@ export default function App(){
     </button>
   );
 
-  const TRow=({track,num,onArtistClick,showBlockBtn}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean})=>{
+  const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
+    const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
+    const swipeFired=useRef(false);
+    // Build swipe state as reactive
+    const[swipeVis,setSwipeVis]=useState({dx:0,dir:''});
+    const swipeHandlers={
+      onPointerDown:(e:React.PointerEvent)=>{swipeState.current={dx:0,startX:e.clientX,startY:e.clientY,active:true,dir:''};swipeFired.current=false;},
+      onPointerMove:(e:React.PointerEvent)=>{
+        if(!swipeState.current.active)return;
+        const dx=e.clientX-swipeState.current.startX;
+        const dy=Math.abs(e.clientY-swipeState.current.startY);
+        if(dy>20&&Math.abs(dx)<20){swipeState.current.active=false;setSwipeVis({dx:0,dir:''});return;}
+        swipeState.current.dx=dx;
+        swipeState.current.dir=dx>0?'right':dx<0?'left':'';
+        setSwipeVis({dx,dir:swipeState.current.dir});
+      },
+      onPointerUp:(e:React.PointerEvent)=>{
+        if(!swipeState.current.active){setSwipeVis({dx:0,dir:''});return;}
+        const dx=swipeState.current.dx;
+        swipeState.current.active=false;
+        if(dx>55&&!track.isArtist&&!track.isAlbum){addQ(track,e as any);swipeFired.current=true;}
+        else if(dx<-55&&onSwipeLeft){onSwipeLeft();swipeFired.current=true;}
+        setSwipeVis({dx:0,dir:''});
+      },
+      onPointerCancel:()=>{swipeState.current.active=false;setSwipeVis({dx:0,dir:''}); },
+    };
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
@@ -501,9 +542,15 @@ export default function App(){
     ];
     return(
       <div style={{position:'relative'}}>
+        {/* Swipe indicator */}
+        {swipeVis.dir==='right'&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(swipeVis.dx,80),background:'rgba(239,191,127,0.15)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:10,pointerEvents:'none',transition:'width 0.05s'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={ACC}/><circle cx="3" cy="12" r="1.2" fill={ACC}/><circle cx="3" cy="18" r="1.2" fill={ACC}/></svg></div>}
+        {swipeVis.dir==='left'&&onSwipeLeft&&<div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(-swipeVis.dx,80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:10,pointerEvents:'none'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>}
         <div
-          onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);return;}setMenuId(null);playTrack(track);}}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',...tap}}>
+          onPointerDown={e=>{e.stopPropagation();swipeHandlers.onPointerDown(e);if(mOpen){setMenuId(null);return;}setMenuId(null);}}
+          onPointerMove={swipeHandlers.onPointerMove}
+          onPointerUp={e=>{swipeHandlers.onPointerUp(e);if(!swipeFired.current&&!mOpen)playTrack(track);swipeFired.current=false;}}
+          onPointerCancel={swipeHandlers.onPointerCancel}
+          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',...tap,transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeState.dx===0?'transform 0.2s':'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
           <div style={{position:'relative',flexShrink:0}}>
             <Img src={track.cover} size={44} radius={track.isArtist?22:8}/>
@@ -565,8 +612,25 @@ export default function App(){
   ];
 
   // ── FULL PLAYER ──────────────────────────────────────────────────────────────
+  // Swipe down to close full player
+  const fpSwipeStart=useRef<number|null>(null);
+  const fpSwipeY=useRef<number>(0);
+  const fpOnPointerDown=(e:React.PointerEvent)=>{fpSwipeStart.current=e.clientY;fpSwipeY.current=e.clientY;};
+  const fpOnPointerMove=(e:React.PointerEvent)=>{fpSwipeY.current=e.clientY;};
+  const fpOnPointerUp=()=>{
+    if(fpSwipeStart.current!==null){
+      const diff=fpSwipeY.current-fpSwipeStart.current;
+      if(diff>70)setFullPlayer(false);
+    }
+    fpSwipeStart.current=null;
+  };
+
   if(fullPlayer&&current)return(
-    <div style={{background:FULL_BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden'}}>
+    <div
+      onPointerDown={fpOnPointerDown}
+      onPointerMove={fpOnPointerMove}
+      onPointerUp={fpOnPointerUp}
+      style={{background:FULL_BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',touchAction:'pan-x'}}>
       <audio ref={audio}/>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end'}} onPointerDown={()=>setShowQueue(false)}>
@@ -820,10 +884,10 @@ export default function App(){
                 <img
                   key={bgCover||history[0]?.cover}
                   src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(1.0) brightness(0.45)',transform:'scale(1.15)'}}
+                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(12px) saturate(0.9) brightness(0.55)',transform:'scale(1.08)'}}
                   onError={()=>{}}
                 />
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.1) 0%,rgba(14,14,14,0.4) 35%,rgba(14,14,14,0.8) 65%,#0e0e0e 100%)'}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,#0e0e0e 100%)'}}/>
               </div>
             )}
             <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -901,7 +965,7 @@ export default function App(){
                 </button>
               ))}
             </div>
-            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1}/>)}</div>)}
+            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onSwipeLeft={()=>toggleLike(tr)}/>)}</div>)}
             {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onPointerDown={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
             {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onPointerDown={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
             {libTab==='playlists'&&(
@@ -973,7 +1037,7 @@ export default function App(){
 
       {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
       {current&&(
-        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:MINI_BG,backdropFilter:'blur(20px)',border:'1px solid #3a3228',borderRadius:14,padding:'8px 12px 8px',zIndex:100}}>
+        <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(28,28,28,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2e2e2e',borderRadius:14,padding:'8px 12px 8px',zIndex:100}}>
           {/* Строка 1: обложка + инфо + громкость + play */}
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
             <div onPointerDown={()=>setFullPlayer(true)} style={{cursor:'pointer',flexShrink:0}}><Img src={current.cover} size={38} radius={7}/></div>
@@ -985,8 +1049,8 @@ export default function App(){
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
               <div {...volSP} ref={volSP.ref} style={{width:38,height:20,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
                 <div style={{width:'100%',height:2.5,background:'rgba(255,255,255,0.08)',borderRadius:2,position:'relative'}}>
-                  <div style={{width:`${volume*100}%`,height:'100%',background:'#6a6050',borderRadius:2}}/>
-                  <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#8a8070',borderRadius:'50%'}}/>
+                  <div style={{width:`${volume*100}%`,height:'100%',background:'#555',borderRadius:2}}/>
+                  <div style={{position:'absolute',top:'50%',left:`${volume*100}%`,transform:'translate(-50%,-50%)',width:8,height:8,background:'#888',borderRadius:'50%'}}/>
                 </div>
               </div>
               {/* Play/Pause — onPointerDown для надёжного срабатывания */}
@@ -997,31 +1061,31 @@ export default function App(){
               </button>
             </div>
           </div>
-          {/* Строка 2: прогресс */}
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-            <span style={{fontSize:9,color:TEXT_MUTED,minWidth:24,textAlign:'right'}}>{curTime}</span>
-            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
-              <div style={{width:'100%',height:2.5,background:'rgba(255,255,255,0.08)',borderRadius:2,position:'relative'}}>
-                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:2,transition:'width 0.3s linear'}}/>
-                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:10,height:10,background:ACC,borderRadius:'50%'}}/>
-              </div>
-            </div>
-            <span style={{fontSize:9,color:TEXT_MUTED,minWidth:24}}>{current.duration}</span>
-          </div>
-          {/* Строка 3: Prev / Next */}
-          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:20}}>
+          {/* Строка 2: Prev / Next */}
+          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:20,marginBottom:3}}>
             <button
               onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 10px',display:'flex',alignItems:'center',gap:4,...tap,opacity:playHistory.length>0?1:0.35}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-              <span style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'Назад':'Prev'}</span>
+              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 12px',display:'flex',alignItems:'center',gap:5,...tap,opacity:playHistory.length>0?1:0.3}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+              <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Назад':'Prev'}</span>
             </button>
             <button
               onPointerDown={e=>{e.stopPropagation();e.preventDefault();playNext();}}
-              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 10px',display:'flex',alignItems:'center',gap:4,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
-              <span style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'Вперёд':'Next'}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+              style={{background:'none',border:'none',cursor:'pointer',padding:'4px 12px',display:'flex',alignItems:'center',gap:5,...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.3}}>
+              <span style={{fontSize:9,color:'#666'}}>{lang==='ru'?'Вперёд':'Next'}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
             </button>
+          </div>
+          {/* Строка 3: timeline */}
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:9,color:'#555',minWidth:24,textAlign:'right'}}>{curTime}</span>
+            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+              <div style={{width:'100%',height:2,background:'rgba(255,255,255,0.06)',borderRadius:2,position:'relative'}}>
+                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:2,transition:'width 0.3s linear'}}/>
+                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:9,height:9,background:ACC,borderRadius:'50%'}}/>
+              </div>
+            </div>
+            <span style={{fontSize:9,color:'#555',minWidth:24}}>{current.duration}</span>
           </div>
         </div>
       )}
