@@ -623,7 +623,8 @@ export default function App(){
   const playTrack=(track:Track)=>{
     if(track.isArtist){openArtist('',track.title,track.cover,track.plays);return;}
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
-    if(!track.mp3)return;
+    // Allow tracks without mp3 — playDirect will resolve via /resolve?id=
+    if(!track.id)return;
     if(current?.id===track.id){togglePlay();return;}
     playDirect(track);
   };
@@ -671,7 +672,7 @@ export default function App(){
           const lr=await fetch(`${W}/artist/latest?userId=${userId}`);
           const ld=await lr.json();
           // Prefer most recent of track vs album
-          latestRelease=ld.track||ld.album||null;
+          latestRelease=ld.latest||ld.track||ld.album||null;
         }catch{}
       }
       setArtistPage({
@@ -744,7 +745,7 @@ export default function App(){
 
   const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     setAlbumLoading(true);
-    prevScreen.current=screen as typeof prevScreen.current;
+    if(screen!=='artist'&&screen!=='album')prevScreen.current=screen as typeof prevScreen.current;
     setScreen('album');setAlbumPage(null);
     try{
       const r=await fetch(`${W}/album?id=${id}`);const d=await r.json();
@@ -800,7 +801,7 @@ export default function App(){
         backdropFilter:overlay?'blur(8px)':'none',
         ...tap,
         position:overlay?'absolute':'relative',
-        top:overlay?44:undefined,
+        top:overlay?10:undefined,
         left:overlay?14:undefined,
         zIndex:overlay?20:undefined,
       }}>
