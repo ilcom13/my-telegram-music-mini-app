@@ -649,27 +649,44 @@ export default function App(){
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
+  // Cursor for paginated track loading
+  const artistTracksCursor=useRef<string|null>(null);
+
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as typeof prevScreen.current;
     setScreen('artist');setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
-    setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');artistUserId.current='';
+    setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');
+    artistUserId.current='';artistTracksCursor.current=null;
     try{
       const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
       const art=d.artist||{};
-      const trks:Track[]=d.tracks||[];
-      const sorted=[...trks].sort((a,b)=>b.plays-a.plays);
       const userId=art.id||'';
       artistUserId.current=userId;
-      setArtistPage({id:userId,name:art.name||name,username:art.username||'',avatar:art.avatar||avatar||'',banner:art.banner||'',followers:art.followers||followers,permalink:art.permalink||permalink,tracks:sorted,albums:[],latestRelease:sorted[0]||null});
+      // Latest release — load separately for accuracy
+      let latestRelease:Track|null=null;
       if(userId){
+        try{
+          const lr=await fetch(`${W}/artist/latest?userId=${userId}`);
+          const ld=await lr.json();
+          // Prefer most recent of track vs album
+          latestRelease=ld.track||ld.album||null;
+        }catch{}
+      }
+      setArtistPage({
+        id:userId,name:art.name||name,username:art.username||'',
+        avatar:art.avatar||avatar||'',banner:art.banner||'',
+        followers:art.followers||followers,permalink:art.permalink||permalink,
+        tracks:[],albums:[],latestRelease
+      });
+      if(userId){
+        // Load albums
         loadArtistAlbums(userId);
-        setArtistTracks(sorted);
+        // Load first page of tracks
         loadArtistTracks(userId,0,true);
       } else {
         loadArtistAlbumsByName(name);
-        setArtistTracks(sorted);
         setArtistTracksHasMore(false);
       }
     }catch{setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});}
@@ -678,7 +695,16 @@ export default function App(){
 
   const loadArtistAlbums=async(userId:string)=>{
     setArtistAlbumsLoading(true);
-    try{const r=await fetch(`${W}/artist/albums?userId=${userId}`);const d=await r.json();setArtistAlbums(d.albums||[]);}catch{}
+    try{
+      const r=await fetch(`${W}/artist/albums?userId=${userId}`);
+      const d=await r.json();
+      const albums=(d.albums||[]).map((al:any)=>({
+        id:al.id,title:al.title,artist:al.artist,cover:al.cover,
+        tracks:[],permalink:al.permalink||'',
+        trackCount:al.trackCount||0,plays:al.plays||0,
+      }));
+      setArtistAlbums(albums);
+    }catch{}
     setArtistAlbumsLoading(false);
   };
 
@@ -691,24 +717,27 @@ export default function App(){
     setArtistAlbumsLoading(false);
   };
 
-  const loadArtistTracks=async(userId:string,offset:number,reset=false)=>{
+  const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
     if(!userId)return;
+    if(artistTracksLoading)return;
     setArtistTracksLoading(true);
     try{
-      const r=await fetch(`${W}/artist/tracks?userId=${userId}&offset=${offset}`);
+      const cursor=reset?null:artistTracksCursor.current;
+      const params=new URLSearchParams({userId,limit:'20'});
+      if(cursor)params.set('cursor',cursor);
+      const r=await fetch(`${W}/artist/tracks?${params}`);
       const d=await r.json();
       const newT:Track[]=d.tracks||[];
-      setArtistTracks(prev=>{
-        if(reset){
+      artistTracksCursor.current=d.nextCursor||null;
+      if(reset){
+        setArtistTracks(newT);
+      } else {
+        setArtistTracks(prev=>{
           const existing=new Set(prev.map(t=>t.id));
-          const fresh=newT.filter(t=>!existing.has(t.id));
-          return [...prev,...fresh];
-        }
-        const existing=new Set(prev.map(t=>t.id));
-        return [...prev,...newT.filter(t=>!existing.has(t.id))];
-      });
+          return [...prev,...newT.filter(t=>!existing.has(t.id))];
+        });
+      }
       setArtistTracksHasMore(d.hasMore||false);
-      setArtistTracksOffset(d.nextOffset||offset+20);
     }catch{}
     setArtistTracksLoading(false);
   };
@@ -1056,29 +1085,33 @@ export default function App(){
                   {artistPage.latestRelease&&(
                     <div style={{padding:'0 16px 12px'}}>
                       <SL text={t('latestRelease')}/>
-                      <div onPointerDown={()=>artistPage.latestRelease&&playTrack(artistPage.latestRelease)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,background:BG2,cursor:'pointer',border:`1px solid #252525`,...tap}}>
+                      <div
+                        onPointerDown={()=>{
+                          const lr=artistPage.latestRelease!;
+                          if(lr.isAlbum)openAlbum(lr.id,lr.title,lr.artist,lr.cover);
+                          else playTrack(lr);
+                        }}
+                        style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,background:BG2,cursor:'pointer',border:`1px solid #252525`,...tap}}>
                         <div style={{position:'relative',flexShrink:0}}>
-                          <Img src={artistPage.latestRelease.cover} size={52} radius={8}/>
-                          {current?.id===artistPage.latestRelease.id&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
+                          <Img src={artistPage.latestRelease.cover} size={56} radius={10}/>
+                          {artistPage.latestRelease.isAlbum&&<div style={{position:'absolute',bottom:3,right:3,background:'rgba(0,0,0,0.7)',borderRadius:4,padding:'1px 4px',fontSize:8,color:'#aaa'}}>LP</div>}
+                          {!artistPage.latestRelease.isAlbum&&current?.id===artistPage.latestRelease.id&&<div style={{position:'absolute',inset:0,borderRadius:10,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:0.7}}>{artistPage.latestRelease.isAlbum?(lang==='ru'?'Альбом':'Album'):(lang==='ru'?'Трек':'Track')}</div>
                           <div style={{fontSize:14,fontWeight:600,color:current?.id===artistPage.latestRelease.id?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{artistPage.latestRelease.title}</div>
-                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{artistPage.latestRelease.duration}{artistPage.latestRelease.plays>0?` · ${fmtP(artistPage.latestRelease.plays)} ${t('plays')}`:''}</div>
+                          {artistPage.latestRelease.isAlbum
+                            ?<div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{artistPage.latestRelease.trackCount||0} {lang==='ru'?'треков':'tracks'}</div>
+                            :<div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{artistPage.latestRelease.duration}{artistPage.latestRelease.plays>0?` · ${fmtP(artistPage.latestRelease.plays)} ${t('plays')}`:''}</div>
+                          }
                         </div>
-                        <HBtn track={artistPage.latestRelease} sz={18}/>
+                        {!artistPage.latestRelease.isAlbum&&<HBtn track={artistPage.latestRelease} sz={18}/>}
+                        {artistPage.latestRelease.isAlbum&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
                       </div>
                     </div>
                   )}
 
-                  {/* Популярное */}
-                  {artistPage.tracks.length>0&&(
-                    <div style={{marginBottom:12}}>
-                      <SL text={t('popular')}/>
-                      <div style={{padding:'0 4px'}}>
-                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Дискография */}
                   <div style={{padding:'0 16px 16px'}}>
