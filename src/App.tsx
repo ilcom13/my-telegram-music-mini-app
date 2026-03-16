@@ -658,69 +658,54 @@ export default function App(){
     setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');
     artistUserId.current='';artistTracksCursor.current=null;
     try{
-      // Шаг 1: получаем профиль (только метаданные)
       const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
       const art=d.artist||{};
       const userId=art.id||'';
+      const username=art.username||name; // username обязателен для поиска треков
       artistUserId.current=userId;
  
-      // Показываем базовую страницу немедленно
+      // Показываем страницу сразу — треки из /artist уже включены (popular)
+      const popularTracks:Track[]=d.tracks||[];
       setArtistPage({
         id:userId,name:art.name||name,username:art.username||'',
         avatar:art.avatar||avatar||'',banner:art.banner||'',
         followers:art.followers||followers,permalink:art.permalink||permalink,
-        tracks:[],albums:[],latestRelease:null
+        tracks:popularTracks, // popular уже пришли из /artist
+        albums:[],latestRelease:null
       });
  
-      if(userId){
-        // Шаг 2: параллельно грузим альбомы + latest release + треки
-        const [albumsR,latestR,tracksR]=await Promise.allSettled([
-          fetch(`${W}/artist/albums?userId=${userId}`),
-          fetch(`${W}/artist/latest?userId=${userId}`),
-          fetch(`${W}/artist/tracks?userId=${userId}`), // limit=200 в воркере, до 3 страниц
-        ]);
+      // Параллельно: альбомы + latest release + все треки для вкладки Tracks
+      const [albumsR,latestR,tracksR]=await Promise.allSettled([
+        fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
+        fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
+        fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}&page=0`),
+      ]);
  
-        // Альбомы
-        if(albumsR.status==='fulfilled'&&albumsR.value.ok){
-          const ad=await albumsR.value.json();
-          setArtistAlbums((ad.albums||[]).map((al:any)=>({
-            id:al.id,title:al.title,artist:al.artist,cover:al.cover,
-            tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
-          })));
-        }
- 
-        // Latest release
-        let latestRelease:Track|null=null;
-        if(latestR.status==='fulfilled'&&latestR.value.ok){
-          const ld=await latestR.value.json();
-          latestRelease=ld.latest||null;
-        }
- 
-        // Треки
-        if(tracksR.status==='fulfilled'&&tracksR.value.ok){
-          const td=await tracksR.value.json();
-          const allTracks:Track[]=td.tracks||[];
-          setArtistTracks(allTracks);
-          setArtistTracksHasMore(td.hasMore||false);
-          artistTracksCursor.current=td.nextCursor||null;
-          // Popular = топ-5 по воспроизведениям
-          const popular=[...allTracks].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,5);
-          setArtistPage(prev=>prev?{...prev,latestRelease,tracks:popular}:null);
-        } else {
-          setArtistPage(prev=>prev?{...prev,latestRelease}:null);
-        }
-      } else {
-        // Нет userId — fallback поиск альбомов по имени
-        fetch(`${W}/albums?q=${encodeURIComponent(name)}`)
-          .then(r=>r.json())
-          .then(d=>{
-            setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({
-              id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],
-              permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
-            })));
-          }).catch(()=>{});
+      if(albumsR.status==='fulfilled'&&albumsR.value.ok){
+        const ad=await albumsR.value.json();
+        setArtistAlbums((ad.albums||[]).map((al:any)=>({
+          id:al.id,title:al.title,artist:al.artist,cover:al.cover,
+          tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
+        })));
       }
+ 
+      let latestRelease:Track|null=null;
+      if(latestR.status==='fulfilled'&&latestR.value.ok){
+        const ld=await latestR.value.json();
+        latestRelease=ld.latest||null;
+      }
+ 
+      if(tracksR.status==='fulfilled'&&tracksR.value.ok){
+        const td=await tracksR.value.json();
+        const allTracks:Track[]=td.tracks||[];
+        setArtistTracks(allTracks);
+        setArtistTracksHasMore(td.hasMore||false);
+        // nextPage для пагинации — сохраняем в offset
+        setArtistTracksOffset(td.nextPage||1);
+      }
+ 
+      setArtistPage(prev=>prev?{...prev,latestRelease}:null);
     }catch{
       setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
     }
@@ -751,17 +736,17 @@ export default function App(){
     setArtistAlbumsLoading(false);
   };
 
-  const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
-    if(!userId||artistTracksLoading)return;
+  const loadArtistTracks=async(userId:string,offset:number,reset=false)=>{
+    if(artistTracksLoading)return;
     setArtistTracksLoading(true);
     try{
-      const cursor=reset?null:artistTracksCursor.current;
-      const params=new URLSearchParams({userId});
-      if(cursor)params.set('cursor',cursor);
-      const r=await fetch(`${W}/artist/tracks?${params}`);
+      // username берём из artistPage
+      const username=artistPage?.username||artistPage?.name||'';
+      if(!username){setArtistTracksLoading(false);return;}
+      const page=reset?0:artistTracksOffset;
+      const r=await fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}&page=${page}`);
       const d=await r.json();
       const newT:Track[]=d.tracks||[];
-      artistTracksCursor.current=d.nextCursor||null;
       if(reset){
         setArtistTracks(newT);
       } else {
@@ -771,6 +756,7 @@ export default function App(){
         });
       }
       setArtistTracksHasMore(d.hasMore||false);
+      setArtistTracksOffset(d.nextPage||page+1);
     }catch{}
     setArtistTracksLoading(false);
   };
@@ -825,7 +811,6 @@ export default function App(){
     <button
       onPointerDown={e=>{
         e.stopPropagation();
-        // НЕ вызываем preventDefault — это блокирует навигацию в Telegram WebApp iOS
         setScreen(prevScreen.current);
       }}
       style={{
@@ -837,7 +822,7 @@ export default function App(){
         backdropFilter:overlay?'blur(8px)':'none',
         ...tap,
         position:overlay?'absolute':'relative',
-        top:overlay?52:undefined,  // чуть выше (было 10, стало 52 = 44 safe area + 8)
+        top:overlay?52:undefined,
         left:overlay?14:undefined,
         zIndex:overlay?20:undefined,
       }}>
