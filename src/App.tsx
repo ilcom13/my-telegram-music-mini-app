@@ -192,7 +192,6 @@ function SliderTrack({val,sp,h=3}:{val:number;sp:ReturnType<typeof useSlider>;h?
   );
 }
 
-// Swipe hook — returns handlers to attach to a row element
 function useSwipe(onSwipeLeft?:()=>void, onSwipeRight?:()=>void){
   const startX=useRef<number|null>(null);
   const startY=useRef<number|null>(null);
@@ -201,7 +200,7 @@ function useSwipe(onSwipeLeft?:()=>void, onSwipeRight?:()=>void){
     if(startX.current===null||startY.current===null)return;
     const dx=e.clientX-startX.current;
     const dy=Math.abs(e.clientY-startY.current);
-    if(dy>30){startX.current=null;return;} // vertical scroll — ignore
+    if(dy>30){startX.current=null;return;}
     if(dx>55&&onSwipeRight)onSwipeRight();
     if(dx<-55&&onSwipeLeft)onSwipeLeft();
     startX.current=null;
@@ -234,6 +233,8 @@ export default function App(){
   const[artistTracksLoading,setArtistTracksLoading]=useState(false);
   const[artistTracksHasMore,setArtistTracksHasMore]=useState(false);
   const[artistTracksOffset,setArtistTracksOffset]=useState(0);
+  // ── ИЗМЕНЕНИЕ 1: cursor для /profile пагинации вместо offset
+  const artistTracksCursor=useRef<string|null>(null);
   const artistUserId=useRef('');
 
   const[favArtists,setFavArtists]=useState<ArtistInfo[]>([]);
@@ -248,7 +249,6 @@ export default function App(){
   const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
   const listenSec=useRef(0);
   const listenTrackId=useRef('');
-  // Refs for sync — always hold latest values (avoid stale closures)
   const totalSecRef=useRef(0);
   const exploredIdsRef=useRef<string[]>([]);
   const listenedIdsRef=useRef<string[]>([]);
@@ -341,95 +341,44 @@ export default function App(){
       const tpl=localStorage.getItem('tpl47');if(tpl)setTrackPlays(JSON.parse(tpl));
       const sdays=localStorage.getItem('sdays47');if(sdays){const d=JSON.parse(sdays);setStreakDays(d);setMaxStreak(calcMaxStreak(d));}
     }catch{}};
-    // ALWAYS load localStorage first (instant, no network)
     ll();
     if(uid!=='anon'){
       fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
-        if(!d.data)return; // server has nothing — keep localStorage data
+        if(!d.data)return;
         const sv=d.data;
-        // Merge rule: take whichever array is LONGER (more data = more recent)
-        // For volume and bgCover — take server value if exists
         const merge=<T,>(local:T[]|null,server:T[]|null):T[]|null=>{
-          if(!server?.length)return local;
-          if(!local?.length)return server;
+          if(!server?.length)return local;if(!local?.length)return server;
           return server.length>=local.length?server:local;
         };
-        // Liked
-        const localLiked=likedRef.current;
-        const merged_liked=merge(localLiked,sv.liked)||localLiked;
+        const localLiked=likedRef.current;const merged_liked=merge(localLiked,sv.liked)||localLiked;
         if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
-        // Playlists — merge by taking longer list
-        const localPl=playlistsRef.current;
-        const merged_pl=merge(localPl,sv.playlists)||localPl;
+        const localPl=playlistsRef.current;const merged_pl=merge(localPl,sv.playlists)||localPl;
         if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
-        // History
-        const localH=historyRef.current;
-        const merged_h=merge(localH,sv.history)||localH;
+        const localH=historyRef.current;const merged_h=merge(localH,sv.history)||localH;
         if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
-        // FavArtists
-        const localFA=favArtistsRef.current;
-        const merged_fa=merge(localFA,sv.favArtists)||localFA;
+        const localFA=favArtistsRef.current;const merged_fa=merge(localFA,sv.favArtists)||localFA;
         if(merged_fa!==localFA){setFavArtists(merged_fa);try{localStorage.setItem('fa47',JSON.stringify(merged_fa));}catch{}}
-        // FavAlbums
-        const localFAl=favAlbumsRef.current;
-        const merged_fal=merge(localFAl,sv.favAlbums)||localFAl;
+        const localFAl=favAlbumsRef.current;const merged_fal=merge(localFAl,sv.favAlbums)||localFAl;
         if(merged_fal!==localFAl){setFavAlbums(merged_fal);try{localStorage.setItem('fal47',JSON.stringify(merged_fal));}catch{}}
-        // Volume — take server only if local is still default (1)
-        if(sv.volume!==undefined&&volumeRef.current===1&&sv.volume!==1){
-          setVolume(sv.volume);volumeRef.current=sv.volume;
-          try{localStorage.setItem('v47',String(sv.volume));}catch{}
-        }
-        // Blocked artists — merge unique
-        if(sv.blockedArtists?.length){
-          const merged_ba=[...new Set([...blockedRef.current,...sv.blockedArtists])];
-          setBlockedArtists(merged_ba);try{localStorage.setItem('ba47',JSON.stringify(merged_ba));}catch{}
-        }
-        // BgCover
+        if(sv.volume!==undefined&&volumeRef.current===1&&sv.volume!==1){setVolume(sv.volume);volumeRef.current=sv.volume;try{localStorage.setItem('v47',String(sv.volume));}catch{}}
+        if(sv.blockedArtists?.length){const merged_ba=[...new Set([...blockedRef.current,...sv.blockedArtists])];setBlockedArtists(merged_ba);try{localStorage.setItem('ba47',JSON.stringify(merged_ba));}catch{}}
         if(sv.bgCover&&!bgCoverRef.current){setBgCover(sv.bgCover);try{localStorage.setItem('bgc47',sv.bgCover);}catch{}}
-        // Recs
-        if(sv.recs?.length){
-          const blocked=sv.blockedArtists||blockedRef.current||[];
-          const freshRecs=sv.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
-          if(freshRecs.length>recsRef.current.length){setRecs(freshRecs);try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}}
-        }
-        // Stats — always take the MAX value (never go backwards)
+        if(sv.recs?.length){const blocked=sv.blockedArtists||blockedRef.current||[];const freshRecs=sv.recs.filter((tr:Track)=>!blocked.includes(tr.artist));if(freshRecs.length>recsRef.current.length){setRecs(freshRecs);try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}}}
         if(sv.stats){
           const s=sv.stats;
-          const localTsec=totalSecRef.current;
-          if((s.totalSec||0)>localTsec){
-            setTotalSec(s.totalSec);totalSecRef.current=s.totalSec;
-            try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}
-          }
-          if((s.exploredIds?.length||0)>exploredIdsRef.current.length){
-            setExploredIds(s.exploredIds);exploredIdsRef.current=s.exploredIds;
-            try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}
-          }
-          if((s.listenedIds?.length||0)>listenedIdsRef.current.length){
-            setListenedIds(s.listenedIds);listenedIdsRef.current=s.listenedIds;
-            try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}
-          }
-          if(s.trackPlays&&Object.keys(s.trackPlays).length>Object.keys(trackPlaysRef.current).length){
-            setTrackPlays(s.trackPlays);trackPlaysRef.current=s.trackPlays;
-            try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}
-          }
-          if((s.streakDays?.length||0)>streakDaysRef.current.length){
-            setStreakDays(s.streakDays);streakDaysRef.current=s.streakDays;
-            const mx=calcMaxStreak(s.streakDays);
-            setMaxStreak(mx);maxStreakRef.current=mx;
-            try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}
-          }
+          if((s.totalSec||0)>totalSecRef.current){setTotalSec(s.totalSec);totalSecRef.current=s.totalSec;try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}}
+          if((s.exploredIds?.length||0)>exploredIdsRef.current.length){setExploredIds(s.exploredIds);exploredIdsRef.current=s.exploredIds;try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}}
+          if((s.listenedIds?.length||0)>listenedIdsRef.current.length){setListenedIds(s.listenedIds);listenedIdsRef.current=s.listenedIds;try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}}
+          if(s.trackPlays&&Object.keys(s.trackPlays).length>Object.keys(trackPlaysRef.current).length){setTrackPlays(s.trackPlays);trackPlaysRef.current=s.trackPlays;try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}}
+          if((s.streakDays?.length||0)>streakDaysRef.current.length){setStreakDays(s.streakDays);streakDaysRef.current=s.streakDays;const mx=calcMaxStreak(s.streakDays);setMaxStreak(mx);maxStreakRef.current=mx;try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}}
         }
-        // After merging — save the merged result back to server
         setTimeout(()=>doFullSync(),3000);
-      }).catch(()=>{}); // on network error — localStorage data already loaded
+      }).catch(()=>{});
     }
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
-  // ── Smart recommendations system ──────────────────────────────────────────
   const[recsLoading,setRecsLoading]=useState(false);
-
-  // Stable ref to avoid stale closure — always holds latest values
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
@@ -455,25 +404,18 @@ export default function App(){
     if(hist.length<1)return;
     setRecsLoading(true);
     try{
-      // Build weighted artist list — recent 15 tracks get 3x weight
       const allCounts=getArtistPlayCounts(hist.slice(0,100));
       const recentCounts=getArtistPlayCounts(hist.slice(0,15));
       const merged:Record<string,number>={};
       for(const[a,n] of Object.entries(allCounts))merged[a]=n;
       for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
-
-      // Sort by weight, filter blocked, take top 8
       const sortedArtists=Object.entries(merged)
         .filter(([a])=>!blocked.includes(a))
         .sort((a,b)=>b[1]-a[1])
         .map(([a])=>a)
         .slice(0,8);
-
       if(!sortedArtists.length){setRecsLoading(false);return;}
-
-      // Exclude recently listened ids (last 30) to avoid duplicates
       const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
-
       const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`);
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
@@ -482,7 +424,6 @@ export default function App(){
         if(fresh.length>0){
           setRecs(fresh);
           try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
-          // Sync everything to server after recs load
           doFullSync();
         }
       }
@@ -490,20 +431,15 @@ export default function App(){
     setRecsLoading(false);
   },[]);
 
-  // Trigger recs load when history or blocked changes
   useEffect(()=>{
     if(history.length>=1)loadRecommendations();
   },[recsVersion,history.length,blockedArtists.join(',')]);
 
-  // Refresh recs when app becomes visible again (tab/app re-open)
   useEffect(()=>{
-    const onVisible=()=>{
-      if(document.visibilityState==='visible')loadRecommendations();
-    };
+    const onVisible=()=>{if(document.visibilityState==='visible')loadRecommendations();};
     document.addEventListener('visibilitychange',onVisible);
     return()=>document.removeEventListener('visibilitychange',onVisible);
   },[loadRecommendations]);
-
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
@@ -512,7 +448,6 @@ export default function App(){
       if(loop){a.currentTime=0;a.play();}
       else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}
       else{
-        // Auto-play from recs/history but NEVER blocked artists
         const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
         const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
         const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
@@ -525,7 +460,6 @@ export default function App(){
   },[current,loop,queue,recs,history,blockedArtists]);
 
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
-  // Sync stats to server when trackPlays changes (catches most-played track)
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
     if(uid==='anon'||!Object.keys(trackPlays).length)return;
@@ -542,7 +476,6 @@ export default function App(){
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
-    // Всегда получаем свежий mp3 URL — SoundCloud URL протухает через ~1 мин
     let freshMp3=track.mp3;
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
@@ -558,6 +491,7 @@ export default function App(){
       a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
+        console.warn('play failed, retry:',err);
         setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
       });
     }
@@ -592,7 +526,6 @@ export default function App(){
     if(playHistory.length>0){
       const prev=playHistory[0];
       setPlayHistory(p=>p.slice(1));
-      // Do NOT touch queue — it stays as is
       if(audio.current&&prev.mp3){
         audio.current.pause();
         audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
@@ -621,7 +554,6 @@ export default function App(){
   const playTrack=(track:Track)=>{
     if(track.isArtist){openArtist('',track.title,track.cover,track.plays);return;}
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
-    // Allow tracks without mp3 — playDirect will resolve via /resolve?id=
     if(!track.id)return;
     if(current?.id===track.id){togglePlay();return;}
     playDirect(track);
@@ -637,7 +569,6 @@ export default function App(){
     setBlockedArtists(prev=>{
       const n=[...new Set([...prev,artist])];
       try{localStorage.setItem('ba47',JSON.stringify(n));}catch{}
-      // Save to server immediately
       triggerSync(liked,playlists,history,volume,favArtists,favAlbums,n,bgCover);
       return n;
     });
@@ -648,9 +579,7 @@ export default function App(){
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
-  // Cursor for paginated track loading
-  const artistTracksCursor = useRef<string|null>(null);
-
+  // ── ИЗМЕНЕНИЕ 2: openArtist использует /profile endpoint через воркер ────────
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as typeof prevScreen.current;
@@ -662,50 +591,60 @@ export default function App(){
       const d=await r.json();
       const art=d.artist||{};
       const userId=art.id||'';
-      const username=art.username||name; // username обязателен для поиска треков
+      const username=art.username||name;
       artistUserId.current=userId;
- 
-      // Показываем страницу сразу — треки из /artist уже включены (popular)
+
+      // Показываем страницу сразу с popular треками из /artist
       const popularTracks:Track[]=d.tracks||[];
       setArtistPage({
-        id:userId,name:art.name||name,username:art.username||'',
+        id:userId,name:art.name||name,username:username,
         avatar:art.avatar||avatar||'',banner:art.banner||'',
         followers:art.followers||followers,permalink:art.permalink||permalink,
-        tracks:popularTracks, // popular уже пришли из /artist
-        albums:[],latestRelease:null
+        tracks:popularTracks,albums:[],latestRelease:null
       });
- 
-      // Параллельно: альбомы + latest release + все треки для вкладки Tracks
-      const [albumsR,latestR,tracksR]=await Promise.allSettled([
-        fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
-        fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
-        fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}&page=0`),
-      ]);
- 
-      if(albumsR.status==='fulfilled'&&albumsR.value.ok){
-        const ad=await albumsR.value.json();
-        setArtistAlbums((ad.albums||[]).map((al:any)=>({
-          id:al.id,title:al.title,artist:al.artist,cover:al.cover,
-          tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
-        })));
+
+      if(userId){
+        // Параллельно грузим альбомы + latest + ВСЕ треки через /profile/soundcloud:users:{userId}
+        const [albumsR,latestR,tracksR]=await Promise.allSettled([
+          fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
+          fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
+          fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}`),
+        ]);
+
+        if(albumsR.status==='fulfilled'&&albumsR.value.ok){
+          const ad=await albumsR.value.json();
+          setArtistAlbums((ad.albums||[]).map((al:any)=>({
+            id:al.id,title:al.title,artist:al.artist,cover:al.cover,
+            tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
+          })));
+        }
+
+        let latestRelease:Track|null=null;
+        if(latestR.status==='fulfilled'&&latestR.value.ok){
+          const ld=await latestR.value.json();
+          latestRelease=ld.latest||null;
+        }
+
+        if(tracksR.status==='fulfilled'&&tracksR.value.ok){
+          const td=await tracksR.value.json();
+          const allTracks:Track[]=td.tracks||[];
+          setArtistTracks(allTracks);
+          setArtistTracksHasMore(td.hasMore||false);
+          artistTracksCursor.current=td.nextCursor||null;
+        }
+
+        setArtistPage(prev=>prev?{...prev,latestRelease}:null);
+      } else {
+        // Нет userId — fallback
+        fetch(`${W}/albums?q=${encodeURIComponent(name)}`)
+          .then(r=>r.json())
+          .then(d=>{
+            setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({
+              id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],
+              permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
+            })));
+          }).catch(()=>{});
       }
- 
-      let latestRelease:Track|null=null;
-      if(latestR.status==='fulfilled'&&latestR.value.ok){
-        const ld=await latestR.value.json();
-        latestRelease=ld.latest||null;
-      }
- 
-      if(tracksR.status==='fulfilled'&&tracksR.value.ok){
-        const td=await tracksR.value.json();
-        const allTracks:Track[]=td.tracks||[];
-        setArtistTracks(allTracks);
-        setArtistTracksHasMore(td.hasMore||false);
-        // nextPage для пагинации — сохраняем в offset
-        setArtistTracksOffset(td.nextPage||1);
-      }
- 
-      setArtistPage(prev=>prev?{...prev,latestRelease}:null);
     }catch{
       setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
     }
@@ -736,17 +675,18 @@ export default function App(){
     setArtistAlbumsLoading(false);
   };
 
-  const loadArtistTracks=async(userId:string,offset:number,reset=false)=>{
-    if(artistTracksLoading)return;
+  // ── ИЗМЕНЕНИЕ 3: loadArtistTracks — cursor через /profile endpoint ────────────
+  const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
+    if(!userId||artistTracksLoading)return;
     setArtistTracksLoading(true);
     try{
-      // username берём из artistPage
-      const username=artistPage?.username||artistPage?.name||'';
-      if(!username){setArtistTracksLoading(false);return;}
-      const page=reset?0:artistTracksOffset;
-      const r=await fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}&page=${page}`);
+      const cursor=reset?null:artistTracksCursor.current;
+      const params=new URLSearchParams({userId});
+      if(cursor)params.set('cursor',cursor);
+      const r=await fetch(`${W}/artist/tracks?${params}`);
       const d=await r.json();
       const newT:Track[]=d.tracks||[];
+      artistTracksCursor.current=d.nextCursor||null;
       if(reset){
         setArtistTracks(newT);
       } else {
@@ -756,7 +696,6 @@ export default function App(){
         });
       }
       setArtistTracksHasMore(d.hasMore||false);
-      setArtistTracksOffset(d.nextPage||page+1);
     }catch{}
     setArtistTracksLoading(false);
   };
@@ -806,7 +745,6 @@ export default function App(){
     <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
   );
 
-  // ── Back button — поверх баннера или в обычном хедере ──
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{
@@ -832,12 +770,11 @@ export default function App(){
   );
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
-    const btnBlocked=useRef(false); // blocks play when action btn pressed
+    const btnBlocked=useRef(false);
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
     const swipeFired=useRef(false);
     const wasMenuOpen=useRef(false);
-    // Build swipe state as reactive
     const[swipeVis,setSwipeVis]=useState({dx:0,dir:''});
     const swipeHandlers={
       onPointerDown:(e:React.PointerEvent)=>{swipeState.current={dx:0,startX:e.clientX,startY:e.clientY,active:true,dir:''};swipeFired.current=false;},
@@ -858,7 +795,7 @@ export default function App(){
         else if(dx<-55&&onSwipeLeft){onSwipeLeft();swipeFired.current=true;}
         setSwipeVis({dx:0,dir:''});
       },
-      onPointerCancel:()=>{swipeState.current.active=false;setSwipeVis({dx:0,dir:''}); },
+      onPointerCancel:()=>{swipeState.current.active=false;setSwipeVis({dx:0,dir:''});},
     };
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
@@ -869,10 +806,8 @@ export default function App(){
     ];
     return(
       <div style={{position:'relative'}}>
-        {/* Swipe indicator */}
         {swipeVis.dir==='right'&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(swipeVis.dx,80),background:'rgba(239,191,127,0.15)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:10,pointerEvents:'none',transition:'width 0.05s'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={ACC}/><circle cx="3" cy="12" r="1.2" fill={ACC}/><circle cx="3" cy="18" r="1.2" fill={ACC}/></svg></div>}
         {swipeVis.dir==='left'&&onSwipeLeft&&<div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(-swipeVis.dx,80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:10,pointerEvents:'none'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>}
-        {/* Outer row container — handles swipe only, NOT click-to-play */}
         <div
           onPointerDown={e=>{swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen){e.stopPropagation();setMenuId(null);}}}
           onPointerMove={swipeHandlers.onPointerMove}
@@ -880,7 +815,6 @@ export default function App(){
           onPointerCancel={swipeHandlers.onPointerCancel}
           style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
-          {/* LEFT ZONE — clicking here plays the track */}
           <div
             onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);return;}}}
             onPointerUp={e=>{e.stopPropagation();if(!swipeFired.current&&!mOpen)playTrack(track);swipeFired.current=false;}}
@@ -900,7 +834,6 @@ export default function App(){
               </div>
             </div>
           </div>
-          {/* RIGHT ZONE — action buttons, clicking here NEVER plays track */}
           {!track.isArtist&&!track.isAlbum&&(
             <div
               onPointerDown={e=>e.stopPropagation()}
@@ -949,17 +882,12 @@ export default function App(){
     {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,lbl:()=>t('trending')},
   ];
 
-  // ── FULL PLAYER ──────────────────────────────────────────────────────────────
-  // Swipe down to close full player
   const fpSwipeStart=useRef<number|null>(null);
   const fpSwipeY=useRef<number>(0);
   const fpOnPointerDown=(e:React.PointerEvent)=>{fpSwipeStart.current=e.clientY;fpSwipeY.current=e.clientY;};
   const fpOnPointerMove=(e:React.PointerEvent)=>{fpSwipeY.current=e.clientY;};
   const fpOnPointerUp=()=>{
-    if(fpSwipeStart.current!==null){
-      const diff=fpSwipeY.current-fpSwipeStart.current;
-      if(diff>70)setFullPlayer(false);
-    }
+    if(fpSwipeStart.current!==null){const diff=fpSwipeY.current-fpSwipeStart.current;if(diff>70)setFullPlayer(false);}
     fpSwipeStart.current=null;
   };
 
@@ -1058,14 +986,13 @@ export default function App(){
     </div>
   );
 
-  // ── MAIN ─────────────────────────────────────────────────────────────────────
   return(
     <div onPointerDown={()=>menuId&&setMenuId(null)} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
       <style>{`button:focus{outline:none!important}*{-webkit-tap-highlight-color:transparent}::-webkit-scrollbar{display:none}`}</style>
       <div style={{paddingBottom:current?NAV_H+110+8:NAV_H+6,minHeight:'100vh'}}>
 
-        {/* ── ARTIST ──────────────────────────────────────────────────────────── */}
+        {/* ── ARTIST ── */}
         {screen==='artist'&&(
           <div style={{position:'relative'}}>
             {artistLoading
@@ -1076,18 +1003,14 @@ export default function App(){
                 </>
               : artistPage&&(
                 <>
-                  {/* Баннер — с самого верха без отступов */}
                   <div style={{width:'100%',height:140,background:BG3,position:'relative',overflow:'hidden'}}>
                     {artistPage.banner
                       ? <img src={artistPage.banner} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} onError={()=>{}}/>
                       : <div style={{width:'100%',height:'100%',background:`linear-gradient(135deg,#2a1f0e,#1a1410,${BG})`}}/>
                     }
                     <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,transparent 35%,rgba(14,14,14,0.7) 75%,#0e0e0e 100%)'}}/>
-                    {/* Кнопка Back поверх баннера */}
                     <BackBtn overlay={true}/>
                   </div>
-
-                  {/* Аватар + инфо — накладывается на нижний край баннера */}
                   <div style={{padding:'0 16px 12px',display:'flex',alignItems:'flex-end',gap:12,marginTop:-32,position:'relative',zIndex:1}}>
                     <div style={{flexShrink:0,borderRadius:'50%',overflow:'hidden',border:`3px solid #0e0e0e`}}>
                       <Img src={artistPage.avatar} size={68} radius={34}/>
@@ -1103,7 +1026,6 @@ export default function App(){
                     </button>
                   </div>
 
-                  {/* Последний релиз */}
                   {artistPage.latestRelease&&(
                     <div style={{padding:'0 16px 12px'}}>
                       <SL text={t('latestRelease')}/>
@@ -1133,9 +1055,15 @@ export default function App(){
                     </div>
                   )}
 
+                  {artistPage.tracks.length>0&&(
+                    <div style={{marginBottom:12}}>
+                      <SL text={t('popular')}/>
+                      <div style={{padding:'0 4px'}}>
+                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+                      </div>
+                    </div>
+                  )}
 
-
-                  {/* Дискография */}
                   <div style={{padding:'0 16px 16px'}}>
                     <SL text={t('discography')}/>
                     <div style={{display:'flex',gap:6,marginBottom:12}}>
@@ -1186,7 +1114,7 @@ export default function App(){
           </div>
         )}
 
-        {/* ── ALBUM ────────────────────────────────────────────────────────────── */}
+        {/* ── ALBUM ── */}
         {screen==='album'&&(
           <div>
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16}}><BackBtn/></div>
@@ -1217,10 +1145,9 @@ export default function App(){
           </div>
         )}
 
-        {/* ── HOME ─────────────────────────────────────────────────────────────── */}
+        {/* ── HOME ── */}
         {screen==='home'&&(
           <div style={{position:'relative'}}>
-            {/* Blurred cover background — always uses current bgCover, updates live */}
             {(bgCover||(history.length>0&&history[0]?.cover))&&(
               <div style={{position:'absolute',top:0,left:0,right:0,height:240,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
                 <img
@@ -1280,7 +1207,7 @@ export default function App(){
           </div>
         )}
 
-        {/* ── SEARCH ───────────────────────────────────────────────────────────── */}
+        {/* ── SEARCH ── */}
         {screen==='search'&&(
           <div>
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}>
@@ -1306,7 +1233,7 @@ export default function App(){
           </div>
         )}
 
-        {/* ── LIBRARY ──────────────────────────────────────────────────────────── */}
+        {/* ── LIBRARY ── */}
         {screen==='library'&&(
           <div>
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
@@ -1346,7 +1273,7 @@ export default function App(){
           </div>
         )}
 
-        {/* ── TRENDING ─────────────────────────────────────────────────────────── */}
+        {/* ── TRENDING ── */}
         {screen==='trending'&&(()=>{const ct=trends[trendGenre]||[];return(
           <div>
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -1360,10 +1287,9 @@ export default function App(){
           </div>
         );})()}
 
-        {/* ── PROFILE ──────────────────────────────────────────────────────────── */}
+        {/* ── PROFILE ── */}
         {screen==='profile'&&(
           <div>
-            {/* Settings modal */}
             {showSettings&&(
               <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:200,display:'flex',alignItems:'flex-end'}} onPointerDown={()=>setShowSettings(false)}>
                 <div style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px'}} onPointerDown={e=>e.stopPropagation()}>
@@ -1385,11 +1311,9 @@ export default function App(){
               </div>
             )}
             {(()=>{
-              // Top track for bg cover
               const topTrack=Object.entries(trackPlays).sort((a,b)=>b[1].count-a[1].count)[0];
               const topCover=topTrack?trackPlays[topTrack[0]].cover||bgCover:bgCover;
               const topTrackData=topTrack?{...trackPlays[topTrack[0]],id:topTrack[0]}:null;
-              // Time formatted per language
               const hours=Math.floor(totalSec/3600);
               const mins=Math.floor((totalSec%3600)/60);
               const fmtTime=()=>{
@@ -1401,14 +1325,12 @@ export default function App(){
               };
               return(
                 <div style={{position:'relative'}}>
-                  {/* Blurred bg cover — top track */}
                   {topCover&&(
                     <div style={{position:'absolute',top:0,left:0,right:0,height:200,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
                       <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.6)',transform:'scale(1.05)'}} onError={()=>{}}/>
                       <div style={{position:'absolute',inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,${BG} 100%)`}}/>
                     </div>
                   )}
-                  {/* Header */}
                   <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:8,display:'flex',alignItems:'center',gap:4}}>
                     <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',...tap}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{t('profile')}</div>
@@ -1418,7 +1340,6 @@ export default function App(){
                       </button>
                     </div>
                   </div>
-                  {/* Avatar + name */}
                   <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 14px'}}>
                     {tg?.photo_url
                       ?<img src={tg.photo_url} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',marginBottom:10,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
@@ -1427,15 +1348,12 @@ export default function App(){
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
                     {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
                   </div>
-                  {/* Stats content */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px'}}>
-                    {/* Monthly stats button */}
                     <button onPointerDown={()=>{}} style={{width:'100%',padding:'11px 14px',background:'rgba(30,30,30,0.8)',border:'1px solid #252525',borderRadius:12,color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,marginBottom:12,...tap}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                       <span style={{color:TEXT_PRIMARY,fontSize:13}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly stats'}</span>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
-                    {/* Row 1: Time + Streak */}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
                       <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
                         <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Времени в музыке':lang==='uk'?'В музиці':lang==='kk'?'Музыкада':lang==='pl'?'W muzyce':lang==='tr'?'Müzikte':'Time in music'}</div>
@@ -1446,7 +1364,6 @@ export default function App(){
                         <div style={{fontSize:18,fontWeight:700,color:ACC}}>{maxStreak} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'?'дн':lang==='uk'?'дн':lang==='kk'?'күн':lang==='pl'?'dni':lang==='tr'?'gün':'d'}</span></div>
                       </div>
                     </div>
-                    {/* Row 2: Explored + Listened */}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
                       <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
                         <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Изучено':lang==='uk'?'Вивчено':lang==='kk'?'Зерттелген':lang==='pl'?'Odkryte':lang==='tr'?'Keşfedilen':'Explored'}</div>
@@ -1457,7 +1374,6 @@ export default function App(){
                         <div style={{fontSize:18,fontWeight:700,color:ACC}}>{listenedIds.length} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'||lang==='uk'?'тр':'tr'}</span></div>
                       </div>
                     </div>
-                    {/* Most played track — full width card with cover */}
                     {topTrackData&&(
                       <div style={{background:'rgba(25,25,25,0.85)',border:`1px solid ${ACC}22`,borderRadius:12,padding:'12px',marginBottom:14,display:'flex',alignItems:'center',gap:12}}>
                         <Img src={topTrackData.cover||''} size={48} radius={8}/>
@@ -1482,21 +1398,17 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER ──────────────────────────────────────────────────────── */}
+      {/* ── MINI PLAYER ── */}
       {current&&screen!=='profile'&&(
         <div style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 10px',zIndex:100}}>
-          {/* Main row: [cover] [title+artist / prev·next] [play] */}
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
-            {/* Cover */}
             <div onPointerDown={()=>setFullPlayer(true)} style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden'}}>
               <Img src={current.cover} size={52} radius={10}/>
             </div>
-            {/* Center: top=title+artist, bottom=prev/next */}
             <div onPointerDown={()=>setFullPlayer(true)} style={{flex:1,minWidth:0,cursor:'pointer'}}>
               <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.2}}>{current.title}</div>
               <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:0.2,textTransform:'uppercase' as const}}>{current.artist}</div>
             </div>
-            {/* Prev / Next icons */}
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
               <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',...tap,opacity:playHistory.length>0?1:0.35}}>
@@ -1507,13 +1419,11 @@ export default function App(){
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
-            {/* Play/pause — big round right */}
             <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();togglePlay();}}
               style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Timeline — full width */}
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
             <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
@@ -1527,7 +1437,7 @@ export default function App(){
         </div>
       )}
 
-      {/* ── NAV ──────────────────────────────────────────────────────────────── */}
+      {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
           {NAV.map(item=>(<div key={item.id} onPointerDown={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>{item.icon(screen===item.id)}<span style={{fontSize:10,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span></div>))}
