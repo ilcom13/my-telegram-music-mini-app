@@ -542,7 +542,7 @@ export default function App(){
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
-    // Always resolve a FRESH mp3 URL — SoundCloud URLs expire in ~1 minute
+    // Всегда получаем свежий mp3 URL — SoundCloud URL протухает через ~1 мин
     let freshMp3=track.mp3;
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
@@ -558,7 +558,6 @@ export default function App(){
       a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
-        console.warn('play failed, retry:',err);
         setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
       });
     }
@@ -584,8 +583,7 @@ export default function App(){
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
       playCountRef.current+=1;
       setRecsVersion(v=>v+1);
-      // Save everything to server on every track play
-      triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover); // stats included via closure
+      triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
       return n;
     });
   };
@@ -719,8 +717,7 @@ export default function App(){
   };
 
   const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
-    if(!userId)return;
-    if(artistTracksLoading)return;
+    if(!userId||artistTracksLoading)return;
     setArtistTracksLoading(true);
     try{
       const cursor=reset?null:artistTracksCursor.current;
@@ -791,17 +788,22 @@ export default function App(){
   // ── Back button — поверх баннера или в обычном хедере ──
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
-      onPointerDown={e=>{e.preventDefault();e.stopPropagation();setScreen(prevScreen.current);}}
+      onPointerDown={e=>{
+        // НЕ вызываем e.preventDefault() — это блокирует навигацию в Telegram WebApp
+        e.stopPropagation();
+        setScreen(prevScreen.current);
+      }}
       style={{
         background:overlay?'rgba(0,0,0,0.5)':'none',
         border:'none',cursor:'pointer',
+        // FIX: поднимаем кнопку выше на overlay — top:52 (44 safe area + 8 отступ)
         padding:overlay?'7px 13px':'6px 10px 6px 0',
         borderRadius:overlay?20:0,
         display:'flex',alignItems:'center',gap:5,
         backdropFilter:overlay?'blur(8px)':'none',
         ...tap,
         position:overlay?'absolute':'relative',
-        top:overlay?10:undefined,
+        top:overlay?52:undefined,
         left:overlay?14:undefined,
         zIndex:overlay?20:undefined,
       }}>
@@ -1152,7 +1154,7 @@ export default function App(){
                         {artistTracksLoading&&artistTracks.length>0&&<div style={{textAlign:'center',padding:'10px',color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
                         {artistTracksHasMore&&!artistTracksLoading&&(
                           <div style={{display:'flex',justifyContent:'center',padding:'10px 0'}}>
-                            <button onPointerDown={()=>loadArtistTracks(artistUserId.current,artistTracksOffset)}
+                            <button onPointerDown={()=>loadArtistTracks(artistUserId.current,0,false)}
                               style={{padding:'9px 28px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',...tap}}>{t('showMore')}</button>
                           </div>
                         )}
