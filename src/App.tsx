@@ -649,7 +649,7 @@ export default function App(){
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
   // Cursor for paginated track loading
-  const artistTracksCursor=useRef<string|null>(null);
+  const artistTracksCursor = useRef<string|null>(null);
 
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
@@ -658,37 +658,72 @@ export default function App(){
     setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');
     artistUserId.current='';artistTracksCursor.current=null;
     try{
+      // Шаг 1: получаем профиль (только метаданные)
       const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
       const art=d.artist||{};
       const userId=art.id||'';
       artistUserId.current=userId;
-      // Latest release — load separately for accuracy
-      let latestRelease:Track|null=null;
-      if(userId){
-        try{
-          const lr=await fetch(`${W}/artist/latest?userId=${userId}`);
-          const ld=await lr.json();
-          // Prefer most recent of track vs album
-          latestRelease=ld.latest||ld.track||ld.album||null;
-        }catch{}
-      }
+ 
+      // Показываем базовую страницу немедленно
       setArtistPage({
         id:userId,name:art.name||name,username:art.username||'',
         avatar:art.avatar||avatar||'',banner:art.banner||'',
         followers:art.followers||followers,permalink:art.permalink||permalink,
-        tracks:[],albums:[],latestRelease
+        tracks:[],albums:[],latestRelease:null
       });
+ 
       if(userId){
-        // Load albums
-        loadArtistAlbums(userId);
-        // Load first page of tracks
-        loadArtistTracks(userId,0,true);
+        // Шаг 2: параллельно грузим альбомы + latest release + треки
+        const [albumsR,latestR,tracksR]=await Promise.allSettled([
+          fetch(`${W}/artist/albums?userId=${userId}`),
+          fetch(`${W}/artist/latest?userId=${userId}`),
+          fetch(`${W}/artist/tracks?userId=${userId}`), // limit=200 в воркере, до 3 страниц
+        ]);
+ 
+        // Альбомы
+        if(albumsR.status==='fulfilled'&&albumsR.value.ok){
+          const ad=await albumsR.value.json();
+          setArtistAlbums((ad.albums||[]).map((al:any)=>({
+            id:al.id,title:al.title,artist:al.artist,cover:al.cover,
+            tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
+          })));
+        }
+ 
+        // Latest release
+        let latestRelease:Track|null=null;
+        if(latestR.status==='fulfilled'&&latestR.value.ok){
+          const ld=await latestR.value.json();
+          latestRelease=ld.latest||null;
+        }
+ 
+        // Треки
+        if(tracksR.status==='fulfilled'&&tracksR.value.ok){
+          const td=await tracksR.value.json();
+          const allTracks:Track[]=td.tracks||[];
+          setArtistTracks(allTracks);
+          setArtistTracksHasMore(td.hasMore||false);
+          artistTracksCursor.current=td.nextCursor||null;
+          // Popular = топ-5 по воспроизведениям
+          const popular=[...allTracks].sort((a,b)=>(b.plays||0)-(a.plays||0)).slice(0,5);
+          setArtistPage(prev=>prev?{...prev,latestRelease,tracks:popular}:null);
+        } else {
+          setArtistPage(prev=>prev?{...prev,latestRelease}:null);
+        }
       } else {
-        loadArtistAlbumsByName(name);
-        setArtistTracksHasMore(false);
+        // Нет userId — fallback поиск альбомов по имени
+        fetch(`${W}/albums?q=${encodeURIComponent(name)}`)
+          .then(r=>r.json())
+          .then(d=>{
+            setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({
+              id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],
+              permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0,
+            })));
+          }).catch(()=>{});
       }
-    }catch{setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});}
+    }catch{
+      setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
+    }
     setArtistLoading(false);
   };
 
@@ -721,7 +756,7 @@ export default function App(){
     setArtistTracksLoading(true);
     try{
       const cursor=reset?null:artistTracksCursor.current;
-      const params=new URLSearchParams({userId,limit:'20'});
+      const params=new URLSearchParams({userId});
       if(cursor)params.set('cursor',cursor);
       const r=await fetch(`${W}/artist/tracks?${params}`);
       const d=await r.json();
@@ -789,21 +824,20 @@ export default function App(){
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{
-        // НЕ вызываем e.preventDefault() — это блокирует навигацию в Telegram WebApp
         e.stopPropagation();
+        // НЕ вызываем preventDefault — это блокирует навигацию в Telegram WebApp iOS
         setScreen(prevScreen.current);
       }}
       style={{
         background:overlay?'rgba(0,0,0,0.5)':'none',
         border:'none',cursor:'pointer',
-        // FIX: поднимаем кнопку выше на overlay — top:52 (44 safe area + 8 отступ)
         padding:overlay?'7px 13px':'6px 10px 6px 0',
         borderRadius:overlay?20:0,
         display:'flex',alignItems:'center',gap:5,
         backdropFilter:overlay?'blur(8px)':'none',
         ...tap,
         position:overlay?'absolute':'relative',
-        top:overlay?52:undefined,
+        top:overlay?52:undefined,  // чуть выше (было 10, стало 52 = 44 safe area + 8)
         left:overlay?14:undefined,
         zIndex:overlay?20:undefined,
       }}>
