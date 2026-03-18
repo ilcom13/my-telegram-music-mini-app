@@ -970,24 +970,26 @@ export default function App(){
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     // ── FIX: всё состояние свайпа хранится в одном ref, без stopPropagation от детей ──
-    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,isMouse:false});
+    // pressed=true только между pointerDown и pointerUp/Cancel
+    // isTouchDown=true только если это тач (не мышь)
+    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,pressed:false,isTouchDown:false});
     const[swipeDx,setSwipeDx]=useState(0);
     const rowRef=useRef<HTMLDivElement>(null);
 
     const onRowDown=(e:React.PointerEvent)=>{
-      const isMouse=e.pointerType==='mouse';
-      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,isMouse};
+      const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
+      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,pressed:true,isTouchDown:isTouch};
       if(mOpen)setMenuId(null);
     };
     const onRowMove=(e:React.PointerEvent)=>{
       const s=ps.current;
-      // ── мышь: свайп не работает, только тач/стилус ──
-      if(s.isMouse)return;
+      // ГЛАВНЫЙ ФИКСa: свайп только если:
+      // 1. была нажата кнопка (pressed)
+      // 2. это тач/стилус, не мышь
+      if(!s.pressed||!s.isTouchDown)return;
       const dx=e.clientX-s.sx;
       const dy=Math.abs(e.clientY-s.sy);
-      // если двигается вертикально — не свайп
       if(dy>18&&Math.abs(dx)<18){setSwipeDx(0);return;}
-      // как только горизонтальное смещение > 8px — захватываем pointer
       if(Math.abs(dx)>8&&!s.captured){
         try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
         s.captured=true;
@@ -1003,19 +1005,19 @@ export default function App(){
       const s=ps.current;
       const dx=s.dx;
       const dt=Date.now()-s.st;
+      ps.current.pressed=false;
+      ps.current.isTouchDown=false;
       setSwipeDx(0);
       if(s.captured){
-        // свайп сработал (только тач)
         if(dx>55&&!track.isArtist&&!track.isAlbum){toggleQ(track);s.fired=true;}
         else if(dx<-55&&onSwipeLeft){onSwipeLeft();s.fired=true;}
-        return; // не трактуем как тап
+        return;
       }
-      // это был тап / клик мышью — открываем трек
       if(!s.menuWasOpen&&!s.fired&&dt<400){
         playTrack(track);
       }
     };
-    const onRowCancel=()=>{setSwipeDx(0);};
+    const onRowCancel=()=>{ps.current.pressed=false;ps.current.isTouchDown=false;setSwipeDx(0);};
 
     const swipeDir=swipeDx>8?'right':swipeDx<-8?'left':'';
     const menuItems=[
