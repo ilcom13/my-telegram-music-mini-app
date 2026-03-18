@@ -932,31 +932,52 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
-    const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
-    const swipeFired=useRef(false);
-    const wasMenuOpen=useRef(false);
-    const[swipeVis,setSwipeVis]=useState({dx:0,dir:''});
-    const swipeHandlers={
-      onPointerDown:(e:React.PointerEvent)=>{swipeState.current={dx:0,startX:e.clientX,startY:e.clientY,active:true,dir:''};swipeFired.current=false;},
-      onPointerMove:(e:React.PointerEvent)=>{
-        if(!swipeState.current.active)return;
-        const dx=e.clientX-swipeState.current.startX;
-        const dy=Math.abs(e.clientY-swipeState.current.startY);
-        if(dy>20&&Math.abs(dx)<20){swipeState.current.active=false;setSwipeVis({dx:0,dir:''});return;}
-        swipeState.current.dx=dx;
-        swipeState.current.dir=dx>0?'right':dx<0?'left':'';
-        setSwipeVis({dx,dir:swipeState.current.dir});
-      },
-      onPointerUp:(e:React.PointerEvent)=>{
-        if(!swipeState.current.active){setSwipeVis({dx:0,dir:''});return;}
-        const dx=swipeState.current.dx;
-        swipeState.current.active=false;
-        if(dx>55&&!track.isArtist&&!track.isAlbum){addQ(track,e as any);swipeFired.current=true;}
-        else if(dx<-55&&onSwipeLeft){onSwipeLeft();swipeFired.current=true;}
-        setSwipeVis({dx:0,dir:''});
-      },
-      onPointerCancel:()=>{swipeState.current.active=false;setSwipeVis({dx:0,dir:''});},
+    // ── FIX: всё состояние свайпа хранится в одном ref, без stopPropagation от детей ──
+    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false});
+    const[swipeDx,setSwipeDx]=useState(0);
+    const rowRef=useRef<HTMLDivElement>(null);
+
+    const onRowDown=(e:React.PointerEvent)=>{
+      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen};
+      if(mOpen)setMenuId(null);
     };
+    const onRowMove=(e:React.PointerEvent)=>{
+      const s=ps.current;
+      const dx=e.clientX-s.sx;
+      const dy=Math.abs(e.clientY-s.sy);
+      // если двигается вертикально — не свайп
+      if(dy>18&&Math.abs(dx)<18){setSwipeDx(0);return;}
+      // как только горизонтальное смещение > 8px — захватываем pointer
+      if(Math.abs(dx)>8&&!s.captured){
+        try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
+        s.captured=true;
+        e.preventDefault();
+      }
+      if(s.captured){
+        s.dx=dx;
+        setSwipeDx(dx);
+        e.preventDefault();
+      }
+    };
+    const onRowUp=(e:React.PointerEvent)=>{
+      const s=ps.current;
+      const dx=s.dx;
+      const dt=Date.now()-s.st;
+      setSwipeDx(0);
+      if(s.captured){
+        // свайп сработал
+        if(dx>55&&!track.isArtist&&!track.isAlbum){toggleQ(track);s.fired=true;}
+        else if(dx<-55&&onSwipeLeft){onSwipeLeft();s.fired=true;}
+        return; // не трактуем как тап
+      }
+      // это был тап (нет захвата) — обрабатываем как нажатие на трек
+      if(!s.menuWasOpen&&!s.fired&&dt<400){
+        playTrack(track);
+      }
+    };
+    const onRowCancel=()=>{setSwipeDx(0);};
+
+    const swipeDir=swipeDx>8?'right':swipeDx<-8?'left':'';
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
@@ -966,19 +987,28 @@ export default function App(){
     ];
     return(
       <div style={{position:'relative'}}>
-        {swipeVis.dir==='right'&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(swipeVis.dx,80),background:'rgba(239,191,127,0.15)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:10,pointerEvents:'none',transition:'width 0.05s'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={ACC}/><circle cx="3" cy="12" r="1.2" fill={ACC}/><circle cx="3" cy="18" r="1.2" fill={ACC}/></svg></div>}
-        {swipeVis.dir==='left'&&onSwipeLeft&&<div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(-swipeVis.dx,80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:10,pointerEvents:'none'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>}
+        {/* свайп вправо — добавить/убрать из очереди */}
+        {swipeDir==='right'&&!track.isArtist&&!track.isAlbum&&(
+          <div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(Math.abs(swipeDx),80),background:inQ(track.id)?'rgba(239,191,127,0.22)':'rgba(239,191,127,0.13)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:12,pointerEvents:'none'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
+          </div>
+        )}
+        {/* свайп влево — убрать лайк или удалить */}
+        {swipeDir==='left'&&onSwipeLeft&&(
+          <div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(Math.abs(swipeDx),80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:12,pointerEvents:'none'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
+        )}
+        {/* основной контейнер строки — единый обработчик pointer-событий */}
         <div
-          onPointerDown={e=>{swipeHandlers.onPointerDown(e);wasMenuOpen.current=mOpen;if(mOpen){e.stopPropagation();setMenuId(null);}}}
-          onPointerMove={swipeHandlers.onPointerMove}
-          onPointerUp={e=>{swipeHandlers.onPointerUp(e);}}
-          onPointerCancel={swipeHandlers.onPointerCancel}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeVis.dx!==0?`translateX(${Math.max(-60,Math.min(60,swipeVis.dx))}px)`:'none',transition:swipeVis.dx===0?'transform 0.2s':'none'}}>
+          ref={rowRef}
+          onPointerDown={onRowDown}
+          onPointerMove={onRowMove}
+          onPointerUp={onRowUp}
+          onPointerCancel={onRowCancel}
+          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeDx!==0?`translateX(${Math.max(-70,Math.min(70,swipeDx))}px)`:'none',transition:swipeDx===0?'transform 0.18s ease':'none',touchAction:'pan-y',userSelect:'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right'}}>{num}</div>}
-          <div
-            onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);return;}}}
-            onPointerUp={e=>{e.stopPropagation();if(!swipeFired.current&&!mOpen)playTrack(track);swipeFired.current=false;}}
-            style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,...tap}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,...tap}}>
             <div style={{position:'relative',flexShrink:0}}>
               <Img src={track.cover} size={44} radius={track.isArtist?22:8}/>
               {active&&!track.isArtist&&!track.isAlbum&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{playing?'⏸':'▶'}</div>}
@@ -1095,8 +1125,25 @@ export default function App(){
         </button>
       </div>
       <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:14}}>
-        <div style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)'}}>
+        <div
+          style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer'}}
+          onClick={e=>{
+            // ── сворачиваем плеер только при нажатии в центральную зону обложки (не края) ──
+            const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
+            const margin=rect.width*0.22; // 22% с каждого края — мёртвая зона
+            const cx=e.clientX-rect.left;
+            const cy=e.clientY-rect.top;
+            const inCenter=cx>margin&&cx<rect.width-margin&&cy>margin&&cy<rect.height-margin;
+            if(inCenter)setFullPlayer(false);
+          }}
+        >
           <Img src={current.cover} size={Math.min(window.innerWidth-64,230)} radius={0}/>
+          {/* подсказка — иконка свернуть в центре при hover (на мобиле не видна) */}
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity 0.2s'}} className="cover-hint">
+            <div style={{width:40,height:40,borderRadius:'50%',background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
         </div>
       </div>
       <div style={{width:'100%',flexShrink:0,marginBottom:10}}>
