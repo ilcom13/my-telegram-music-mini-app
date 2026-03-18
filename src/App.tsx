@@ -204,6 +204,7 @@ function AlbumImg({src,radius=0}:{src:string;radius?:number}){
 
 const GENRES=[{id:'top',label:'Топ',e:'🔥'},{id:'new',label:'Новинки',e:'⚡'},{id:'ru-rap',label:'RU Рэп',e:'🎤'},{id:'hip-hop',label:'Hip-Hop',e:'🎧'},{id:'trap',label:'Trap',e:'💀'},{id:'drill',label:'Drill',e:'🔩'},{id:'electronic',label:'Electronic',e:'⚡'},{id:'rnb',label:'R&B',e:'💜'},{id:'pop',label:'Pop',e:'✨'},{id:'latin',label:'Latin',e:'🌴'}];
 const REMIX_W=['speed up','sped up','slowed','reverb','slow reverb','nightcore','pitched','lofi','lo-fi','boosted','bass boost','phonk','tiktok','ultra slowed','super slowed','mashup','extended','hardstyle','core','remix','bass','спид ап','спид апп','словед','слоувед','ремикс','басс','слоу','реверб','найткор','хардстайл','мэшап','мешап','кор','фонк','лофи'];
+const COVER_W=['cover','parody','кавер','пародия','cover version','кавер-версия','tribute to','в стиле','cover by','кавер на'];
 
 // ── FIX: Slider — keep thumb and fill perfectly in sync, use pointer capture ──
 function useSlider(val:number,onChange:(v:number)=>void){
@@ -358,7 +359,7 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
-  const[searchMode,setSearchMode]=useState<'sound'|'albums'|'remix'|'artists'>('sound');
+  const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const[results,setResults]=useState<Track[]>([]);
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
@@ -473,7 +474,7 @@ export default function App(){
       const fa=localStorage.getItem('fa47');if(fa)setFavArtists(JSON.parse(fa));
       const fal=localStorage.getItem('fal47');if(fal)setFavAlbums(JSON.parse(fal));
       const v=localStorage.getItem('v47');if(v)setVolume(parseFloat(v));
-      const q=localStorage.getItem('q47');if(q)setQueue(JSON.parse(q));
+      // queue intentionally NOT restored on reload (fresh queue each session)
       const ba_raw=localStorage.getItem('ba47');
       const blocked_on_load:string[]=ba_raw?JSON.parse(ba_raw):[];
       setBlockedArtists(blocked_on_load);
@@ -766,7 +767,43 @@ export default function App(){
   };
 
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
-  const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
+  const doSearch=async(mode=searchMode)=>{
+    if(!query.trim())return;
+    setLoading(true);setError('');setResults([]);
+    try{
+      const ep=mode==='albums'?'albums':'search';
+      // covers режим — ищем как sound, но фильтрация по COVER_W на клиенте
+      const serverMode=mode==='covers'?'sound':mode;
+      const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${serverMode}`);
+      const d=await r.json();
+      if(d.error)throw new Error(d.error);
+      let tracks:Track[]=d.tracks||[];
+      if(mode==='covers'){
+        // оставляем только каверы/пародии
+        tracks=tracks.filter(tr=>COVER_W.some(w=>tr.title.toLowerCase().includes(w)));
+        // если в основных результатах мало — делаем дополнительный запрос с словом cover
+        if(tracks.length<5){
+          try{
+            const r2=await fetch(`${W}/search?q=${encodeURIComponent(query+' cover')}&mode=sound`);
+            const d2=await r2.json();
+            const extra=(d2.tracks||[]).filter((tr:Track)=>
+              COVER_W.some(w=>tr.title.toLowerCase().includes(w))&&
+              !tracks.some(t=>t.id===tr.id)
+            );
+            tracks=[...tracks,...extra];
+          }catch{}
+        }
+      } else {
+        // в обычных режимах фильтруем каверы/пародии
+        if(mode==='sound'||mode==='remix'){
+          tracks=tracks.filter(tr=>!COVER_W.some(w=>tr.title.toLowerCase().includes(w)));
+        }
+      }
+      if(!tracks.length)throw new Error(t('notFound'));
+      setResults(tracks);
+    }catch(e:unknown){setError(e instanceof Error?e.message:String(e));}
+    finally{setLoading(false);}
+  };
 
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
@@ -1427,9 +1464,9 @@ export default function App(){
                 <button onPointerDown={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0,...tap}}>{loading?'...':t('find')}</button>
               </div>
               <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto'}}>
-                {(['sound','albums','remix','artists'] as const).map(m=>(
+                {(['sound','albums','covers','remix','artists'] as const).map(m=>(
                   <button key={m} onPointerDown={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
-                    {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='remix'?t('remix'):t('artists')}
+                    {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
                   </button>
                 ))}
               </div>
