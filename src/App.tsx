@@ -272,6 +272,71 @@ function Spinner(){return(<div style={{display:'flex',alignItems:'center',justif
 
 function getArtistPlayCounts(history:Track[]):Record<string,number>{const c:Record<string,number>={};for(const tr of history){if(!tr.artist||REMIX_W.some(w=>tr.artist.toLowerCase().includes(w)))continue;c[tr.artist]=(c[tr.artist]||0)+1;}return c;}
 
+// ── RecentCard: выделен в отдельный компонент чтобы useRef не был внутри .map() ──
+function RecentCard({tr,isActive,isPlaying,inQueue,onPlay,onArtist,onQueue,queueLabel}:{
+  tr:Track;isActive:boolean;isPlaying:boolean;inQueue:boolean;
+  onPlay:()=>void;onArtist:()=>void;onQueue:(e:React.MouseEvent)=>void;queueLabel:string;
+}){
+  const pressStart=useRef<{x:number;y:number;t:number}|null>(null);
+  const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
+  return(
+    <div style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e',userSelect:'none'}}>
+      <div
+        onPointerDown={e=>{pressStart.current={x:e.clientX,y:e.clientY,t:Date.now()};}}
+        onPointerUp={e=>{
+          if(!pressStart.current)return;
+          const dx=Math.abs(e.clientX-pressStart.current.x);
+          const dy=Math.abs(e.clientY-pressStart.current.y);
+          const dt=Date.now()-pressStart.current.t;
+          pressStart.current=null;
+          if(dx<8&&dy<8&&dt<400)onPlay();
+        }}
+        onPointerCancel={()=>{pressStart.current=null;}}
+        style={{width:100,height:100,position:'relative'}}>
+        <Img src={tr.cover} size={100} radius={0}/>
+        {isActive&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{isPlaying?'⏸':'▶'}</div>}
+      </div>
+      <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
+        <button onPointerDown={e=>{e.stopPropagation();onArtist();}} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const,...tap}}>
+          <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist}</div>
+        </button>
+        <div style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
+      </div>
+      <button
+        onPointerDown={e=>{e.stopPropagation();onQueue(e);}}
+        style={{width:'100%',padding:'4px 7px',background:inQueue?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/></svg>
+        <span style={{fontSize:8,color:inQueue?ACC:'#5a5a5a'}}>{queueLabel}</span>
+      </button>
+    </div>
+  );
+}
+
+// ── NavItem: выделен в отдельный компонент чтобы useRef не был внутри .map() ──
+function NavItem({item,active,onSelect}:{
+  item:{id:string;icon:(a:boolean)=>React.ReactNode;lbl:()=>string};
+  active:boolean;onSelect:()=>void;
+}){
+  const pressStart=useRef<{x:number;y:number}|null>(null);
+  const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
+  return(
+    <div
+      onPointerDown={e=>{pressStart.current={x:e.clientX,y:e.clientY};}}
+      onPointerUp={e=>{
+        if(!pressStart.current)return;
+        const dx=Math.abs(e.clientX-pressStart.current.x);
+        const dy=Math.abs(e.clientY-pressStart.current.y);
+        pressStart.current=null;
+        if(dx<10&&dy<10)onSelect();
+      }}
+      onPointerCancel={()=>{pressStart.current=null;}}
+      style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>
+      {item.icon(active)}
+      <span style={{fontSize:10,color:active?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span>
+    </div>
+  );
+}
+
 export default function App(){
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
@@ -1275,41 +1340,19 @@ export default function App(){
                 <SL text={t('recent')}/>
                 {/* ── FIX: recent history scroll — use onPointerUp with distance check to prevent accidental play ── */}
                 <div style={{display:'flex',gap:10,padding:'0 16px 12px',overflowX:'auto'}}>
-                  {history.slice(0,8).map(tr=>{
-                    const pressStart=useRef<{x:number;y:number;t:number}|null>(null);
-                    return(
-                      <div key={tr.id} style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e',userSelect:'none'}}>
-                        <div
-                          onPointerDown={e=>{pressStart.current={x:e.clientX,y:e.clientY,t:Date.now()};}}
-                          onPointerUp={e=>{
-                            if(!pressStart.current)return;
-                            const dx=Math.abs(e.clientX-pressStart.current.x);
-                            const dy=Math.abs(e.clientY-pressStart.current.y);
-                            const dt=Date.now()-pressStart.current.t;
-                            pressStart.current=null;
-                            // Only play if: minimal movement (not scrolling) AND quick tap
-                            if(dx<8&&dy<8&&dt<400)playTrack(tr);
-                          }}
-                          onPointerCancel={()=>{pressStart.current=null;}}
-                          style={{width:100,height:100}}>
-                          <Img src={tr.cover} size={100} radius={0}/>
-                        </div>
-                        <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
-                          <button onPointerDown={e=>{e.stopPropagation();openArtist('',tr.artist,tr.cover,0);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const,...tap}}>
-                            <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist}</div>
-                          </button>
-                          <div style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-                        </div>
-                        {/* ── FIX: Add to queue button on recent tracks ── */}
-                        <button
-                          onPointerDown={e=>{e.stopPropagation();addQ(tr,e);}}
-                          style={{width:'100%',padding:'4px 7px',background:inQ(tr.id)?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQ(tr.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/></svg>
-                          <span style={{fontSize:8,color:inQ(tr.id)?ACC:'#5a5a5a'}}>{t('queue')}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {history.slice(0,8).map(tr=>(
+                    <RecentCard
+                      key={tr.id}
+                      tr={tr}
+                      isActive={current?.id===tr.id}
+                      isPlaying={playing}
+                      inQueue={inQ(tr.id)}
+                      onPlay={()=>playTrack(tr)}
+                      onArtist={()=>openArtist('',tr.artist,tr.cover,0)}
+                      onQueue={e=>addQ(tr,e)}
+                      queueLabel={t('queue')}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -1557,27 +1600,14 @@ export default function App(){
       {/* ── NAV — FIX: use onClick instead of onPointerDown to prevent drag-triggered navigation ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
-          {NAV.map(item=>{
-            const navPressStart=useRef<{x:number;y:number}|null>(null);
-            return(
-              <div
-                key={item.id}
-                onPointerDown={e=>{navPressStart.current={x:e.clientX,y:e.clientY};}}
-                onPointerUp={e=>{
-                  if(!navPressStart.current)return;
-                  const dx=Math.abs(e.clientX-navPressStart.current.x);
-                  const dy=Math.abs(e.clientY-navPressStart.current.y);
-                  navPressStart.current=null;
-                  // Only switch tab if it's a real tap (no drag)
-                  if(dx<10&&dy<10)setScreen(item.id as 'home'|'search'|'library'|'trending');
-                }}
-                onPointerCancel={()=>{navPressStart.current=null;}}
-                style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>
-                {item.icon(screen===item.id)}
-                <span style={{fontSize:10,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span>
-              </div>
-            );
-          })}
+          {NAV.map(item=>(
+            <NavItem
+              key={item.id}
+              item={item}
+              active={screen===item.id}
+              onSelect={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')}
+            />
+          ))}
         </div>
       )}
     </div>
