@@ -7,8 +7,6 @@ const ACC_DIM = 'rgba(239,191,127,0.13)';
 const BG = '#0e0e0e';
 const BG2 = '#161616';
 const BG3 = '#1e1e1e';
-const MINI_BG = 'rgba(36,32,26,0.97)';
-const FULL_BG = '#181510';
 const TEXT_PRIMARY = '#f0f0f0';
 const TEXT_SEC = '#9a9a9a';
 const TEXT_MUTED = '#5a5a5a';
@@ -155,6 +153,42 @@ function calcMaxStreak(days:string[]):number{
   return mx;
 }
 
+// ── FIX: Extract dominant colors from cover image via canvas ──────────────
+function extractColors(src: string): Promise<{dark: string; mid: string; accent: string}> {
+  return new Promise((resolve) => {
+    const fallback = { dark: '#1a1208', mid: '#2a1f10', accent: '#3a2d18' };
+    if (!src) { resolve(fallback); return; }
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 50; canvas.height = 50;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(fallback); return; }
+          ctx.drawImage(img, 0, 0, 50, 50);
+          const data = ctx.getImageData(0, 0, 50, 50).data;
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let i = 0; i < data.length; i += 16) {
+            r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+          }
+          r = Math.floor(r / count);
+          g = Math.floor(g / count);
+          b = Math.floor(b / count);
+          // darken significantly for background
+          const dark = `rgb(${Math.floor(r*0.25)},${Math.floor(g*0.25)},${Math.floor(b*0.25)})`;
+          const mid = `rgb(${Math.floor(r*0.45)},${Math.floor(g*0.45)},${Math.floor(b*0.45)})`;
+          const accent = `rgb(${Math.floor(r*0.65)},${Math.floor(g*0.65)},${Math.floor(b*0.65)})`;
+          resolve({ dark, mid, accent });
+        } catch { resolve(fallback); }
+      };
+      img.onerror = () => resolve(fallback);
+      img.src = src;
+    } catch { resolve(fallback); }
+  });
+}
+
 function Img({src,size,radius,fb='🎵'}:{src:string;size:number;radius:number;fb?:string}){
   const[e,sE]=useState(false);
   const s:React.CSSProperties={width:size,height:size,borderRadius:radius,flexShrink:0,display:'block'};
@@ -171,47 +205,72 @@ function AlbumImg({src,radius=0}:{src:string;radius?:number}){
 const GENRES=[{id:'top',label:'Топ',e:'🔥'},{id:'new',label:'Новинки',e:'⚡'},{id:'ru-rap',label:'RU Рэп',e:'🎤'},{id:'hip-hop',label:'Hip-Hop',e:'🎧'},{id:'trap',label:'Trap',e:'💀'},{id:'drill',label:'Drill',e:'🔩'},{id:'electronic',label:'Electronic',e:'⚡'},{id:'rnb',label:'R&B',e:'💜'},{id:'pop',label:'Pop',e:'✨'},{id:'latin',label:'Latin',e:'🌴'}];
 const REMIX_W=['speed up','sped up','slowed','reverb','slow reverb','nightcore','pitched','lofi','lo-fi','boosted','bass boost','phonk','tiktok','ultra slowed','super slowed','mashup','extended','hardstyle','core','remix','bass','спид ап','спид апп','словед','слоувед','ремикс','басс','слоу','реверб','найткор','хардстайл','мэшап','мешап','кор','фонк','лофи'];
 
+// ── FIX: Slider — keep thumb and fill perfectly in sync, use pointer capture ──
 function useSlider(val:number,onChange:(v:number)=>void){
   const ref=useRef<HTMLDivElement>(null);
   const dragging=useRef(false);
-  const update=useCallback((cx:number)=>{if(!ref.current)return;const r=ref.current.getBoundingClientRect();onChange(Math.max(0,Math.min(1,(cx-r.left)/r.width)));},[onChange]);
-  const onDown=(e:React.PointerEvent)=>{dragging.current=true;ref.current?.setPointerCapture(e.pointerId);update(e.clientX);};
-  const onMove=(e:React.PointerEvent)=>{if(dragging.current)update(e.clientX);};
-  const onUp=()=>{dragging.current=false;};
-  return{ref,onPointerDown:onDown,onPointerMove:onMove,onPointerUp:onUp};
+  const currentVal=useRef(val);
+  const[displayVal,setDisplayVal]=useState(val);
+
+  useEffect(()=>{
+    if(!dragging.current){
+      currentVal.current=val;
+      setDisplayVal(val);
+    }
+  },[val]);
+
+  const update=useCallback((cx:number)=>{
+    if(!ref.current)return;
+    const r=ref.current.getBoundingClientRect();
+    const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
+    currentVal.current=v;
+    setDisplayVal(v);
+    onChange(v);
+  },[onChange]);
+
+  const onDown=(e:React.PointerEvent)=>{
+    dragging.current=true;
+    ref.current?.setPointerCapture(e.pointerId);
+    update(e.clientX);
+    e.preventDefault();
+  };
+  const onMove=(e:React.PointerEvent)=>{
+    if(dragging.current){
+      update(e.clientX);
+      e.preventDefault();
+    }
+  };
+  const onUp=(e:React.PointerEvent)=>{
+    dragging.current=false;
+    update(e.clientX);
+  };
+  const onCancel=()=>{ dragging.current=false; };
+
+  return{ref,displayVal,onPointerDown:onDown,onPointerMove:onMove,onPointerUp:onUp,onPointerCancel:onCancel};
 }
 
-function SliderTrack({val,sp,h=3}:{val:number;sp:ReturnType<typeof useSlider>;h?:number}){
+function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
+  const val=sp.displayVal;
   return(
-    <div {...sp} ref={sp.ref} style={{flex:1,height:Math.max(h,22),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
+    <div
+      ref={sp.ref}
+      onPointerDown={sp.onPointerDown}
+      onPointerMove={sp.onPointerMove}
+      onPointerUp={sp.onPointerUp}
+      onPointerCancel={sp.onPointerCancel}
+      style={{flex:1,height:Math.max(h,22),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
+    >
       <div style={{width:'100%',height:h,background:'rgba(255,255,255,0.1)',borderRadius:h,position:'relative'}}>
-        <div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:h,transition:'width 0.05s'}}/>
-        <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:h+10,height:h+10,background:ACC,borderRadius:'50%'}}/>
+        <div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:h}}/>
+        <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:h+10,height:h+10,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
       </div>
     </div>
   );
 }
 
-function useSwipe(onSwipeLeft?:()=>void, onSwipeRight?:()=>void){
-  const startX=useRef<number|null>(null);
-  const startY=useRef<number|null>(null);
-  const onDown=(e:React.PointerEvent)=>{startX.current=e.clientX;startY.current=e.clientY;};
-  const onUp=(e:React.PointerEvent)=>{
-    if(startX.current===null||startY.current===null)return;
-    const dx=e.clientX-startX.current;
-    const dy=Math.abs(e.clientY-startY.current);
-    if(dy>30){startX.current=null;return;}
-    if(dx>55&&onSwipeRight)onSwipeRight();
-    if(dx<-55&&onSwipeLeft)onSwipeLeft();
-    startX.current=null;
-  };
-  return{onPointerDown:onDown,onPointerUp:onUp};
-}
-
 function Spinner(){return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'40px 0'}}><div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>);}
 
 function getArtistPlayCounts(history:Track[]):Record<string,number>{const c:Record<string,number>={};for(const tr of history){if(!tr.artist||REMIX_W.some(w=>tr.artist.toLowerCase().includes(w)))continue;c[tr.artist]=(c[tr.artist]||0)+1;}return c;}
-function getTopArtists(history:Track[],min=2,limit=5):string[]{const c=getArtistPlayCounts(history);return Object.entries(c).filter(([,n])=>n>=min).sort((a,b)=>b[1]-a[1]).slice(0,limit).map(([a])=>a);}
 
 export default function App(){
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('home');
@@ -233,7 +292,6 @@ export default function App(){
   const[artistTracksLoading,setArtistTracksLoading]=useState(false);
   const[artistTracksHasMore,setArtistTracksHasMore]=useState(false);
   const[artistTracksOffset,setArtistTracksOffset]=useState(0);
-  // ── ИЗМЕНЕНИЕ 1: cursor для /profile пагинации вместо offset
   const artistTracksCursor=useRef<string|null>(null);
   const artistUserId=useRef('');
 
@@ -246,9 +304,11 @@ export default function App(){
   const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
   const[streakDays,setStreakDays]=useState<string[]>([]);
   const[maxStreak,setMaxStreak]=useState(0);
+  // ── FIX: listen timer only ticks when playing ──
   const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
   const listenSec=useRef(0);
   const listenTrackId=useRef('');
+  const isPlayingRef=useRef(false);
   const totalSecRef=useRef(0);
   const exploredIdsRef=useRef<string[]>([]);
   const listenedIdsRef=useRef<string[]>([]);
@@ -266,6 +326,8 @@ export default function App(){
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
   const[current,setCurrent]=useState<Track|null>(null);
   const[bgCover,setBgCover]=useState('');
+  // ── FIX: full player cover colors ──
+  const[fpColors,setFpColors]=useState({dark:'#1a1208',mid:'#2a1f10',accent:'#3a2d18'});
   const[playing,setPlaying]=useState(false);
   const[progress,setProgress]=useState(0);
   const[curTime,setCurTime]=useState('0:00');
@@ -291,7 +353,6 @@ export default function App(){
   const[newPlName,setNewPlName]=useState('');
   const[addToPl,setAddToPl]=useState<Track|null>(null);
   const[copied,setCopied]=useState(false);
-  const[syncSt,setSyncSt]=useState<''|'saving'|'saved'>('');
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -301,6 +362,9 @@ export default function App(){
   const uName=tg?.first_name||tg?.username||'User';
   const uHandle=tg?.username?`@${tg.username}`:'';
   const uInit=uName.charAt(0).toUpperCase();
+
+  // keep isPlayingRef in sync
+  useEffect(()=>{ isPlayingRef.current=playing; },[playing]);
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}};
   const doFullSync=()=>{
@@ -378,6 +442,21 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
+  // ── FIX: Spacebar plays/pauses on desktop ──────────────────────────────
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      if(e.code==='Space'&&e.target===document.body){
+        e.preventDefault();
+        if(audio.current){
+          if(isPlayingRef.current){audio.current.pause();setPlaying(false);}
+          else{audio.current.play();setPlaying(true);}
+        }
+      }
+    };
+    document.addEventListener('keydown',onKey);
+    return()=>document.removeEventListener('keydown',onKey);
+  },[]);
+
   const[recsLoading,setRecsLoading]=useState(false);
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
@@ -397,6 +476,13 @@ export default function App(){
   useEffect(()=>{favArtistsRef.current=favArtists;},[favArtists]);
   useEffect(()=>{favAlbumsRef.current=favAlbums;},[favAlbums]);
   useEffect(()=>{bgCoverRef.current=bgCover;},[bgCover]);
+
+  // ── FIX: Extract colors when full player opens or track changes ──
+  useEffect(()=>{
+    if(fullPlayer&&current?.cover){
+      extractColors(current.cover).then(setFpColors);
+    }
+  },[fullPlayer,current?.cover]);
 
   const loadRecommendations=useCallback(async()=>{
     const hist=historyRef.current;
@@ -460,21 +546,28 @@ export default function App(){
   },[current,loop,queue,recs,history,blockedArtists]);
 
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
+
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
     if(uid==='anon'||!Object.keys(trackPlays).length)return;
     if(statsTimer.current)clearTimeout(statsTimer.current);
     statsTimer.current=setTimeout(()=>doFullSync(),3000);
   },[trackPlays,totalSec,maxStreak]);
+
   useEffect(()=>{
     const a=audio.current;if(!a)return;
     const onVol=()=>{if(Math.abs(a.volume-volume)>0.02)setVol(a.volume);};
     a.addEventListener('volumechange',onVol);
     return()=>a.removeEventListener('volumechange',onVol);
   },[volume]);
+
   useEffect(()=>{if(screen==='trending'&&!trends[trendGenre])loadTrend(trendGenre,true);},[screen,trendGenre]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
+  // ── FIX: 30-second tracks — SoundCloud preview issue.
+  // We resolve the stream and check duration. If audio metadata shows <= 32s, skip and re-resolve.
+  // The actual fix is in playDirect — we check audio duration after load and if < 35s it's a preview.
+  // We also try to get a fresh resolve to get around preview URLs.
   const playDirect=async(track:Track)=>{
     let freshMp3=track.mp3;
     if(track.id&&!track.isArtist&&!track.isAlbum){
@@ -490,6 +583,31 @@ export default function App(){
       a.pause();
       a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
+
+      // ── FIX 30sec: after metadata loads, check if it's a preview (<=32s)
+      // If so, try to get a non-preview stream
+      const checkPreview=()=>{
+        if(a.duration>0&&a.duration<=32){
+          // This is a 30-second preview — the track is not fully streamable
+          // Mark in title or skip silently (we'll just let it play but log)
+          console.warn('Preview track detected:',track.title,'duration:',a.duration);
+          // Try re-resolving once more — sometimes a second attempt gets full stream
+          fetch(`${W}/resolve?id=${track.id}`)
+            .then(r=>r.json())
+            .then(d=>{
+              if(d.mp3&&d.mp3!==freshMp3){
+                a.pause();
+                a.src=`${W}/stream?url=${encodeURIComponent(d.mp3)}`;
+                a.load();
+                a.play().catch(()=>{});
+              }
+            })
+            .catch(()=>{});
+        }
+        a.removeEventListener('loadedmetadata',checkPreview);
+      };
+      a.addEventListener('loadedmetadata',checkPreview);
+
       a.play().then(()=>setPlaying(true)).catch(err=>{
         console.warn('play failed, retry:',err);
         setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
@@ -498,12 +616,20 @@ export default function App(){
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});setProgress(0);setCurTime('0:00');
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
+    // ── FIX: extract cover colors for full player ──
+    if(fullPlayer||true){
+      extractColors(track.cover).then(setFpColors);
+    }
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
     setStreakDays(prev=>{if(prev.includes(today))return prev;const n=[...prev,today];try{localStorage.setItem('sdays47',JSON.stringify(n));}catch{}setMaxStreak(calcMaxStreak(n));return n;});
+
+    // ── FIX: stats timer only counts when audio is actually playing ──
     if(listenTimer.current)clearInterval(listenTimer.current);
     listenSec.current=0;listenTrackId.current=track.id;
     listenTimer.current=setInterval(()=>{
+      // Only count if audio is playing and not paused
+      if(!isPlayingRef.current||!audio.current||audio.current.paused)return;
       listenSec.current+=1;
       setTotalSec(prev=>{const n=prev+1;try{localStorage.setItem('tsec47',String(n));}catch{}return n;});
       if(listenSec.current===40){
@@ -512,6 +638,7 @@ export default function App(){
         setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
       }
     },1000);
+
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
@@ -579,7 +706,6 @@ export default function App(){
   const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
   const doSearch=async(mode=searchMode)=>{if(!query.trim())return;setLoading(true);setError('');setResults([]);try{const ep=mode==='albums'?'albums':'search';const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${mode}`);const d=await r.json();if(d.error)throw new Error(d.error);if(!d.tracks?.length)throw new Error(t('notFound'));setResults(d.tracks);}catch(e:unknown){setError(e instanceof Error?e.message:String(e));}finally{setLoading(false);};};
 
-  // ── ИЗМЕНЕНИЕ 2: openArtist использует /profile endpoint через воркер ────────
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as typeof prevScreen.current;
@@ -594,7 +720,6 @@ export default function App(){
       const username=art.username||name;
       artistUserId.current=userId;
 
-      // Показываем страницу сразу с popular треками из /artist
       const popularTracks:Track[]=d.tracks||[];
       setArtistPage({
         id:userId,name:art.name||name,username:username,
@@ -604,7 +729,6 @@ export default function App(){
       });
 
       if(userId){
-        // Параллельно грузим альбомы + latest + ВСЕ треки через /profile/soundcloud:users:{userId}
         const [albumsR,latestR,tracksR]=await Promise.allSettled([
           fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
           fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
@@ -635,7 +759,6 @@ export default function App(){
 
         setArtistPage(prev=>prev?{...prev,latestRelease}:null);
       } else {
-        // Нет userId — fallback
         fetch(`${W}/albums?q=${encodeURIComponent(name)}`)
           .then(r=>r.json())
           .then(d=>{
@@ -651,31 +774,6 @@ export default function App(){
     setArtistLoading(false);
   };
 
-  const loadArtistAlbums=async(userId:string)=>{
-    setArtistAlbumsLoading(true);
-    try{
-      const r=await fetch(`${W}/artist/albums?userId=${userId}`);
-      const d=await r.json();
-      const albums=(d.albums||[]).map((al:any)=>({
-        id:al.id,title:al.title,artist:al.artist,cover:al.cover,
-        tracks:[],permalink:al.permalink||'',
-        trackCount:al.trackCount||0,plays:al.plays||0,
-      }));
-      setArtistAlbums(albums);
-    }catch{}
-    setArtistAlbumsLoading(false);
-  };
-
-  const loadArtistAlbumsByName=async(name:string)=>{
-    setArtistAlbumsLoading(true);
-    try{
-      const r=await fetch(`${W}/albums?q=${encodeURIComponent(name)}`);const d=await r.json();
-      setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0})));
-    }catch{}
-    setArtistAlbumsLoading(false);
-  };
-
-  // ── ИЗМЕНЕНИЕ 3: loadArtistTracks — cursor через /profile endpoint ────────────
   const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
     if(!userId||artistTracksLoading)return;
     setArtistTracksLoading(true);
@@ -724,6 +822,7 @@ export default function App(){
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
+  // ── FIX: Sliders — use new useSlider that manages its own displayVal ──
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
   const miniSeekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
   const volSP=useSlider(volume,v=>setVol(v));
@@ -770,7 +869,6 @@ export default function App(){
   );
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
-    const btnBlocked=useRef(false);
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     const swipeState=useRef({dx:0,startX:0,startY:0,active:false,dir:''});
     const swipeFired=useRef(false);
@@ -875,6 +973,7 @@ export default function App(){
     </div>
   );
 
+  // ── FIX: Nav — use onClick (pointer up only, no drag) ──
   const NAV=[
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
     {id:'search',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,lbl:()=>t('search')},
@@ -882,21 +981,19 @@ export default function App(){
     {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,lbl:()=>t('trending')},
   ];
 
-  const fpSwipeStart=useRef<number|null>(null);
-  const fpSwipeY=useRef<number>(0);
-  const fpOnPointerDown=(e:React.PointerEvent)=>{fpSwipeStart.current=e.clientY;fpSwipeY.current=e.clientY;};
-  const fpOnPointerMove=(e:React.PointerEvent)=>{fpSwipeY.current=e.clientY;};
-  const fpOnPointerUp=()=>{
-    if(fpSwipeStart.current!==null){const diff=fpSwipeY.current-fpSwipeStart.current;if(diff>70)setFullPlayer(false);}
-    fpSwipeStart.current=null;
-  };
-
+  // ── Full player — NO swipe-to-close ──
   if(fullPlayer&&current)return(
     <div
-      onPointerDown={fpOnPointerDown}
-      onPointerMove={fpOnPointerMove}
-      onPointerUp={fpOnPointerUp}
-      style={{background:FULL_BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',touchAction:'pan-x'}}>
+      style={{
+        // ── FIX: dynamic gradient from cover colors ──
+        background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,
+        height:'100vh',width:'100%',display:'flex',flexDirection:'column',
+        alignItems:'center',padding:'0 22px',
+        fontFamily:"-apple-system,'SF Pro Display',sans-serif",
+        boxSizing:'border-box',overflow:'hidden',
+        // transition for smooth color change
+        transition:'background 0.8s ease',
+      }}>
       <audio ref={audio}/>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end'}} onPointerDown={()=>setShowQueue(false)}>
@@ -945,28 +1042,28 @@ export default function App(){
         <button onPointerDown={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,...tap}}>
           <span style={{fontSize:13,color:ACC}}>{current.artist}</span>
         </button>
-        {current.plays>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
+        {current.plays>0&&<div style={{fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
       </div>
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:8}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
           <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center'}}>
           <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
           <button onPointerDown={()=>share(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
         </div>
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4}}>{t('copied')}</div>}
       <div style={{width:'100%',flexShrink:0,marginBottom:2}}>
-        <SliderTrack val={progress/100} sp={seekSP} h={3}/>
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:TEXT_SEC,marginTop:4}}><span>{curTime}</span><span>{current.duration}</span></div>
+        <SliderTrack sp={seekSP} h={3}/>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}><span>{curTime}</span><span>{current.duration}</span></div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:28,flexShrink:0,marginBottom:12}}>
         <button onPointerDown={playPrev} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
@@ -978,9 +1075,9 @@ export default function App(){
         </button>
       </div>
       <div style={{width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-        <SliderTrack val={volume} sp={volSP} h={3}/>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+        <SliderTrack sp={volSP} h={3}/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
       </div>
       {addToPl&&<PlModal track={addToPl}/>}
     </div>
@@ -1176,18 +1273,43 @@ export default function App(){
             {history.length>0&&(
               <div>
                 <SL text={t('recent')}/>
+                {/* ── FIX: recent history scroll — use onPointerUp with distance check to prevent accidental play ── */}
                 <div style={{display:'flex',gap:10,padding:'0 16px 12px',overflowX:'auto'}}>
-                  {history.slice(0,8).map(tr=>(
-                    <div key={tr.id} style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e'}}>
-                      <div onPointerDown={()=>playTrack(tr)} style={{width:100,height:100}}><Img src={tr.cover} size={100} radius={0}/></div>
-                      <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
-                        <button onPointerDown={()=>openArtist('',tr.artist,tr.cover,0)} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const,...tap}}>
-                          <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist}</div>
+                  {history.slice(0,8).map(tr=>{
+                    const pressStart=useRef<{x:number;y:number;t:number}|null>(null);
+                    return(
+                      <div key={tr.id} style={{width:100,borderRadius:10,background:BG2,overflow:'hidden',cursor:'pointer',flexShrink:0,border:'1px solid #1e1e1e',userSelect:'none'}}>
+                        <div
+                          onPointerDown={e=>{pressStart.current={x:e.clientX,y:e.clientY,t:Date.now()};}}
+                          onPointerUp={e=>{
+                            if(!pressStart.current)return;
+                            const dx=Math.abs(e.clientX-pressStart.current.x);
+                            const dy=Math.abs(e.clientY-pressStart.current.y);
+                            const dt=Date.now()-pressStart.current.t;
+                            pressStart.current=null;
+                            // Only play if: minimal movement (not scrolling) AND quick tap
+                            if(dx<8&&dy<8&&dt<400)playTrack(tr);
+                          }}
+                          onPointerCancel={()=>{pressStart.current=null;}}
+                          style={{width:100,height:100}}>
+                          <Img src={tr.cover} size={100} radius={0}/>
+                        </div>
+                        <div style={{padding:'6px 7px 8px',boxSizing:'border-box' as const}}>
+                          <button onPointerDown={e=>{e.stopPropagation();openArtist('',tr.artist,tr.cover,0);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'block',width:'100%',textAlign:'left' as const,...tap}}>
+                            <div style={{fontSize:10,fontWeight:600,color:ACC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist}</div>
+                          </button>
+                          <div style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
+                        </div>
+                        {/* ── FIX: Add to queue button on recent tracks ── */}
+                        <button
+                          onPointerDown={e=>{e.stopPropagation();addQ(tr,e);}}
+                          style={{width:'100%',padding:'4px 7px',background:inQ(tr.id)?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQ(tr.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(tr.id)?ACC:'#5a5a5a'}/></svg>
+                          <span style={{fontSize:8,color:inQ(tr.id)?ACC:'#5a5a5a'}}>{t('queue')}</span>
                         </button>
-                        <div onPointerDown={()=>playTrack(tr)} style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',cursor:'pointer'}}>{tr.title}</div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1426,21 +1548,36 @@ export default function App(){
           </div>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
-            <div {...miniSeekSP} ref={miniSeekSP.ref} style={{flex:1,height:16,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}>
-              <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.08)',borderRadius:3,position:'relative'}}>
-                <div style={{width:`${progress}%`,height:'100%',background:ACC,borderRadius:3,transition:'width 0.3s linear'}}/>
-                <div style={{position:'absolute',top:'50%',left:`${progress}%`,transform:'translate(-50%,-50%)',width:11,height:11,background:ACC,borderRadius:'50%',boxShadow:`0 0 6px ${ACC}88`}}/>
-              </div>
-            </div>
+            <SliderTrack sp={miniSeekSP} h={3}/>
             <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
           </div>
         </div>
       )}
 
-      {/* ── NAV ── */}
+      {/* ── NAV — FIX: use onClick instead of onPointerDown to prevent drag-triggered navigation ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
-          {NAV.map(item=>(<div key={item.id} onPointerDown={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>{item.icon(screen===item.id)}<span style={{fontSize:10,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span></div>))}
+          {NAV.map(item=>{
+            const navPressStart=useRef<{x:number;y:number}|null>(null);
+            return(
+              <div
+                key={item.id}
+                onPointerDown={e=>{navPressStart.current={x:e.clientX,y:e.clientY};}}
+                onPointerUp={e=>{
+                  if(!navPressStart.current)return;
+                  const dx=Math.abs(e.clientX-navPressStart.current.x);
+                  const dy=Math.abs(e.clientY-navPressStart.current.y);
+                  navPressStart.current=null;
+                  // Only switch tab if it's a real tap (no drag)
+                  if(dx<10&&dy<10)setScreen(item.id as 'home'|'search'|'library'|'trending');
+                }}
+                onPointerCancel={()=>{navPressStart.current=null;}}
+                style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,cursor:'pointer',padding:'8px 4px 10px',...tap}}>
+                {item.icon(screen===item.id)}
+                <span style={{fontSize:10,color:screen===item.id?ACC:'#606060',letterSpacing:0.3}}>{item.lbl()}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
