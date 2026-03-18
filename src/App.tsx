@@ -559,6 +559,57 @@ export default function App(){
   useEffect(()=>{favAlbumsRef.current=favAlbums;},[favAlbums]);
   useEffect(()=>{bgCoverRef.current=bgCover;},[bgCover]);
 
+  // ── MediaSession API: обложка, название, автор в системном плеере телефона ──
+  useEffect(()=>{
+    if(!('mediaSession' in navigator))return;
+    if(!current){
+      navigator.mediaSession.metadata=null;
+      navigator.mediaSession.playbackState='none';
+      return;
+    }
+    // Формируем artwork — несколько размеров для разных устройств
+    const artworkUrl=current.cover
+      ?current.cover.replace('t300x300','t500x500')
+      :'';
+    const artwork:MediaImage[]=artworkUrl?[
+      {src:artworkUrl.replace('t500x500','t120x120'),sizes:'128x128',type:'image/jpeg'},
+      {src:artworkUrl.replace('t500x500','t300x300'),sizes:'300x300',type:'image/jpeg'},
+      {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
+    ]:[];
+    navigator.mediaSession.metadata=new MediaMetadata({
+      title:current.title||'',
+      artist:current.artist||'',
+      album:'',
+      artwork,
+    });
+    navigator.mediaSession.playbackState=playing?'playing':'paused';
+    // Обработчики кнопок на экране блокировки / наушниках
+    navigator.mediaSession.setActionHandler('play',()=>{
+      if(audio.current){audio.current.play();setPlaying(true);}
+    });
+    navigator.mediaSession.setActionHandler('pause',()=>{
+      if(audio.current){audio.current.pause();setPlaying(false);}
+    });
+    navigator.mediaSession.setActionHandler('previoustrack',()=>playPrev());
+    navigator.mediaSession.setActionHandler('nexttrack',()=>playNext());
+    navigator.mediaSession.setActionHandler('seekto',(details)=>{
+      if(audio.current&&details.seekTime!=null){
+        audio.current.currentTime=details.seekTime;
+        setProgress(audio.current.currentTime/(audio.current.duration||1)*100);
+      }
+    });
+    // Позиция воспроизведения для прогресс-бара на экране блокировки
+    try{
+      if(audio.current&&audio.current.duration&&!isNaN(audio.current.duration)){
+        navigator.mediaSession.setPositionState({
+          duration:audio.current.duration,
+          playbackRate:1,
+          position:audio.current.currentTime||0,
+        });
+      }
+    }catch{}
+  },[current,playing]);
+
   // ── FIX: Extract colors when full player opens or track changes ──
   useEffect(()=>{
     if(fullPlayer&&current?.cover){
@@ -611,7 +662,23 @@ export default function App(){
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
-    const onT=()=>{if(a.duration){setProgress(a.currentTime/a.duration*100);const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);setCurTime(`${m}:${s.toString().padStart(2,'0')}`);}}; 
+    const onT=()=>{
+      if(a.duration){
+        setProgress(a.currentTime/a.duration*100);
+        const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);
+        setCurTime(`${m}:${s.toString().padStart(2,'0')}`);
+        // Обновляем позицию в системном плеере (прогресс-бар на экране блокировки)
+        try{
+          if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
+            navigator.mediaSession.setPositionState({
+              duration:a.duration,
+              playbackRate:a.playbackRate||1,
+              position:a.currentTime,
+            });
+          }
+        }catch{}
+      }
+    };
     const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
       else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}
