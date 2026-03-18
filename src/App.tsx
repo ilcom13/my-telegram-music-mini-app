@@ -202,7 +202,18 @@ function AlbumImg({src,radius=0}:{src:string;radius?:number}){
   return<div style={{width:'100%',aspectRatio:'1/1',background:BG3,borderRadius:radius,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,color:ACC}}>💿</div>;
 }
 
-const GENRES=[{id:'top',label:'Топ',e:'🔥'},{id:'new',label:'Новинки',e:'⚡'},{id:'ru-rap',label:'RU Рэп',e:'🎤'},{id:'hip-hop',label:'Hip-Hop',e:'🎧'},{id:'trap',label:'Trap',e:'💀'},{id:'drill',label:'Drill',e:'🔩'},{id:'electronic',label:'Electronic',e:'⚡'},{id:'rnb',label:'R&B',e:'💜'},{id:'pop',label:'Pop',e:'✨'},{id:'latin',label:'Latin',e:'🌴'}];
+const GENRES = [
+  { id: 'top',    label: 'Топ',          e: '🔥' },
+  { id: 'new',    label: 'Новинки',      e: '⚡' },
+  { id: 'rap',    label: 'Рэп',          e: '🎤' },
+  { id: 'pop',    label: 'Поп',          e: '✨' },
+  { id: 'phonk',  label: 'Фонк',         e: '💀' },
+  { id: 'trap',   label: 'Трэп',         e: '💀' },
+  { id: 'drill',  label: 'Дрилл',        e: '🔩' },
+  { id: 'club',   label: 'Клубные',      e: '🕺' },
+  { id: 'old',    label: '2010-е',       e: '📼' },
+  { id: 'viral',  label: 'Viral',        e: '📱' }
+];
 const REMIX_W=['speed up','sped up','slowed','reverb','slow reverb','nightcore','pitched','lofi','lo-fi','boosted','bass boost','phonk','tiktok','ultra slowed','super slowed','mashup','extended','hardstyle','core','remix','bass','спид ап','спид апп','словед','слоувед','ремикс','басс','слоу','реверб','найткор','хардстайл','мэшап','мешап','кор','фонк','лофи'];
 const COVER_W=['cover','parody','кавер','пародия','cover version','кавер-версия','tribute to','в стиле','cover by','кавер на'];
 
