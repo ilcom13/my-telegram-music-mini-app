@@ -266,38 +266,33 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider: слайдер для мини-плеера с правильной изоляцией событий ──
+// ── MiniSlider: слайдер для мини-плеера, маленький хитбокс чтобы не конфликтовать с названием ──
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
-  const ref=useRef<HTMLDivElement>(null);
+  const trackRef=useRef<HTMLDivElement>(null);
   const dragging=useRef(false);
   const[disp,setDisp]=useState(val);
   useEffect(()=>{if(!dragging.current)setDisp(val);},[val]);
   const calc=(cx:number)=>{
-    if(!ref.current)return;
-    const r=ref.current.getBoundingClientRect();
+    if(!trackRef.current)return;
+    const r=trackRef.current.getBoundingClientRect();
     const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
-    setDisp(v);
-    onChange(v);
+    setDisp(v);onChange(v);
   };
   return(
-    <div
-      ref={ref}
-      onPointerDown={e=>{
-        e.stopPropagation();
-        e.preventDefault();
-        dragging.current=true;
-        ref.current?.setPointerCapture(e.pointerId);
-        calc(e.clientX);
-      }}
-      onPointerMove={e=>{e.stopPropagation();if(dragging.current)calc(e.clientX);}}
-      onPointerUp={e=>{e.stopPropagation();if(dragging.current){calc(e.clientX);dragging.current=false;}}}
-      onPointerCancel={()=>{dragging.current=false;}}
-      onClick={e=>e.stopPropagation()}
-      style={{flex:1,height:22,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
-    >
-      <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
-        <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
-        <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:13,height:13,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+    <div style={{flex:1,display:'flex',alignItems:'center'}}>
+      <div
+        ref={trackRef}
+        onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;trackRef.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
+        onPointerMove={e=>{if(!dragging.current)return;e.stopPropagation();calc(e.clientX);}}
+        onPointerUp={e=>{if(!dragging.current)return;e.stopPropagation();calc(e.clientX);dragging.current=false;}}
+        onPointerCancel={()=>{dragging.current=false;}}
+        onClick={e=>e.stopPropagation()}
+        style={{flex:1,height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
+      >
+        <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
+          <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
+          <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:12,height:12,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+        </div>
       </div>
     </div>
   );
@@ -768,7 +763,7 @@ export default function App(){
     });
   };
 
-  // ── Deeplink — стабильная версия (без мигания и перемотки) ──
+  // ── Deeplink — через воркер (CORS-safe, полные метаданные) ──
   const deepLinkHandled=useRef(false);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -778,47 +773,32 @@ export default function App(){
     const trackId=startParam.replace('track-','');
 
     const openAndPlay=async()=>{
-      // Сначала пытаемся найти в уже загруженных списках
-      let found:Track|undefined=[...hotTracks,...risingTracks,...history,...recs,...results]
-        .find((tr:Track)=>String(tr.id)===trackId);
-
-      if(!found){
-        try{
-          const r=await fetch(`${W}/resolve?id=${trackId}`);
-          const d=await r.json();
-          if(d.mp3){
-            // Получаем метаданные параллельно
-            try{
-              const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
-              const meta=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`);
-              if(meta.ok){
-                const md=await meta.json();
-                found={
-                  id:trackId,
-                  title:md.title||'',
-                  artist:md.user?.username||'',
-                  cover:(md.artwork_url||md.user?.avatar_url||'').replace('large','t300x300'),
-                  duration:'',
-                  plays:md.playback_count||0,
-                  mp3:d.mp3,
-                };
-              }
-            }catch{}
-            if(!found){
-              found={id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3};
-            }
-          }
-        }catch{}
-      }
-
-      if(found){
-        setCurrent(found);
-        setTimeout(()=>playDirect(found!),400);
-      }
+      try{
+        // Воркер теперь возвращает mp3 + все метаданные (title, artist, cover, plays)
+        // Прямые запросы к SoundCloud из браузера блокируются CORS — только через воркер
+        const r=await fetch(`${W}/resolve?id=${trackId}`);
+        const d=await r.json();
+        if(d.mp3){
+          const track:Track={
+            id:trackId,
+            title:d.title||'',
+            artist:d.artist||'',
+            cover:d.cover||'',
+            duration:d.duration||'',
+            plays:d.plays||0,
+            mp3:d.mp3,
+          };
+          // setCurrent сначала — показываем UI немедленно
+          setCurrent(track);
+          // playDirect запускает воспроизведение (mp3 уже есть, повторный resolve не нужен)
+          playDirect(track);
+        }
+      }catch(e){console.warn('deeplink error:',e);}
     };
 
-    setTimeout(openAndPlay,1200);
-  },[hotTracks,risingTracks,history,recs,results]);
+    setTimeout(openAndPlay,800);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const playPrev=()=>{
     if(playHistory.length>0){
