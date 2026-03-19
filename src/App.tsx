@@ -1379,7 +1379,7 @@ export default function App(){
         .full-player-cover{transition:transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease}
         .full-player-cover:active{transform:scale(0.97)}
       `}</style>
-      <div style={{paddingBottom:current?NAV_H+110+8:NAV_H+6,minHeight:'100vh'}}>
+      <div style={{paddingBottom:current?NAV_H+30+72+12:NAV_H+6,minHeight:'100vh'}}>
 
         {/* ── ARTIST ── */}
         {screen==='artist'&&(
@@ -1892,17 +1892,23 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER — два отдельных div чтобы название и слайдер никогда не пересекались ── */}
+      {/* ── MINI PLAYER — два отдельных fixed div, нет пересечений событий ── */}
       {current && screen !== 'profile' && (
         <>
-          {/* DIV 1: Фон + верхняя часть (обложка, название, кнопки) — НЕТ слайдера */}
+          {/* DIV 1: Верхняя часть — обложка, название, кнопки */}
+          {/* bottom = NAV_H+5+30 — сидит прямо над слайдером */}
           <div
             className="mini-player"
             style={{
-              position:'fixed',bottom:NAV_H+5,left:8,right:8,
-              background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',
-              border:'1px solid #252525',borderRadius:16,
-              padding:'10px 12px 22px', // нижний padding = место под слайдер
+              position:'fixed',
+              bottom:NAV_H+5+30,
+              left:8,right:8,
+              background:'rgba(18,18,18,0.98)',
+              backdropFilter:'blur(20px)',
+              border:'1px solid #252525',
+              borderRadius:'16px 16px 0 0',
+              borderBottom:'none',
+              padding:'10px 12px 8px',
               zIndex:100,
             }}
           >
@@ -1937,18 +1943,21 @@ export default function App(){
               </button>
             </div>
           </div>
-          {/* DIV 2: Слайдер — отдельный position:fixed, стоит ПОВЕРХ нижней части первого div */}
-          {/* Физически отдельный DOM-элемент — события между ними НИКОГДА не пересекаются */}
+          {/* DIV 2: Слайдер — отдельный DOM-элемент, сидит снизу */}
+          {/* bottom = NAV_H+5 — самый низ плеера, высота 30px */}
           <div style={{
             position:'fixed',
-            bottom:NAV_H+5+10, // совпадает с нижним краем первого div
+            bottom:NAV_H+5,
             left:8,right:8,
-            zIndex:101, // выше первого div
+            height:30,
+            background:'rgba(18,18,18,0.98)',
+            backdropFilter:'blur(20px)',
+            border:'1px solid #252525',
+            borderTop:'1px solid #1e1e1e',
+            borderRadius:'0 0 16px 16px',
+            zIndex:101,
             display:'flex',alignItems:'center',gap:8,
             padding:'0 12px',
-            height:22,
-            borderRadius:'0 0 16px 16px',
-            pointerEvents:'auto',
           }}>
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right'}}>{curTime}</span>
             <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
