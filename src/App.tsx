@@ -266,28 +266,38 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider: простой слайдер БЕЗ setPointerCapture для мини-плеера ──
-// Не использует capture чтобы не перехватывать события со всего экрана
+// ── MiniSlider: слайдер для мини-плеера с правильной изоляцией событий ──
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
   const ref=useRef<HTMLDivElement>(null);
   const dragging=useRef(false);
+  const[disp,setDisp]=useState(val);
+  useEffect(()=>{if(!dragging.current)setDisp(val);},[val]);
   const calc=(cx:number)=>{
     if(!ref.current)return;
     const r=ref.current.getBoundingClientRect();
-    onChange(Math.max(0,Math.min(1,(cx-r.left)/r.width)));
+    const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
+    setDisp(v);
+    onChange(v);
   };
   return(
     <div
       ref={ref}
-      onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;calc(e.clientX);}}
+      onPointerDown={e=>{
+        e.stopPropagation();
+        e.preventDefault();
+        dragging.current=true;
+        ref.current?.setPointerCapture(e.pointerId);
+        calc(e.clientX);
+      }}
       onPointerMove={e=>{e.stopPropagation();if(dragging.current)calc(e.clientX);}}
       onPointerUp={e=>{e.stopPropagation();if(dragging.current){calc(e.clientX);dragging.current=false;}}}
       onPointerCancel={()=>{dragging.current=false;}}
+      onClick={e=>e.stopPropagation()}
       style={{flex:1,height:22,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
     >
       <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
-        <div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
-        <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:13,height:13,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+        <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
+        <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:13,height:13,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
       </div>
     </div>
   );
@@ -484,50 +494,6 @@ export default function App(){
     }),1500);
   };
   const triggerSync=(..._args:any[])=>doFullSync();
-
-  // ── Deeplink: открыть и сразу запустить трек по ссылке ──
-  const deepLinkHandled=useRef(false);
-  useEffect(()=>{
-    const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-    if(!startParam||!startParam.startsWith('track-'))return;
-    if(deepLinkHandled.current)return;
-    deepLinkHandled.current=true; // сразу блокируем повторные вызовы
-
-    const trackId=startParam.replace('track-','');
-
-    const tryPlayTrack=async()=>{
-      // Шаг 1: ищем в уже загруженных
-      const allTracks=[...hotTracks,...risingTracks,...history,...recs,...results];
-      let found:Track|undefined=allTracks.find(tr=>String(tr.id)===trackId);
-
-      if(!found){
-        // Шаг 2: сначала получаем метаданные (название, обложка, артист)
-        try{
-          const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
-          const meta=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`);
-          if(meta.ok){
-            const md=await meta.json();
-            found={
-              id:trackId,
-              title:md.title||'',
-              artist:md.user?.username||'',
-              cover:(md.artwork_url||md.user?.avatar_url||'').replace('large','t300x300'),
-              duration:'',
-              plays:md.playback_count||0,
-              mp3:null, // mp3 резолвится внутри playDirect через воркер
-            };
-          }
-        }catch{}
-      }
-
-      if(found){
-        playDirect(found); // playDirect сам резолвит mp3 через ${W}/resolve
-      }
-    };
-
-    setTimeout(tryPlayTrack,1000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]); // [] — только один раз при монтировании, флаг deepLinkHandled защищает от повторов
 
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
@@ -801,6 +767,51 @@ export default function App(){
       return n;
     });
   };
+
+  // ── Deeplink: открыть трек по ссылке ?startapp=track-ID ──
+  // Размещён ПОСЛЕ playDirect чтобы функция была доступна
+  const deepLinkHandled=useRef(false);
+  useEffect(()=>{
+    const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+    if(!startParam||!startParam.startsWith('track-'))return;
+    if(deepLinkHandled.current)return;
+    deepLinkHandled.current=true;
+
+    const trackId=startParam.replace('track-','');
+
+    const tryPlayTrack=async()=>{
+      // Шаг 1: сначала получаем полные метаданные
+      try{
+        const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
+        const meta=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`);
+        if(meta.ok){
+          const md=await meta.json();
+          const track:Track={
+            id:trackId,
+            title:md.title||'',
+            artist:md.user?.username||'',
+            cover:(md.artwork_url||md.user?.avatar_url||'').replace('large','t300x300'),
+            duration:'',
+            plays:md.playback_count||0,
+            mp3:null,
+          };
+          playDirect(track);
+          return;
+        }
+      }catch{}
+      // Шаг 2: fallback — только через воркер если SoundCloud недоступен
+      try{
+        const r=await fetch(`${W}/resolve?id=${trackId}`);
+        const d=await r.json();
+        if(d.mp3){
+          playDirect({id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3});
+        }
+      }catch{}
+    };
+
+    setTimeout(tryPlayTrack,800);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   const playPrev=()=>{
     if(playHistory.length>0){
