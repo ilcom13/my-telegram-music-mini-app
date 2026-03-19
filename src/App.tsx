@@ -281,7 +281,7 @@ function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
   return(
     <div
       ref={ref}
-      onPointerDown={e=>{e.stopImmediatePropagation();e.preventDefault();dragging.current=true;ref.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
+      onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;ref.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
       onPointerMove={e=>{if(!dragging.current)return;calc(e.clientX);}}
       onPointerUp={e=>{if(!dragging.current)return;calc(e.clientX);dragging.current=false;}}
       onPointerCancel={()=>{dragging.current=false;}}
@@ -1004,7 +1004,7 @@ export default function App(){
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
-    const deepLink=`https://t.me/forty7bot?startapp=track-${track.id}`;
+    const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
     const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
@@ -1904,7 +1904,7 @@ export default function App(){
           {/* Верхняя часть: обложка + название + кнопки (клик → full player) */}
           <div
             onPointerDown={(e)=>{
-              e.stopImmediatePropagation();
+              e.stopPropagation();
               e.preventDefault();
               setFullPlayer(true);
             }}
@@ -1930,18 +1930,18 @@ export default function App(){
             </div>
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
               <button className="prev-next-btn"
-                onPointerDown={(e)=>{e.stopImmediatePropagation();e.preventDefault();playPrev();}}
+                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:playHistory.length>0?1:0.35,...tap}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
               </button>
               <button className="prev-next-btn"
-                onPointerDown={(e)=>{e.stopImmediatePropagation();e.preventDefault();playNext();}}
+                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
             <button className="play-btn"
-              onPointerDown={(e)=>{e.stopImmediatePropagation();e.preventDefault();togglePlay();}}
+              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
               style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
