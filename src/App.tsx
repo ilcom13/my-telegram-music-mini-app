@@ -252,7 +252,7 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   return(
     <div
       ref={sp.ref}
-      onPointerDown={sp.onPointerDown}
+      onPointerDown={e=>{e.stopPropagation();sp.onPointerDown(e);}}
       onPointerMove={sp.onPointerMove}
       onPointerUp={sp.onPointerUp}
       onPointerCancel={sp.onPointerCancel}
@@ -299,8 +299,8 @@ function RecentCard({tr,isActive,isPlaying,inQueue,onPlay,onArtist,onQueue,queue
         </button>
         <div style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
       </div>
-      <button
-        onPointerDown={e=>{e.stopPropagation();onQueue(e);}}
+<button
+  onPointerDown={e=>{e.stopPropagation();e.preventDefault();onQueue(e as any);}}
         style={{width:'100%',padding:'4px 7px',background:inQueue?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/></svg>
         <span style={{fontSize:8,color:inQueue?ACC:'#5a5a5a'}}>{queueLabel}</span>
@@ -459,16 +459,25 @@ export default function App(){
   const triggerSync=(..._args:any[])=>doFullSync();
 
 
-  useEffect(()=>{
+useEffect(()=>{
   const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
   if(startParam&&startParam.startsWith('track-')){
     const trackId=startParam.replace('track-','');
     setTimeout(async()=>{
       try{
-        const r=await fetch(`${W}/resolve?id=${trackId}`);
+        // Получаем полные метаданные трека
+        const r=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm`);
         const d=await r.json();
-        if(d.mp3){
-          const track:Track={id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3};
+        if(d&&d.id){
+          const track:Track={
+            id:String(d.id),
+            title:d.title||'',
+            artist:d.user?.username||'',
+            cover:(d.artwork_url||d.user?.avatar_url||'').replace('large','t300x300'),
+            duration:'',
+            plays:d.playback_count||0,
+            mp3:null,
+          };
           playDirect(track);
         }
       }catch{}
@@ -958,13 +967,34 @@ export default function App(){
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
 const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
 const shareTrack=(track:Track)=>{
-  const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
-  if(window.Telegram?.WebApp?.shareUrl){
-    window.Telegram.WebApp.shareUrl(deepLink,`${track.title} — ${track.artist} 🎵`);
-  } else {
-    navigator.clipboard?.writeText(deepLink);
-    setCopied(true);setTimeout(()=>setCopied(false),2000);
+  const deepLink=`https://t.me/forty7bot?startapp=track-${track.id}`;
+  const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
+  
+  const tgApp=window.Telegram?.WebApp;
+  
+  if(tgApp){
+    // Метод 1: новый API (Telegram 7.0+)
+    if(typeof tgApp.shareUrl==='function'){
+      tgApp.shareUrl(deepLink,text);
+      return;
+    }
+    // Метод 2: открываем нативное меню пересылки через t.me/share
+    if(typeof tgApp.openTelegramLink==='function'){
+      const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
+      tgApp.openTelegramLink(shareUrl);
+      return;
+    }
+    // Метод 3: открываем через внешний браузер
+    if(typeof tgApp.openLink==='function'){
+      const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
+      tgApp.openLink(shareUrl);
+      return;
+    }
   }
+  
+  // Fallback для браузера/ПК
+  const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
+  window.open(shareUrl,'_blank');
 };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
