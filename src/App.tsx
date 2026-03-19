@@ -458,6 +458,25 @@ export default function App(){
   };
   const triggerSync=(..._args:any[])=>doFullSync();
 
+
+  useEffect(()=>{
+  const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  if(startParam&&startParam.startsWith('track-')){
+    const trackId=startParam.replace('track-','');
+    setTimeout(async()=>{
+      try{
+        const r=await fetch(`${W}/resolve?id=${trackId}`);
+        const d=await r.json();
+        if(d.mp3){
+          const track:Track={id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3};
+          playDirect(track);
+        }
+      }catch{}
+    },1000);
+  }
+},[]);
+
+  
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
     const ll=()=>{try{
@@ -937,7 +956,16 @@ export default function App(){
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
-  const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
+const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
+const shareTrack=(track:Track)=>{
+  const deepLink=`https://t.me/forty7bot?startapp=track-${track.id}`;
+  if(window.Telegram?.WebApp?.shareUrl){
+    window.Telegram.WebApp.shareUrl(deepLink,`${track.title} — ${track.artist} 🎵`);
+  } else {
+    navigator.clipboard?.writeText(deepLink);
+    setCopied(true);setTimeout(()=>setCopied(false),2000);
+  }
+};
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
@@ -1218,10 +1246,11 @@ export default function App(){
           <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
-          <button onPointerDown={()=>share(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+          <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
         </div>
+        
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
@@ -1839,11 +1868,11 @@ export default function App(){
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
-            <SliderTrack sp={miniSeekSP} h={3}/>
-            <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
-          </div>
+<div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:8}}>
+  <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
+  <SliderTrack sp={miniSeekSP} h={3}/>
+  <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
+</div>
         </div>
       )}
 
