@@ -840,45 +840,43 @@ export default function App(){
   };
 
   // ── Новая loadTrend: загружает Hot Now (top) и Rising (new) параллельно ──
-  const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
-  const loadTrend=async(genre='top',reset=false)=>{
-    const section=genre==='top'?'hot':'rising';
-    const offset=reset?0:trendOffset[section];
-    
-    setTrendLoading(true);
-    try{
-      const r=await fetch(`${W}/trending?genre=${genre}&offset=${offset}`);
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      const d=await r.json();
-      
-      if(reset){
-        if(section==='hot')setHotTracks(d.tracks||[]);
-        else setRisingTracks(d.tracks||[]);
-        setTrendOffset(prev=>({...prev,[section]:0}));
-      }else{
-        // Append для Load More
-        if(section==='hot'){
-          setHotTracks(prev=>[...prev,...(d.tracks||[])]);
-        }else{
-          setRisingTracks(prev=>[...prev,...(d.tracks||[])]);
-        }
-        if(d.hasMore){
-          setTrendOffset(prev=>({...prev,[section]:(d.currentOffset||offset)+1}));
-        }
-      }
-    }catch(e){
-      console.error('trend load error:',e);
-    }
-    setTrendLoading(false);
-  };
+const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
+const loadTrend=async(genre='top',reset=false)=>{
+  const section=genre==='top'?'hot':'rising';
+  const offset=reset?0:trendOffset[section];
   
-  // Инициализация при открытии вкладки
-  useEffect(()=>{
-    if(screen==='trending'&&hotTracks.length===0){
-      loadTrend('top',true);
-      loadTrend('new',true);
+  setTrendLoading(true);
+  try{
+    const r=await fetch(`${W}/trending?genre=${genre}&offset=${offset}`);
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    
+    if(reset){
+      if(section==='hot')setHotTracks(d.tracks||[]);
+      else setRisingTracks(d.tracks||[]);
+      setTrendOffset(prev=>({...prev,[section]:0}));
+    }else{
+      if(section==='hot'){
+        setHotTracks(prev=>[...prev,...(d.tracks||[])]);
+      }else{
+        setRisingTracks(prev=>[...prev,...(d.tracks||[])]);
+      }
+      if(d.hasMore){
+        setTrendOffset(prev=>({...prev,[section]:(d.currentOffset||offset)+1}));
+      }
     }
-  },[screen]);
+  }catch(e){
+    console.error('trend load error:',e);
+  }
+  setTrendLoading(false);
+};
+
+useEffect(()=>{
+  if(screen==='trending'&&hotTracks.length===0){
+    loadTrend('top',true);
+    loadTrend('new',true);
+  }
+},[screen]);
     
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
