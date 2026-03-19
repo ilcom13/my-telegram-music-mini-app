@@ -1641,7 +1641,7 @@ useEffect(()=>{
           const BEI_DIM='rgba(239,191,127,0.13)';
           const BEI_GLOW='rgba(239,191,127,0.35)';
           
-          const activeTracks=trendSection==='hot'?hotTracks:risingTracks;
+          const activeTracks=hotTracks;
           
           return(
           <div style={{minHeight:'100vh'}}>
@@ -1665,44 +1665,6 @@ useEffect(()=>{
                 </div>
               </div>
               <button
-                onPointerDown={()=>loadTrend('top',true)}
-                style={{width:36,height:36,borderRadius:'50%',background:BEI_DIM,border:`1px solid ${BEI}44`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BEI} strokeWidth="2.2" strokeLinecap="round"
-                  style={{animation:trendLoading?'spin 0.8s linear infinite':undefined}}>
-                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
-                </svg>
-              </button>
-            </div>
- 
-            {/* Переключатель Hot / Rising */}
-            <div style={{display:'flex',gap:8,padding:'14px 16px 0'}}>
-              {([
-                ['hot', lang==='ru'?'🔥 Горячие':lang==='uk'?'🔥 Гарячі':lang==='kk'?'🔥 Ыстық':lang==='pl'?'🔥 Gorące':lang==='tr'?'🔥 Sıcak':'🔥 Hot'],
-                ['rising', lang==='ru'?'⚡ Растущие':lang==='uk'?'⚡ Зростаючі':lang==='kk'?'⚡ Өсіп келе жатқан':lang==='pl'?'⚡ Rosnące':lang==='tr'?'⚡ Yükseliş':'⚡ Rising']
-              ] as const).map(([key,label])=>(
-                <button
-                  key={key}
-                  onPointerDown={()=>setTrendSection(key)}
-                  style={{
-                    flex:1,padding:'10px 0',borderRadius:14,border:'none',
-                    background:trendSection===key?BEI:BEI_DIM,
-                    color:trendSection===key?'#0e0e0e':BEI,
-                    fontSize:13,fontWeight:trendSection===key?700:500,
-                    cursor:'pointer',letterSpacing:0.2,
-                    boxShadow:trendSection===key?`0 4px 18px ${BEI_GLOW}`:'none',
-                    transition:'all 0.2s ease',
-                    ...tap
-                  }}>
-                  {label}
-                </button>
-              ))}
-            </div>
- 
-            {/* Описание секции */}
-            <div style={{padding:'8px 16px 12px',fontSize:11,color:'#555',letterSpacing:0.2}}>
-              {trendSection==='hot'
-                ?(lang==='ru'?'Топ треки по количеству прослушиваний':lang==='uk'?'Топ треки за кількістю прослухань':lang==='kk'?'Тыңдалым саны бойынша топ треки':lang==='pl'?'Leaderboard słuchań':lang==='tr'?'Çalış sayısına göre en çok':'Top by plays')
-                :(lang==='ru'?'Новинки с быстрым ростом популярности':lang==='uk'?'Новинки з швидким зростанням популярності':lang==='kk'?'Жылдам өндіктілік өсімімен жаңалықтар':lang==='pl'?'Nowe z szybkim wzrostem':lang==='tr'?'Hızlı büyüyen yeniler':'Rising new releases')}
             </div>
  
             {/* Список треков с Load More */}
