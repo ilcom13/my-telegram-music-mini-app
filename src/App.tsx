@@ -253,9 +253,9 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
     <div
       ref={sp.ref}
       onPointerDown={e=>{e.stopPropagation();sp.onPointerDown(e);}}
-      onPointerMove={sp.onPointerMove}
-      onPointerUp={sp.onPointerUp}
-      onPointerCancel={sp.onPointerCancel}
+      onPointerMove={e=>{e.stopPropagation();sp.onPointerMove(e);}}
+      onPointerUp={e=>{e.stopPropagation();sp.onPointerUp(e);}}
+      onPointerCancel={e=>{e.stopPropagation();sp.onPointerCancel();}}
       style={{flex:1,height:Math.max(h,22),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
     >
       <div style={{width:'100%',height:h,background:'rgba(255,255,255,0.1)',borderRadius:h,position:'relative'}}>
@@ -299,8 +299,8 @@ function RecentCard({tr,isActive,isPlaying,inQueue,onPlay,onArtist,onQueue,queue
         </button>
         <div style={{fontSize:9,color:TEXT_MUTED,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
       </div>
-<button
-  onPointerDown={e=>{e.stopPropagation();e.preventDefault();onQueue(e as any);}}
+      <button
+        onPointerDown={e=>{e.stopPropagation();onQueue(e);}}
         style={{width:'100%',padding:'4px 7px',background:inQueue?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/></svg>
         <span style={{fontSize:8,color:inQueue?ACC:'#5a5a5a'}}>{queueLabel}</span>
@@ -458,34 +458,34 @@ export default function App(){
   };
   const triggerSync=(..._args:any[])=>doFullSync();
 
+  // ── Deeplink: открыть трек по ссылке вида ?startapp=track-ID ──
+  useEffect(()=>{
+    const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+    if(startParam&&startParam.startsWith('track-')){
+      const trackId=startParam.replace('track-','');
+      setTimeout(async()=>{
+        try{
+          const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
+          const r=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`,{headers:{'User-Agent':'Mozilla/5.0'}});
+          if(!r.ok)throw new Error('not found');
+          const d=await r.json();
+          if(d&&d.id){
+            const track:Track={
+              id:String(d.id),
+              title:d.title||'',
+              artist:d.user?.username||'',
+              cover:(d.artwork_url||d.user?.avatar_url||'').replace('large','t300x300'),
+              duration:'',
+              plays:d.playback_count||0,
+              mp3:null,
+            };
+            playDirect(track);
+          }
+        }catch(e){console.warn('deeplink failed:',e);}
+      },1200);
+    }
+  },[]);
 
-useEffect(()=>{
-  const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-  if(startParam&&startParam.startsWith('track-')){
-    const trackId=startParam.replace('track-','');
-    setTimeout(async()=>{
-      try{
-        // Получаем полные метаданные трека
-        const r=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm`);
-        const d=await r.json();
-        if(d&&d.id){
-          const track:Track={
-            id:String(d.id),
-            title:d.title||'',
-            artist:d.user?.username||'',
-            cover:(d.artwork_url||d.user?.avatar_url||'').replace('large','t300x300'),
-            duration:'',
-            plays:d.playback_count||0,
-            mp3:null,
-          };
-          playDirect(track);
-        }
-      }catch{}
-    },1000);
-  }
-},[]);
-
-  
   useEffect(()=>{
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
     const ll=()=>{try{
@@ -965,37 +965,18 @@ useEffect(()=>{
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
-const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
-const shareTrack=(track:Track)=>{
-  const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
-  const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
-  
-  const tgApp=window.Telegram?.WebApp;
-  
-  if(tgApp){
-    // Метод 1: новый API (Telegram 7.0+)
-    if(typeof tgApp.shareUrl==='function'){
-      tgApp.shareUrl(deepLink,text);
-      return;
+  const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
+  const shareTrack=(track:Track)=>{
+    const deepLink=`https://t.me/forty7bot?startapp=track-${track.id}`;
+    const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
+    const tgApp=window.Telegram?.WebApp;
+    if(tgApp){
+      if(typeof tgApp.shareUrl==='function'){tgApp.shareUrl(deepLink,text);return;}
+      if(typeof tgApp.openTelegramLink==='function'){tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
+      if(typeof tgApp.openLink==='function'){tgApp.openLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
     }
-    // Метод 2: открываем нативное меню пересылки через t.me/share
-    if(typeof tgApp.openTelegramLink==='function'){
-      const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
-      tgApp.openTelegramLink(shareUrl);
-      return;
-    }
-    // Метод 3: открываем через внешний браузер
-    if(typeof tgApp.openLink==='function'){
-      const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
-      tgApp.openLink(shareUrl);
-      return;
-    }
-  }
-  
-  // Fallback для браузера/ПК
-  const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
-  window.open(shareUrl,'_blank');
-};
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
+  };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
@@ -1280,7 +1261,6 @@ const shareTrack=(track:Track)=>{
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
         </div>
-        
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
@@ -1883,6 +1863,7 @@ const shareTrack=(track:Track)=>{
               <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.2}}>{current.title}</div>
               <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:0.2,textTransform:'uppercase' as const}}>{current.artist}</div>
             </div>
+
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
               <button className="prev-next-btn" onPointerDown={e=>{e.stopPropagation();e.preventDefault();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',...tap,opacity:playHistory.length>0?1:0.35}}>
@@ -1898,11 +1879,15 @@ const shareTrack=(track:Track)=>{
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-<div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:8}}>
-  <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
-  <SliderTrack sp={miniSeekSP} h={3}/>
-  <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
-</div>
+          <div
+            onPointerDown={e=>e.stopPropagation()}
+            onPointerUp={e=>e.stopPropagation()}
+            onPointerMove={e=>e.stopPropagation()}
+            style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right',fontVariantNumeric:'tabular-nums' as any}}>{curTime}</span>
+            <SliderTrack sp={miniSeekSP} h={3}/>
+            <span style={{fontSize:10,color:'#555',minWidth:28,fontVariantNumeric:'tabular-nums' as any}}>{current.duration}</span>
+          </div>
         </div>
       )}
 
