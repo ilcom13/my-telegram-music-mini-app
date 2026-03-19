@@ -266,27 +266,76 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider: слайдер для мини-плеера, маленький хитбокс чтобы не конфликтовать с названием ──
+// ── MiniSlider: нативные DOM события, полностью обходит React event system ──
+// Использует useEffect + addEventListener вместо React onPointerDown
+// Это гарантирует что события НЕ всплывают через React дерево вообще
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
+  const wrapRef=useRef<HTMLDivElement>(null);
   const trackRef=useRef<HTMLDivElement>(null);
-  const dragging=useRef(false);
   const[disp,setDisp]=useState(val);
-  useEffect(()=>{if(!dragging.current)setDisp(val);},[val]);
-  const calc=(cx:number)=>{
-    if(!trackRef.current)return;
-    const r=trackRef.current.getBoundingClientRect();
-    const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
-    setDisp(v);onChange(v);
-  };
+  const dragging=useRef(false);
+  const dispRef=useRef(val);
+
+  useEffect(()=>{
+    if(!dragging.current){
+      dispRef.current=val;
+      setDisp(val);
+    }
+  },[val]);
+
+  useEffect(()=>{
+    const track=trackRef.current;
+    if(!track)return;
+
+    const calc=(cx:number)=>{
+      const r=track.getBoundingClientRect();
+      const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
+      dispRef.current=v;
+      setDisp(v);
+      onChange(v);
+    };
+
+    const onDown=(e:PointerEvent)=>{
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      dragging.current=true;
+      track.setPointerCapture(e.pointerId);
+      calc(e.clientX);
+    };
+    const onMove=(e:PointerEvent)=>{
+      if(!dragging.current)return;
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      calc(e.clientX);
+    };
+    const onUp=(e:PointerEvent)=>{
+      if(!dragging.current)return;
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      calc(e.clientX);
+      dragging.current=false;
+    };
+    const onCancel=()=>{dragging.current=false;};
+
+    // capture:true — перехватываем до любых React обработчиков
+    track.addEventListener('pointerdown',onDown,{capture:true});
+    track.addEventListener('pointermove',onMove,{capture:true});
+    track.addEventListener('pointerup',onUp,{capture:true});
+    track.addEventListener('pointercancel',onCancel,{capture:true});
+
+    return()=>{
+      track.removeEventListener('pointerdown',onDown,{capture:true});
+      track.removeEventListener('pointermove',onMove,{capture:true});
+      track.removeEventListener('pointerup',onUp,{capture:true});
+      track.removeEventListener('pointercancel',onCancel,{capture:true});
+    };
+  },[onChange]);
+
   return(
-    <div style={{flex:1,display:'flex',alignItems:'center'}}>
+    <div ref={wrapRef} style={{flex:1,display:'flex',alignItems:'center',height:18}}>
       <div
         ref={trackRef}
-        onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;trackRef.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
-        onPointerMove={e=>{if(!dragging.current)return;e.stopPropagation();calc(e.clientX);}}
-        onPointerUp={e=>{if(!dragging.current)return;e.stopPropagation();calc(e.clientX);dragging.current=false;}}
-        onPointerCancel={()=>{dragging.current=false;}}
-        onClick={e=>e.stopPropagation()}
         style={{flex:1,height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
       >
         <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
@@ -1008,7 +1057,7 @@ export default function App(){
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
-    const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
+    const deepLink=`https://t.me/fortym7bot?startapp=track-${track.id}`;
     const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
@@ -1379,7 +1428,7 @@ export default function App(){
         .full-player-cover{transition:transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease}
         .full-player-cover:active{transform:scale(0.97)}
       `}</style>
-      <div style={{paddingBottom:current?NAV_H+30+72+12:NAV_H+6,minHeight:'100vh'}}>
+      <div style={{paddingBottom:current?NAV_H+110+8:NAV_H+6,minHeight:'100vh'}}>
 
         {/* ── ARTIST ── */}
         {screen==='artist'&&(
@@ -1892,78 +1941,48 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER — два отдельных fixed div, нет пересечений событий ── */}
+      {/* ── MINI PLAYER — один div, слайдер через нативные DOM события (capture phase) ── */}
       {current && screen !== 'profile' && (
-        <>
-          {/* DIV 1: Верхняя часть — обложка, название, кнопки */}
-          {/* bottom = NAV_H+5+30 — сидит прямо над слайдером */}
-          <div
-            className="mini-player"
-            style={{
-              position:'fixed',
-              bottom:NAV_H+5+30,
-              left:8,right:8,
-              background:'rgba(18,18,18,0.98)',
-              backdropFilter:'blur(20px)',
-              border:'1px solid #252525',
-              borderRadius:'16px 16px 0 0',
-              borderBottom:'none',
-              padding:'10px 12px 8px',
-              zIndex:100,
-            }}
-          >
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <div
-                className="mini-cover"
-                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
-                style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden',transition:'transform 0.15s ease'}}
-              >
-                <Img src={current.cover} size={52} radius={10}/>
-              </div>
-              <div
-                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
-                style={{flex:1,minWidth:0,cursor:'pointer'}}
-              >
-                <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
-                <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
-                <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
-                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:playHistory.length>0?1:0.35}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-                </button>
-                <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
-                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-                </button>
-              </div>
-              <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
-                style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
-                <PP sz="sm" col={BG}/>
+        <div
+          className="mini-player"
+          style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 8px',zIndex:100}}
+        >
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:6}}>
+            <div
+              className="mini-cover"
+              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+              style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden',transition:'transform 0.15s ease'}}
+            >
+              <Img src={current.cover} size={52} radius={10}/>
+            </div>
+            <div
+              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+              style={{flex:1,minWidth:0,cursor:'pointer'}}
+            >
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
+              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:playHistory.length>0?1:0.35}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+              </button>
+              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
+            <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
+              style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
+              <PP sz="sm" col={BG}/>
+            </button>
           </div>
-          {/* DIV 2: Слайдер — отдельный DOM-элемент, сидит снизу */}
-          {/* bottom = NAV_H+5 — самый низ плеера, высота 30px */}
-          <div style={{
-            position:'fixed',
-            bottom:NAV_H+5,
-            left:8,right:8,
-            height:30,
-            background:'rgba(18,18,18,0.98)',
-            backdropFilter:'blur(20px)',
-            border:'1px solid #252525',
-            borderTop:'1px solid #1e1e1e',
-            borderRadius:'0 0 16px 16px',
-            zIndex:101,
-            display:'flex',alignItems:'center',gap:8,
-            padding:'0 12px',
-          }}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right'}}>{curTime}</span>
             <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
             <span style={{fontSize:10,color:'#555',minWidth:28}}>{current.duration}</span>
           </div>
-        </>
+        </div>
       )}
 
             {/* ── NAV ── */}
