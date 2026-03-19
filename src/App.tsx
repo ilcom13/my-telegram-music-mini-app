@@ -768,50 +768,57 @@ export default function App(){
     });
   };
 
-  // ── Deeplink: открыть трек по ссылке ?startapp=track-ID ──
-  // Размещён ПОСЛЕ playDirect чтобы функция была доступна
+  // ── Deeplink — стабильная версия (без мигания и перемотки) ──
   const deepLinkHandled=useRef(false);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-    if(!startParam||!startParam.startsWith('track-'))return;
-    if(deepLinkHandled.current)return;
-    deepLinkHandled.current=true;
+    if(!startParam||!startParam.startsWith('track-')||deepLinkHandled.current)return;
 
+    deepLinkHandled.current=true;
     const trackId=startParam.replace('track-','');
 
-    const tryPlayTrack=async()=>{
-      // Шаг 1: сначала получаем полные метаданные
-      try{
-        const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
-        const meta=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`);
-        if(meta.ok){
-          const md=await meta.json();
-          const track:Track={
-            id:trackId,
-            title:md.title||'',
-            artist:md.user?.username||'',
-            cover:(md.artwork_url||md.user?.avatar_url||'').replace('large','t300x300'),
-            duration:'',
-            plays:md.playback_count||0,
-            mp3:null,
-          };
-          playDirect(track);
-          return;
-        }
-      }catch{}
-      // Шаг 2: fallback — только через воркер если SoundCloud недоступен
-      try{
-        const r=await fetch(`${W}/resolve?id=${trackId}`);
-        const d=await r.json();
-        if(d.mp3){
-          playDirect({id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3});
-        }
-      }catch{}
+    const openAndPlay=async()=>{
+      // Сначала пытаемся найти в уже загруженных списках
+      let found:Track|undefined=[...hotTracks,...risingTracks,...history,...recs,...results]
+        .find((tr:Track)=>String(tr.id)===trackId);
+
+      if(!found){
+        try{
+          const r=await fetch(`${W}/resolve?id=${trackId}`);
+          const d=await r.json();
+          if(d.mp3){
+            // Получаем метаданные параллельно
+            try{
+              const SC_ID='Qp0vxL7bAA1IUGyK2A2GpvEaHW9fmkBm';
+              const meta=await fetch(`https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${SC_ID}`);
+              if(meta.ok){
+                const md=await meta.json();
+                found={
+                  id:trackId,
+                  title:md.title||'',
+                  artist:md.user?.username||'',
+                  cover:(md.artwork_url||md.user?.avatar_url||'').replace('large','t300x300'),
+                  duration:'',
+                  plays:md.playback_count||0,
+                  mp3:d.mp3,
+                };
+              }
+            }catch{}
+            if(!found){
+              found={id:trackId,title:'',artist:'',cover:'',duration:'',plays:0,mp3:d.mp3};
+            }
+          }
+        }catch{}
+      }
+
+      if(found){
+        setCurrent(found);
+        setTimeout(()=>playDirect(found!),400);
+      }
     };
 
-    setTimeout(tryPlayTrack,800);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+    setTimeout(openAndPlay,1200);
+  },[hotTracks,risingTracks,history,recs,results]);
 
   const playPrev=()=>{
     if(playHistory.length>0){
@@ -1905,42 +1912,50 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER — исправленный клик (название больше не перематывает) ── */}
-      {current&&screen!=='profile'&&(
-        <div className="mini-player" style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 10px',zIndex:100}}>
+      {/* ── MINI PLAYER — финальное исправление (название больше НЕ перематывает) ── */}
+      {current && screen !== 'profile' && (
+        <div
+          className="mini-player"
+          style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 10px',zIndex:100}}
+          onPointerDown={e=>e.stopPropagation()}
+        >
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
-            <div className="mini-cover"
-              onPointerDown={(e)=>{e.stopPropagation();setFullPlayer(true);}}
-              style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden'}}>
+            <div
+              className="mini-cover"
+              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+              style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden',transition:'transform 0.15s ease'}}
+            >
               <Img src={current.cover} size={52} radius={10}/>
             </div>
             <div
-              onPointerDown={(e)=>{e.stopPropagation();setFullPlayer(true);}}
-              style={{flex:1,minWidth:0,cursor:'pointer'}}>
+              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+              style={{flex:1,minWidth:0,cursor:'pointer'}}
+            >
               <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
               <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
-              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();playPrev();}}
+              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:playHistory.length>0?1:0.35}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
               </button>
-              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();playNext();}}
+              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
-            <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();togglePlay();}}
+            <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
               style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Таймлайн — защищён от всплытия */}
+          {/* Таймлайн — полностью изолирован от верхней части */}
           <div
-            onPointerDown={(e)=>e.stopPropagation()}
-            onPointerUp={(e)=>e.stopPropagation()}
+            onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();}}
             onPointerMove={(e)=>e.stopPropagation()}
-            style={{display:'flex',alignItems:'center',gap:8}}>
+            onPointerUp={(e)=>e.stopPropagation()}
+            style={{display:'flex',alignItems:'center',gap:8}}
+          >
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right'}}>{curTime}</span>
             <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
             <span style={{fontSize:10,color:'#555',minWidth:28}}>{current.duration}</span>
@@ -1948,7 +1963,7 @@ export default function App(){
         </div>
       )}
 
-      {/* ── NAV ── */}
+            {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
           {NAV.map(item=>(
