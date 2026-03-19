@@ -967,7 +967,7 @@ export default function App(){
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
-    const deepLink=`https://t.me/forty7bot?startapp=track-${track.id}`;
+    const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
     const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
