@@ -1676,7 +1676,7 @@ useEffect(()=>{
  
             {/* Переключатель Hot / Rising */}
             <div style={{display:'flex',gap:8,padding:'14px 16px 0'}}>
-              {(()[
+              {([
                 ['hot', lang==='ru'?'🔥 Горячие':lang==='uk'?'🔥 Гарячі':lang==='kk'?'🔥 Ыстық':lang==='pl'?'🔥 Gorące':lang==='tr'?'🔥 Sıcak':'🔥 Hot'],
                 ['rising', lang==='ru'?'⚡ Растущие':lang==='uk'?'⚡ Зростаючі':lang==='kk'?'⚡ Өсіп келе жатқан':lang==='pl'?'⚡ Rosnące':lang==='tr'?'⚡ Yükseliş':'⚡ Rising']
               ] as const).map(([key,label])=>(
