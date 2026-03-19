@@ -431,6 +431,7 @@ export default function App(){
   const[risingTracks,setRisingTracks]=useState<Track[]>([]);
   const[trendLoading,setTrendLoading]=useState(false);
   const[trendSection,setTrendSection]=useState<'hot'|'rising'>('hot');
+  const[trendOffset,setTrendOffset]=useState<Record<'hot'|'rising',number>>({hot:0,rising:0});
   // Оставляем для совместимости (не используется)
   const[trends]=useState<Record<string,Track[]>>({});
   const[trendGenre]=useState('top');
@@ -840,38 +841,45 @@ export default function App(){
 
   // ── Новая loadTrend: загружает Hot Now (top) и Rising (new) параллельно ──
   const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
-  const loadTrend=async(_genre='top',_reset=false)=>{
-    const now=Date.now();
-    const CACHE_MS=20*60*1000; // 20 минут кэш
-    if(trendCacheRef.current.ts>0&&(now-trendCacheRef.current.ts)<CACHE_MS&&!_reset){
-      setHotTracks(trendCacheRef.current.hot);
-      setRisingTracks(trendCacheRef.current.rising);
-      return;
-    }
+  const loadTrend=async(genre='top',reset=false)=>{
+    const section=genre==='top'?'hot':'rising';
+    const offset=reset?0:trendOffset[section];
+    
     setTrendLoading(true);
     try{
-      const [hotRes,risingRes]=await Promise.allSettled([
-        fetch(`${W}/trending?genre=top&offset=0`),
-        fetch(`${W}/trending?genre=new&offset=0`),
-      ]);
-      let hot:Track[]=[],rising:Track[]=[];
-      if(hotRes.status==='fulfilled'&&hotRes.value.ok){
-        const d=await hotRes.value.json();
-        // Формула трендов: score = plays*0.3 + likes*2 / (days+1)
-        hot=(d.tracks||[]).map((tr:Track&{likes?:number;reposts?:number;created_at?:string})=>{
-          return {...tr,_score:tr.plays};
-        }).sort((a:any,b:any)=>b._score-a._score).slice(0,25);
+      const r=await fetch(`${W}/trending?genre=${genre}&offset=${offset}`);
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const d=await r.json();
+      
+      if(reset){
+        if(section==='hot')setHotTracks(d.tracks||[]);
+        else setRisingTracks(d.tracks||[]);
+        setTrendOffset(prev=>({...prev,[section]:0}));
+      }else{
+        // Append для Load More
+        if(section==='hot'){
+          setHotTracks(prev=>[...prev,...(d.tracks||[])]);
+        }else{
+          setRisingTracks(prev=>[...prev,...(d.tracks||[])]);
+        }
+        if(d.hasMore){
+          setTrendOffset(prev=>({...prev,[section]:(d.currentOffset||offset)+1}));
+        }
       }
-      if(risingRes.status==='fulfilled'&&risingRes.value.ok){
-        const d=await risingRes.value.json();
-        rising=(d.tracks||[]).sort((a:Track,b:Track)=>b.plays-a.plays).slice(0,25);
-      }
-      trendCacheRef.current={hot,rising,ts:Date.now()};
-      setHotTracks(hot);
-      setRisingTracks(rising);
-    }catch{}
+    }catch(e){
+      console.error('trend load error:',e);
+    }
     setTrendLoading(false);
   };
+  
+  // Инициализация при открытии вкладки
+  useEffect(()=>{
+    if(screen==='trending'&&hotTracks.length===0){
+      loadTrend('top',true);
+      loadTrend('new',true);
+    }
+  },[screen]);
+    
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
@@ -1631,50 +1639,59 @@ export default function App(){
 
         {/* ── TRENDING — новый дизайн ── */}
         {screen==='trending'&&(()=>{
-          const PUR='#C54CFD';
-          const PUR_DIM='rgba(197,76,253,0.13)';
-          const PUR_GLOW='rgba(197,76,253,0.35)';
+          const BEI='#EFBF7F';  // FIX: заменён фиолетовый на бежевый
+          const BEI_DIM='rgba(239,191,127,0.13)';
+          const BEI_GLOW='rgba(239,191,127,0.35)';
+          
           const activeTracks=trendSection==='hot'?hotTracks:risingTracks;
+          
           return(
           <div style={{minHeight:'100vh'}}>
             <style>{`
               @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-              @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(197,76,253,0.4)}50%{box-shadow:0 0 14px 4px rgba(197,76,253,0.25)}}
+              @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
               .tcard{transition:transform 0.15s ease,background 0.15s ease;}
               .tcard:active{transform:scale(0.975);}
               .tplay{transition:box-shadow 0.2s,transform 0.15s;}
               .tplay:active{transform:scale(0.88);}
             `}</style>
-
+ 
             {/* Заголовок */}
             <div style={{padding:'18px 16px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
-                <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>🔥 Тренды</div>
-                <div style={{fontSize:11,color:'#666',marginTop:3,letterSpacing:0.3}}>Что слушают прямо сейчас</div>
+                <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>
+                  {lang==='ru'?'🔥 Тренды':lang==='uk'?'🔥 Тренди':lang==='kk'?'🔥 Трендтер':lang==='pl'?'🔥 Trendy':lang==='tr'?'🔥 Trendler':'🔥 Trending'}
+                </div>
+                <div style={{fontSize:11,color:'#666',marginTop:3,letterSpacing:0.3}}>
+                  {lang==='ru'?'Что слушают прямо сейчас':lang==='uk'?'Що слухають прямо зараз':lang==='kk'?'Қазір тыңдалатындар':lang==='pl'?'Teraz słuchane':lang==='tr'?'Şu anda dinleniyor':'Listening now'}
+                </div>
               </div>
               <button
                 onPointerDown={()=>loadTrend('top',true)}
-                style={{width:36,height:36,borderRadius:'50%',background:PUR_DIM,border:`1px solid ${PUR}44`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PUR} strokeWidth="2.2" strokeLinecap="round"
+                style={{width:36,height:36,borderRadius:'50%',background:BEI_DIM,border:`1px solid ${BEI}44`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BEI} strokeWidth="2.2" strokeLinecap="round"
                   style={{animation:trendLoading?'spin 0.8s linear infinite':undefined}}>
                   <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
                 </svg>
               </button>
             </div>
-
+ 
             {/* Переключатель Hot / Rising */}
             <div style={{display:'flex',gap:8,padding:'14px 16px 0'}}>
-              {([['hot','🔥 Hot Now'],['rising','⚡ Rising']] as const).map(([key,label])=>(
+              {(()[
+                ['hot', lang==='ru'?'🔥 Горячие':lang==='uk'?'🔥 Гарячі':lang==='kk'?'🔥 Ыстық':lang==='pl'?'🔥 Gorące':lang==='tr'?'🔥 Sıcak':'🔥 Hot'],
+                ['rising', lang==='ru'?'⚡ Растущие':lang==='uk'?'⚡ Зростаючі':lang==='kk'?'⚡ Өсіп келе жатқан':lang==='pl'?'⚡ Rosnące':lang==='tr'?'⚡ Yükseliş':'⚡ Rising']
+              ] as const).map(([key,label])=>(
                 <button
                   key={key}
                   onPointerDown={()=>setTrendSection(key)}
                   style={{
                     flex:1,padding:'10px 0',borderRadius:14,border:'none',
-                    background:trendSection===key?PUR:PUR_DIM,
-                    color:trendSection===key?'#fff':PUR,
+                    background:trendSection===key?BEI:BEI_DIM,
+                    color:trendSection===key?'#0e0e0e':BEI,
                     fontSize:13,fontWeight:trendSection===key?700:500,
                     cursor:'pointer',letterSpacing:0.2,
-                    boxShadow:trendSection===key?`0 4px 18px ${PUR_GLOW}`:'none',
+                    boxShadow:trendSection===key?`0 4px 18px ${BEI_GLOW}`:'none',
                     transition:'all 0.2s ease',
                     ...tap
                   }}>
@@ -1682,27 +1699,31 @@ export default function App(){
                 </button>
               ))}
             </div>
-
+ 
             {/* Описание секции */}
             <div style={{padding:'8px 16px 12px',fontSize:11,color:'#555',letterSpacing:0.2}}>
               {trendSection==='hot'
-                ?'Топ треки по количеству прослушиваний'
-                :'Новинки с быстрым ростом популярности'}
+                ?(lang==='ru'?'Топ треки по количеству прослушиваний':lang==='uk'?'Топ треки за кількістю прослухань':lang==='kk'?'Тыңдалым саны бойынша топ треки':lang==='pl'?'Leaderboard słuchań':lang==='tr'?'Çalış sayısına göre en çok':'Top by plays')
+                :(lang==='ru'?'Новинки с быстрым ростом популярности':lang==='uk'?'Новинки з швидким зростанням популярності':lang==='kk'?'Жылдам өндіктілік өсімімен жаңалықтар':lang==='pl'?'Nowe z szybkim wzrostem':lang==='tr'?'Hızlı büyüyen yeniler':'Rising new releases')}
             </div>
-
-            {/* Список треков */}
+ 
+            {/* Список треков с Load More */}
             {trendLoading&&activeTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,gap:12}}>
-                <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${PUR}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
-                <div style={{fontSize:12,color:'#555'}}>Загружаем тренды...</div>
+                <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${BEI}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+                <div style={{fontSize:12,color:'#555'}}>
+                  {lang==='ru'?'Загружаем тренды...':lang==='uk'?'Завантажуємо тренди...':lang==='kk'?'Трендтерді жүктеу...':lang==='pl'?'Ładowanie trendów...':lang==='tr'?'Trendler yükleniyor...':'Loading trends...'}
+                </div>
               </div>
             ):activeTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12}}>
                 <div style={{fontSize:40}}>📈</div>
-                <div style={{fontSize:13,color:'#555'}}>Нет данных</div>
+                <div style={{fontSize:13,color:'#555'}}>
+                  {lang==='ru'?'Нет данных':lang==='uk'?'Немає даних':lang==='kk'?'Деректер жоқ':lang==='pl'?'Brak danych':lang==='tr'?'Veri yok':'No data'}
+                </div>
                 <button onPointerDown={()=>loadTrend('top',true)}
-                  style={{padding:'9px 24px',background:PUR_DIM,border:`1px solid ${PUR}44`,borderRadius:10,color:PUR,fontSize:12,cursor:'pointer',...tap}}>
-                  Обновить
+                  style={{padding:'9px 24px',background:BEI_DIM,border:`1px solid ${BEI}44`,borderRadius:10,color:BEI,fontSize:12,cursor:'pointer',...tap}}>
+                  {lang==='ru'?'Обновить':lang==='uk'?'Оновити':lang==='kk'?'Жаңарту':lang==='pl'?'Odśwież':lang==='tr'?'Yenile':'Refresh'}
                 </button>
               </div>
             ):(
@@ -1721,18 +1742,18 @@ export default function App(){
                         borderRadius:isFirst?18:14,
                         marginBottom:isFirst?10:5,
                         background:isActive
-                          ?`linear-gradient(135deg,rgba(197,76,253,0.18),rgba(197,76,253,0.08))`
+                          ?`linear-gradient(135deg,rgba(239,191,127,0.18),rgba(239,191,127,0.08))`
                           :isFirst
-                            ?'rgba(197,76,253,0.08)'
+                            ?'rgba(239,191,127,0.08)'
                             :'rgba(255,255,255,0.03)',
                         border:isFirst
-                          ?`1px solid rgba(197,76,253,0.25)`
+                          ?`1px solid rgba(239,191,127,0.25)`
                           :isActive
-                            ?`1px solid rgba(197,76,253,0.2)`
+                            ?`1px solid rgba(239,191,127,0.2)`
                             :'1px solid rgba(255,255,255,0.04)',
                         cursor:'pointer',
                         animation:`fadeUp 0.3s ease ${Math.min(i*0.04,0.5)}s both`,
-                        boxShadow:isFirst?`0 4px 24px rgba(197,76,253,0.12)`:isActive?`0 2px 12px rgba(197,76,253,0.15)`:'none',
+                        boxShadow:isFirst?`0 4px 24px rgba(239,191,127,0.12)`:isActive?`0 2px 12px rgba(239,191,127,0.15)`:'none',
                         ...tap
                       }}>
                       {/* Номер */}
@@ -1740,11 +1761,11 @@ export default function App(){
                         width:isFirst?24:20,flexShrink:0,textAlign:'center',
                         fontSize:isFirst?15:12,
                         fontWeight:700,
-                        color:i<3?PUR:'#444',
+                        color:i<3?BEI:'#444',
                       }}>
                         {i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
                       </div>
-
+ 
                       {/* Обложка */}
                       <div style={{position:'relative',flexShrink:0}}>
                         <div style={{
@@ -1758,64 +1779,91 @@ export default function App(){
                           <div style={{position:'absolute',inset:0,borderRadius:isFirst?14:12,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                             {playing
                               ?<div style={{display:'flex',gap:2,alignItems:'flex-end',height:14}}>
-                                {[0,1,2].map(b=><div key={b} style={{width:3,background:PUR,borderRadius:2,height:[10,14,8][b],animation:`pulse 0.8s ease ${b*0.15}s infinite`}}/>)}
+                                {[0,1,2].map(b=><div key={b} style={{width:3,background:BEI,borderRadius:2,height:[10,14,8][b],animation:`pulse 0.8s ease ${b*0.15}s infinite`}}/>)}
                               </div>
                               :<span style={{color:'#fff',fontSize:14}}>▶</span>
                             }
                           </div>
                         )}
                       </div>
-
+ 
                       {/* Инфо */}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{
                           fontSize:isFirst?14:13,fontWeight:isFirst?700:600,
-                          color:isActive?PUR:TEXT_PRIMARY,
+                          color:isActive?BEI:TEXT_PRIMARY,
                           whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
                           letterSpacing:-0.1,
                         }}>{tr.title}</div>
                         <div style={{
-                          fontSize:11,color:isActive?'rgba(197,76,253,0.7)':'#5a5a5a',
+                          fontSize:11,color:isActive?`rgba(239,191,127,0.7)`:'#5a5a5a',
                           marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
                         }}>{tr.artist}</div>
                         {tr.plays>0&&(
                           <div style={{display:'flex',alignItems:'center',gap:4,marginTop:4}}>
                             <div style={{
                               height:2,width:Math.min(Math.max((tr.plays/1000000)*60,8),60),
-                              background:`linear-gradient(90deg,${PUR},rgba(197,76,253,0.3))`,
+                              background:`linear-gradient(90deg,${BEI},rgba(239,191,127,0.3))`,
                               borderRadius:2,
                             }}/>
                             <span style={{fontSize:9,color:'#444',letterSpacing:0.3}}>{fmtP(tr.plays)}</span>
                           </div>
                         )}
                       </div>
-
-                      {/* Play кнопка */}
+ 
+                      {/* Play кнопка — FIX: теперь круглая */}
                       <button
                         className="tplay"
                         onPointerDown={e=>{e.stopPropagation();playTrack(tr);}}
                         style={{
-                          width:isFirst?40:34,height:isFirst?40:34,
-                          minWidth:isFirst?40:34,
+                          width:44,height:44,  // FIX: одинаковая ширина и высота для круга
+                          minWidth:44,
                           borderRadius:'50%',border:'none',
-                          background:isActive?PUR:PUR_DIM,
+                          background:isActive?BEI:BEI_DIM,
                           display:'flex',alignItems:'center',justifyContent:'center',
                           cursor:'pointer',flexShrink:0,
-                          boxShadow:isActive?`0 0 16px ${PUR_GLOW}`:isFirst?`0 2px 10px ${PUR_GLOW}`:'none',
+                          boxShadow:isActive?`0 0 16px ${BEI_GLOW}`:isFirst?`0 2px 10px ${BEI_GLOW}`:'none',
                           ...tap
                         }}>
                         {isActive&&playing
-                          ?<div style={{display:'flex',gap:2}}><div style={{width:3,height:10,background:isActive?'#fff':PUR,borderRadius:2}}/><div style={{width:3,height:10,background:isActive?'#fff':PUR,borderRadius:2}}/></div>
-                          :<div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${isActive?'#fff':PUR}`,marginLeft:2}}/>
+                          ?<div style={{display:'flex',gap:2}}><div style={{width:3,height:10,background:isActive?'#0e0e0e':'#EFBF7F',borderRadius:2}}/><div style={{width:3,height:10,background:isActive?'#0e0e0e':'#EFBF7F',borderRadius:2}}/></div>
+                          :<div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${isActive?'#0e0e0e':'#EFBF7F'}`,marginLeft:2}}/>
                         }
                       </button>
                     </div>
                   );
                 })}
+                
+                {/* FIX: Load More кнопка */}
+                {(trendSection==='hot'?hotTracks:risingTracks).length>0&&(
+                  <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
+                    <button 
+                      onPointerDown={()=>loadTrend(trendSection==='hot'?'top':'new',false)}
+                      disabled={trendLoading}
+                      style={{
+                        padding:'11px 28px',
+                        background:trendLoading?'#2a2a2a':BEI_DIM,
+                        border:`1px solid ${BEI}33`,
+                        borderRadius:12,
+                        color:trendLoading?'#5a5a5a':BEI,
+                        fontSize:13,
+                        fontWeight:600,
+                        cursor:trendLoading?'not-allowed':'pointer',
+                        opacity:trendLoading?0.6:1,
+                        ...tap
+                      }}>
+                      {trendLoading
+                        ?'...'
+                        :(lang==='ru'?'Загрузить ещё':lang==='uk'?'Завантажити ще':lang==='kk'?'Тағы жүктеу':lang==='pl'?'Wczytaj więcej':lang==='tr'?'Daha fazla yükle':'Load more')
+                      }
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         );})()}
+ 
 
         {/* ── PROFILE ── */}
         {screen==='profile'&&(
