@@ -202,18 +202,7 @@ function AlbumImg({src,radius=0}:{src:string;radius?:number}){
   return<div style={{width:'100%',aspectRatio:'1/1',background:BG3,borderRadius:radius,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,color:ACC}}>💿</div>;
 }
 
-const GENRES = [
-  { id: 'top',    label: 'Топ',          e: '🔥' },
-  { id: 'new',    label: 'Новинки',      e: '⚡' },
-  { id: 'rap',    label: 'Рэп',          e: '🎤' },
-  { id: 'pop',    label: 'Поп',          e: '✨' },
-  { id: 'phonk',  label: 'Фонк',         e: '💀' },
-  { id: 'trap',   label: 'Трэп',         e: '💀' },
-  { id: 'drill',  label: 'Дрилл',        e: '🔩' },
-  { id: 'club',   label: 'Клубные',      e: '🕺' },
-  { id: 'old',    label: '2010-е',       e: '📼' },
-  { id: 'viral',  label: 'Viral',        e: '📱' }
-];
+const GENRES=[{id:'top',label:'Топ',e:'🔥'},{id:'new',label:'Новинки',e:'⚡'},{id:'ru-rap',label:'RU Рэп',e:'🎤'},{id:'hip-hop',label:'Hip-Hop',e:'🎧'},{id:'trap',label:'Trap',e:'💀'},{id:'drill',label:'Drill',e:'🔩'},{id:'electronic',label:'Electronic',e:'⚡'},{id:'rnb',label:'R&B',e:'💜'},{id:'pop',label:'Pop',e:'✨'},{id:'latin',label:'Latin',e:'🌴'}];
 const REMIX_W=['speed up','sped up','slowed','reverb','slow reverb','nightcore','pitched','lofi','lo-fi','boosted','bass boost','phonk','tiktok','ultra slowed','super slowed','mashup','extended','hardstyle','core','remix','bass','спид ап','спид апп','словед','слоувед','ремикс','басс','слоу','реверб','найткор','хардстайл','мэшап','мешап','кор','фонк','лофи'];
 const COVER_W=['cover','parody','кавер','пародия','cover version','кавер-версия','tribute to','в стиле','cover by','кавер на'];
 
@@ -437,10 +426,15 @@ export default function App(){
   const[history,setHistory]=useState<Track[]>([]);
   const[recs,setRecs]=useState<Track[]>([]);
   const[recsVersion,setRecsVersion]=useState(0);
-  const[trends,setTrends]=useState<Record<string,Track[]>>({});
+  // ── Новые state для трендов (Hot Now + Rising) ──
+  const[hotTracks,setHotTracks]=useState<Track[]>([]);
+  const[risingTracks,setRisingTracks]=useState<Track[]>([]);
   const[trendLoading,setTrendLoading]=useState(false);
-  const[trendGenre,setTrendGenre]=useState('top');
-  const[trendOff,setTrendOff]=useState<Record<string,number>>({});
+  const[trendSection,setTrendSection]=useState<'hot'|'rising'>('hot');
+  // Оставляем для совместимости (не используется)
+  const[trends]=useState<Record<string,Track[]>>({});
+  const[trendGenre]=useState('top');
+  const[trendOff]=useState<Record<string,number>>({});
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -721,7 +715,7 @@ export default function App(){
     return()=>a.removeEventListener('volumechange',onVol);
   },[volume]);
 
-  useEffect(()=>{if(screen==='trending'&&!trends[trendGenre])loadTrend(trendGenre,true);},[screen,trendGenre]);
+  useEffect(()=>{if(screen==='trending'&&hotTracks.length===0)loadTrend('top',false);},[screen]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
@@ -844,7 +838,40 @@ export default function App(){
     setRecsVersion(v=>v+1);
   };
 
-  const loadTrend=async(genre=trendGenre,reset=false)=>{setTrendLoading(true);const off=reset?0:(trendOff[genre]||0);try{const r=await fetch(`${W}/trending?genre=${genre}&offset=${off}`);const d=await r.json();if(d.tracks){setTrends(prev=>({...prev,[genre]:reset?d.tracks:[...(prev[genre]||[]),...d.tracks]}));setTrendOff(prev=>({...prev,[genre]:off+1}));}}catch{}setTrendLoading(false);};
+  // ── Новая loadTrend: загружает Hot Now (top) и Rising (new) параллельно ──
+  const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
+  const loadTrend=async(_genre='top',_reset=false)=>{
+    const now=Date.now();
+    const CACHE_MS=20*60*1000; // 20 минут кэш
+    if(trendCacheRef.current.ts>0&&(now-trendCacheRef.current.ts)<CACHE_MS&&!_reset){
+      setHotTracks(trendCacheRef.current.hot);
+      setRisingTracks(trendCacheRef.current.rising);
+      return;
+    }
+    setTrendLoading(true);
+    try{
+      const [hotRes,risingRes]=await Promise.allSettled([
+        fetch(`${W}/trending?genre=top&offset=0`),
+        fetch(`${W}/trending?genre=new&offset=0`),
+      ]);
+      let hot:Track[]=[],rising:Track[]=[];
+      if(hotRes.status==='fulfilled'&&hotRes.value.ok){
+        const d=await hotRes.value.json();
+        // Формула трендов: score = plays*0.3 + likes*2 / (days+1)
+        hot=(d.tracks||[]).map((tr:Track&{likes?:number;reposts?:number;created_at?:string})=>{
+          return {...tr,_score:tr.plays};
+        }).sort((a:any,b:any)=>b._score-a._score).slice(0,25);
+      }
+      if(risingRes.status==='fulfilled'&&risingRes.value.ok){
+        const d=await risingRes.value.json();
+        rising=(d.tracks||[]).sort((a:Track,b:Track)=>b.plays-a.plays).slice(0,25);
+      }
+      trendCacheRef.current={hot,rising,ts:Date.now()};
+      setHotTracks(hot);
+      setRisingTracks(rising);
+    }catch{}
+    setTrendLoading(false);
+  };
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
@@ -1602,17 +1629,191 @@ export default function App(){
           </div>
         )}
 
-        {/* ── TRENDING ── */}
-        {screen==='trending'&&(()=>{const ct=trends[trendGenre]||[];return(
-          <div>
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('trending')}</div>
-              <button onPointerDown={()=>loadTrend(trendGenre,true)} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+        {/* ── TRENDING — новый дизайн ── */}
+        {screen==='trending'&&(()=>{
+          const PUR='#C54CFD';
+          const PUR_DIM='rgba(197,76,253,0.13)';
+          const PUR_GLOW='rgba(197,76,253,0.35)';
+          const activeTracks=trendSection==='hot'?hotTracks:risingTracks;
+          return(
+          <div style={{minHeight:'100vh'}}>
+            <style>{`
+              @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+              @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(197,76,253,0.4)}50%{box-shadow:0 0 14px 4px rgba(197,76,253,0.25)}}
+              .tcard{transition:transform 0.15s ease,background 0.15s ease;}
+              .tcard:active{transform:scale(0.975);}
+              .tplay{transition:box-shadow 0.2s,transform 0.15s;}
+              .tplay:active{transform:scale(0.88);}
+            `}</style>
+
+            {/* Заголовок */}
+            <div style={{padding:'18px 16px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>🔥 Тренды</div>
+                <div style={{fontSize:11,color:'#666',marginTop:3,letterSpacing:0.3}}>Что слушают прямо сейчас</div>
+              </div>
+              <button
+                onPointerDown={()=>loadTrend('top',true)}
+                style={{width:36,height:36,borderRadius:'50%',background:PUR_DIM,border:`1px solid ${PUR}44`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PUR} strokeWidth="2.2" strokeLinecap="round"
+                  style={{animation:trendLoading?'spin 0.8s linear infinite':undefined}}>
+                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                </svg>
+              </button>
             </div>
-            <div style={{display:'flex',gap:6,padding:'0 16px 12px',overflowX:'auto'}}>
-              {GENRES.map(g=>(<button key={g.id} onPointerDown={()=>setTrendGenre(g.id)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 11px',borderRadius:12,border:trendGenre===g.id?`1px solid ${ACC}44`:'1px solid #222',background:trendGenre===g.id?ACC_DIM:BG2,color:trendGenre===g.id?ACC:TEXT_SEC,cursor:'pointer',flexShrink:0,minWidth:54,transition:'all 0.15s',...tap}}><span style={{fontSize:19}}>{g.e}</span><span style={{fontSize:9,fontWeight:trendGenre===g.id?600:400,whiteSpace:'nowrap'}}>{g.label}</span></button>))}
+
+            {/* Переключатель Hot / Rising */}
+            <div style={{display:'flex',gap:8,padding:'14px 16px 0'}}>
+              {([['hot','🔥 Hot Now'],['rising','⚡ Rising']] as const).map(([key,label])=>(
+                <button
+                  key={key}
+                  onPointerDown={()=>setTrendSection(key)}
+                  style={{
+                    flex:1,padding:'10px 0',borderRadius:14,border:'none',
+                    background:trendSection===key?PUR:PUR_DIM,
+                    color:trendSection===key?'#fff':PUR,
+                    fontSize:13,fontWeight:trendSection===key?700:500,
+                    cursor:'pointer',letterSpacing:0.2,
+                    boxShadow:trendSection===key?`0 4px 18px ${PUR_GLOW}`:'none',
+                    transition:'all 0.2s ease',
+                    ...tap
+                  }}>
+                  {label}
+                </button>
+              ))}
             </div>
-            {trendLoading&&ct.length===0?<Spinner/>:ct.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'60px 20px 0',textAlign:'center'}}><div style={{fontSize:38,marginBottom:12}}>📈</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('notFound')}</div><button onPointerDown={()=>loadTrend(trendGenre,true)} style={{marginTop:12,padding:'8px 20px',background:ACC_DIM,border:'none',borderRadius:9,color:ACC,fontSize:12,cursor:'pointer',...tap}}>{t('retry')}</button></div>:<div><div style={{padding:'0 4px'}}>{ct.map((tr,i)=><TRow key={tr.id+i} track={tr} num={i+1}/>)}</div><div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'center'}}><button onPointerDown={()=>loadTrend(trendGenre,false)} disabled={trendLoading} style={{padding:'9px 32px',background:ACC_DIM,border:`1px solid ${ACC}22`,borderRadius:11,color:ACC,fontSize:12,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?.5:1,...tap}}>{trendLoading?t('loading'):t('loadMore')}</button></div></div>}
+
+            {/* Описание секции */}
+            <div style={{padding:'8px 16px 12px',fontSize:11,color:'#555',letterSpacing:0.2}}>
+              {trendSection==='hot'
+                ?'Топ треки по количеству прослушиваний'
+                :'Новинки с быстрым ростом популярности'}
+            </div>
+
+            {/* Список треков */}
+            {trendLoading&&activeTracks.length===0?(
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,gap:12}}>
+                <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${PUR}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+                <div style={{fontSize:12,color:'#555'}}>Загружаем тренды...</div>
+              </div>
+            ):activeTracks.length===0?(
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12}}>
+                <div style={{fontSize:40}}>📈</div>
+                <div style={{fontSize:13,color:'#555'}}>Нет данных</div>
+                <button onPointerDown={()=>loadTrend('top',true)}
+                  style={{padding:'9px 24px',background:PUR_DIM,border:`1px solid ${PUR}44`,borderRadius:10,color:PUR,fontSize:12,cursor:'pointer',...tap}}>
+                  Обновить
+                </button>
+              </div>
+            ):(
+              <div style={{padding:'0 12px 16px'}}>
+                {activeTracks.map((tr,i)=>{
+                  const isFirst=i===0;
+                  const isActive=current?.id===tr.id;
+                  return(
+                    <div
+                      key={tr.id+i}
+                      className="tcard"
+                      onPointerDown={()=>playTrack(tr)}
+                      style={{
+                        display:'flex',alignItems:'center',gap:12,
+                        padding:isFirst?'12px 14px':'9px 12px',
+                        borderRadius:isFirst?18:14,
+                        marginBottom:isFirst?10:5,
+                        background:isActive
+                          ?`linear-gradient(135deg,rgba(197,76,253,0.18),rgba(197,76,253,0.08))`
+                          :isFirst
+                            ?'rgba(197,76,253,0.08)'
+                            :'rgba(255,255,255,0.03)',
+                        border:isFirst
+                          ?`1px solid rgba(197,76,253,0.25)`
+                          :isActive
+                            ?`1px solid rgba(197,76,253,0.2)`
+                            :'1px solid rgba(255,255,255,0.04)',
+                        cursor:'pointer',
+                        animation:`fadeUp 0.3s ease ${Math.min(i*0.04,0.5)}s both`,
+                        boxShadow:isFirst?`0 4px 24px rgba(197,76,253,0.12)`:isActive?`0 2px 12px rgba(197,76,253,0.15)`:'none',
+                        ...tap
+                      }}>
+                      {/* Номер */}
+                      <div style={{
+                        width:isFirst?24:20,flexShrink:0,textAlign:'center',
+                        fontSize:isFirst?15:12,
+                        fontWeight:700,
+                        color:i<3?PUR:'#444',
+                      }}>
+                        {i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
+                      </div>
+
+                      {/* Обложка */}
+                      <div style={{position:'relative',flexShrink:0}}>
+                        <div style={{
+                          borderRadius:isFirst?14:12,overflow:'hidden',
+                          width:isFirst?58:50,height:isFirst?58:50,
+                          boxShadow:isFirst?`0 4px 16px rgba(0,0,0,0.5)`:undefined,
+                        }}>
+                          <Img src={tr.cover} size={isFirst?58:50} radius={isFirst?14:12}/>
+                        </div>
+                        {isActive&&(
+                          <div style={{position:'absolute',inset:0,borderRadius:isFirst?14:12,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            {playing
+                              ?<div style={{display:'flex',gap:2,alignItems:'flex-end',height:14}}>
+                                {[0,1,2].map(b=><div key={b} style={{width:3,background:PUR,borderRadius:2,height:[10,14,8][b],animation:`pulse 0.8s ease ${b*0.15}s infinite`}}/>)}
+                              </div>
+                              :<span style={{color:'#fff',fontSize:14}}>▶</span>
+                            }
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Инфо */}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{
+                          fontSize:isFirst?14:13,fontWeight:isFirst?700:600,
+                          color:isActive?PUR:TEXT_PRIMARY,
+                          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                          letterSpacing:-0.1,
+                        }}>{tr.title}</div>
+                        <div style={{
+                          fontSize:11,color:isActive?'rgba(197,76,253,0.7)':'#5a5a5a',
+                          marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                        }}>{tr.artist}</div>
+                        {tr.plays>0&&(
+                          <div style={{display:'flex',alignItems:'center',gap:4,marginTop:4}}>
+                            <div style={{
+                              height:2,width:Math.min(Math.max((tr.plays/1000000)*60,8),60),
+                              background:`linear-gradient(90deg,${PUR},rgba(197,76,253,0.3))`,
+                              borderRadius:2,
+                            }}/>
+                            <span style={{fontSize:9,color:'#444',letterSpacing:0.3}}>{fmtP(tr.plays)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Play кнопка */}
+                      <button
+                        className="tplay"
+                        onPointerDown={e=>{e.stopPropagation();playTrack(tr);}}
+                        style={{
+                          width:isFirst?40:34,height:isFirst?40:34,
+                          minWidth:isFirst?40:34,
+                          borderRadius:'50%',border:'none',
+                          background:isActive?PUR:PUR_DIM,
+                          display:'flex',alignItems:'center',justifyContent:'center',
+                          cursor:'pointer',flexShrink:0,
+                          boxShadow:isActive?`0 0 16px ${PUR_GLOW}`:isFirst?`0 2px 10px ${PUR_GLOW}`:'none',
+                          ...tap
+                        }}>
+                        {isActive&&playing
+                          ?<div style={{display:'flex',gap:2}}><div style={{width:3,height:10,background:isActive?'#fff':PUR,borderRadius:2}}/><div style={{width:3,height:10,background:isActive?'#fff':PUR,borderRadius:2}}/></div>
+                          :<div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${isActive?'#fff':PUR}`,marginLeft:2}}/>
+                        }
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );})()}
 
