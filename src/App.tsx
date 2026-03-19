@@ -1664,7 +1664,6 @@ useEffect(()=>{
                   {lang==='ru'?'Что слушают прямо сейчас':lang==='uk'?'Що слухають прямо зараз':lang==='kk'?'Қазір тыңдалатындар':lang==='pl'?'Teraz słuchane':lang==='tr'?'Şu anda dinleniyor':'Listening now'}
                 </div>
               </div>
-              <button
             </div>
  
             {/* Список треков с Load More */}
