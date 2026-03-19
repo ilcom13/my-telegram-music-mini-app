@@ -1892,55 +1892,69 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER — финальное исправление (название больше НЕ перематывает) ── */}
+      {/* ── MINI PLAYER — два отдельных div чтобы название и слайдер никогда не пересекались ── */}
       {current && screen !== 'profile' && (
-        <div
-          className="mini-player"
-          style={{position:'fixed',bottom:NAV_H+5,left:8,right:8,background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',border:'1px solid #252525',borderRadius:16,padding:'10px 12px 10px',zIndex:100}}
-          onPointerDown={e=>e.stopPropagation()}
-        >
-          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
-            <div
-              className="mini-cover"
-              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
-              style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden',transition:'transform 0.15s ease'}}
-            >
-              <Img src={current.cover} size={52} radius={10}/>
-            </div>
-            <div
-              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
-              style={{flex:1,minWidth:0,cursor:'pointer'}}
-            >
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
-              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
-              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:playHistory.length>0?1:0.35}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-              </button>
-              <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-              </button>
-            </div>
-            <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
-              style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
-              <PP sz="sm" col={BG}/>
-            </button>
-          </div>
-          {/* Таймлайн — полностью изолирован от верхней части */}
+        <>
+          {/* DIV 1: Фон + верхняя часть (обложка, название, кнопки) — НЕТ слайдера */}
           <div
-            onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();}}
-            onPointerMove={(e)=>e.stopPropagation()}
-            onPointerUp={(e)=>e.stopPropagation()}
-            style={{display:'flex',alignItems:'center',gap:8}}
+            className="mini-player"
+            style={{
+              position:'fixed',bottom:NAV_H+5,left:8,right:8,
+              background:'rgba(18,18,18,0.98)',backdropFilter:'blur(20px)',
+              border:'1px solid #252525',borderRadius:16,
+              padding:'10px 12px 22px', // нижний padding = место под слайдер
+              zIndex:100,
+            }}
           >
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <div
+                className="mini-cover"
+                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+                style={{flexShrink:0,cursor:'pointer',borderRadius:10,overflow:'hidden',transition:'transform 0.15s ease'}}
+              >
+                <Img src={current.cover} size={52} radius={10}/>
+              </div>
+              <div
+                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();setFullPlayer(true);}}
+                style={{flex:1,minWidth:0,cursor:'pointer'}}
+              >
+                <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.title}</div>
+                <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{current.artist}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+                <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:playHistory.length>0?1:0.35}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                </button>
+                <button className="prev-next-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',...tap,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                </button>
+              </div>
+              <button className="play-btn" onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
+                style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
+                <PP sz="sm" col={BG}/>
+              </button>
+            </div>
+          </div>
+          {/* DIV 2: Слайдер — отдельный position:fixed, стоит ПОВЕРХ нижней части первого div */}
+          {/* Физически отдельный DOM-элемент — события между ними НИКОГДА не пересекаются */}
+          <div style={{
+            position:'fixed',
+            bottom:NAV_H+5+10, // совпадает с нижним краем первого div
+            left:8,right:8,
+            zIndex:101, // выше первого div
+            display:'flex',alignItems:'center',gap:8,
+            padding:'0 12px',
+            height:22,
+            borderRadius:'0 0 16px 16px',
+            pointerEvents:'auto',
+          }}>
             <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right'}}>{curTime}</span>
             <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
             <span style={{fontSize:10,color:'#555',minWidth:28}}>{current.duration}</span>
           </div>
-        </div>
+        </>
       )}
 
             {/* ── NAV ── */}
