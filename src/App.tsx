@@ -266,7 +266,7 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider — простой слайдер для нижней зоны мини-плеера ──
+// ── MiniSlider — pointer-events:none на обёртке, auto только на полоске ──
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
   const ref=useRef<HTMLDivElement>(null);
   const dragging=useRef(false);
@@ -279,17 +279,30 @@ function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
     setDisp(v);onChange(v);
   };
   return(
-    <div
-      ref={ref}
-      onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;ref.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
-      onPointerMove={e=>{if(!dragging.current)return;calc(e.clientX);}}
-      onPointerUp={e=>{if(!dragging.current)return;calc(e.clientX);dragging.current=false;}}
-      onPointerCancel={()=>{dragging.current=false;}}
-      style={{flex:1,height:20,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
-    >
-      <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
-        <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
-        <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:12,height:12,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+    // Внешняя обёртка: pointer-events:none — не перехватывает клики вообще
+    <div style={{flex:1,display:'flex',alignItems:'center',pointerEvents:'none' as const}}>
+      {/* Только полоска: pointer-events:auto — ловит клики строго по себе */}
+      <div
+        ref={ref}
+        onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;ref.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
+        onPointerMove={e=>{if(!dragging.current)return;calc(e.clientX);}}
+        onPointerUp={e=>{if(!dragging.current)return;calc(e.clientX);dragging.current=false;}}
+        onPointerCancel={()=>{dragging.current=false;}}
+        style={{
+          flex:1,
+          height:16,  // строго маленькая высота — только полоска
+          display:'flex',
+          alignItems:'center',
+          cursor:'pointer',
+          touchAction:'none',
+          userSelect:'none' as const,
+          pointerEvents:'auto' as const,  // только здесь ловим клики
+        }}
+      >
+        <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
+          <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
+          <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:12,height:12,background:ACC,borderRadius:'50%',pointerEvents:'none' as const}}/>
+        </div>
       </div>
     </div>
   );
@@ -1005,7 +1018,7 @@ export default function App(){
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
     const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
-    const text=`${track.title} — ${track.artist} 🎵\nСлушай в Forty7`;
+    const text=`${track.title} — ${track.artist} 🎵\nListen on Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
       if(typeof tgApp.shareUrl==='function'){tgApp.shareUrl(deepLink,text);return;}
@@ -1946,7 +1959,7 @@ export default function App(){
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Нижняя часть: только таймлайн — полностью изолирован */}
+          {/* Нижняя часть: pointer-events:none на контейнере, клики только на слайдере */}
           <div
             style={{
               padding:'0 12px 10px',
@@ -1954,11 +1967,12 @@ export default function App(){
               alignItems:'center',
               gap:8,
               borderTop:'1px solid #1e1e1e',
+              pointerEvents:'none' as const,  // контейнер не перехватывает клики
             }}
           >
-            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const}}>{curTime}</span>
+            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,pointerEvents:'none' as const}}>{curTime}</span>
             <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
-            <span style={{fontSize:10,color:'#555',minWidth:28}}>{current.duration}</span>
+            <span style={{fontSize:10,color:'#555',minWidth:28,pointerEvents:'none' as const}}>{current.duration}</span>
           </div>
         </div>
       )}
