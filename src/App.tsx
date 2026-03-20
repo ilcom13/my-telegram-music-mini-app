@@ -954,6 +954,8 @@ export default function App(){
       loadForYou(true);
     }
   },[screen,history.length]);
+
+  const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
     try{
