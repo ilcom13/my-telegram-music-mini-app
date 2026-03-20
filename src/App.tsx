@@ -266,7 +266,6 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider — финальная версия по рекомендации GPT-4 ──
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
   const trackRef=useRef<HTMLDivElement>(null);
   const[dragging,setDragging]=useState(false);
@@ -476,6 +475,7 @@ export default function App(){
   const[risingTracks,setRisingTracks]=useState<Track[]>([]);
   const[trendLoading,setTrendLoading]=useState(false);
   const[trendSection,setTrendSection]=useState<'hot'|'rising'>('hot');
+  // ── ИЗМЕНЕНИЕ: единый курсор для трендов ──
   const[trendNextCursor,setTrendNextCursor]=useState<Record<'hot'|'rising',string>>({hot:'',rising:''});
   const[trends]=useState<Record<string,Track[]>>({});
   const[trendGenre]=useState('top');
@@ -732,7 +732,6 @@ export default function App(){
     return()=>a.removeEventListener('volumechange',onVol);
   },[volume]);
 
-  useEffect(()=>{if(screen==='trending'&&hotTracks.length===0)loadTrend('top',false);},[screen]);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
@@ -787,7 +786,6 @@ export default function App(){
     });
   };
 
-  // ── Deeplink — через воркер (CORS-safe, полные метаданные) ──
   const deepLinkHandled=useRef(false);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -798,8 +796,6 @@ export default function App(){
 
     const openAndPlay=async()=>{
       try{
-        // Воркер теперь возвращает mp3 + все метаданные (title, artist, cover, plays)
-        // Прямые запросы к SoundCloud из браузера блокируются CORS — только через воркер
         const r=await fetch(`${W}/resolve?id=${trackId}`);
         const d=await r.json();
         if(d.mp3){
@@ -812,9 +808,7 @@ export default function App(){
             plays:d.plays||0,
             mp3:d.mp3,
           };
-          // setCurrent сначала — показываем UI немедленно
           setCurrent(track);
-          // playDirect запускает воспроизведение (mp3 уже есть, повторный resolve не нужен)
           playDirect(track);
         }
       }catch(e){console.warn('deeplink error:',e);}
@@ -888,10 +882,11 @@ export default function App(){
   };
 
   const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
+
+  // ── ИЗМЕНЕНИЕ: упрощённый loadTrend — один список, один cursor ──
   const loadTrend=async(genre='top',reset=false)=>{
-    const section=genre==='top'?'hot':'rising';
-    // При reset — курсор пустой (первая страница), иначе берём сохранённый
-    const cursor=reset?'':trendNextCursor[section];
+    // cursor: при reset — пустой (первая страница), иначе берём сохранённый
+    const cursor=reset?'':trendNextCursor['hot'];
     setTrendLoading(true);
     try{
       const params=new URLSearchParams({genre});
@@ -900,23 +895,19 @@ export default function App(){
       if(!r.ok)throw new Error(`HTTP ${r.status}`);
       const d=await r.json();
       if(reset){
-        if(section==='hot')setHotTracks(d.tracks||[]);
-        else setRisingTracks(d.tracks||[]);
-        // Сохраняем cursor для следующей страницы
-        setTrendNextCursor(prev=>({...prev,[section]:d.nextCursor||''}));
+        setHotTracks(d.tracks||[]);
       }else{
-        if(section==='hot'){setHotTracks(prev=>[...prev,...(d.tracks||[])]);}
-        else{setRisingTracks(prev=>[...prev,...(d.tracks||[])]);}
-        setTrendNextCursor(prev=>({...prev,[section]:d.nextCursor||''}));
+        setHotTracks(prev=>[...prev,...(d.tracks||[])]);
       }
+      setTrendNextCursor(prev=>({...prev,hot:d.nextCursor||''}));
     }catch(e){console.error('trend load error:',e);}
     setTrendLoading(false);
   };
 
+  // ── ИЗМЕНЕНИЕ: только один loadTrend('top', true), без 'new' ──
   useEffect(()=>{
     if(screen==='trending'&&hotTracks.length===0){
       loadTrend('top',true);
-      loadTrend('new',true);
     }
   },[screen]);
 
@@ -1613,7 +1604,8 @@ export default function App(){
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:8,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
               <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8}}>{t('recommended')}</div>
               <button onPointerDown={()=>loadRecommendations()} disabled={recsLoading} style={{background:'none',border:'none',cursor:recsLoading?'default':'pointer',padding:4,...tap,opacity:recsLoading?0.5:1}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:recsLoading?'spin 0.8s linear infinite':undefined,transition:'opacity 0.2s ease'}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:recsLoading?'spin
+             0.8s linear infinite':undefined,transition:'opacity 0.2s ease'}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
               </button>
             </div>
             {recs.length===0&&history.length<1
@@ -1625,7 +1617,7 @@ export default function App(){
             </div>
           </div>
         )}
-
+ 
         {/* ── SEARCH ── */}
         {screen==='search'&&(
           <div className="screen-slide-up">
@@ -1651,7 +1643,7 @@ export default function App(){
             </div>
           </div>
         )}
-
+ 
         {/* ── LIBRARY ── */}
         {screen==='library'&&(
           <div className="screen-slide-up">
@@ -1691,7 +1683,7 @@ export default function App(){
             )}
           </div>
         )}
-
+ 
         {/* ── TRENDING ── */}
         {screen==='trending'&&(()=>{
           const BEI='#EFBF7F';
@@ -1700,7 +1692,6 @@ export default function App(){
           const activeTracks=hotTracks;
           return(
           <div className="screen-fade" style={{minHeight:'100vh'}}>
-            {/* Заголовок */}
             <div style={{padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>
@@ -1711,7 +1702,7 @@ export default function App(){
                 </div>
               </div>
             </div>
-
+ 
             {trendLoading&&activeTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,gap:12}}>
                 <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${BEI}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
@@ -1808,7 +1799,7 @@ export default function App(){
             )}
           </div>
         );})()}
-
+ 
         {/* ── PROFILE ── */}
         {screen==='profile'&&(
           <div className="screen-fade">
@@ -1877,11 +1868,11 @@ export default function App(){
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
-                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px',transition:'transform 0.15s ease'}}>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
                         <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Времени в музыке':lang==='uk'?'В музиці':lang==='kk'?'Музыкада':lang==='pl'?'W muzyce':lang==='tr'?'Müzikte':'Time in music'}</div>
                         <div style={{fontSize:18,fontWeight:700,color:ACC}}>{fmtTime()}</div>
                       </div>
-                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px',transition:'transform 0.15s ease'}}>
+                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
                         <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Макс. стрик 🔥':lang==='uk'?'Макс. стрік 🔥':lang==='kk'?'Серия 🔥':lang==='pl'?'Streak 🔥':lang==='tr'?'Seri 🔥':'Max streak 🔥'}</div>
                         <div style={{fontSize:18,fontWeight:700,color:ACC}}>{maxStreak} <span style={{fontSize:12,fontWeight:400,color:TEXT_SEC}}>{lang==='ru'?'дн':lang==='uk'?'дн':lang==='kk'?'күн':lang==='pl'?'dni':lang==='tr'?'gün':'d'}</span></div>
                       </div>
@@ -1917,10 +1908,10 @@ export default function App(){
           </div>
         )}
       </div>
-
+ 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
-
-      {/* ── MINI PLAYER — один контейнер, seek absolute снизу, нет overlap ── */}
+ 
+      {/* ── MINI PLAYER ── */}
       {current && screen !== 'profile' && (
         <div
           className="mini-player"
@@ -1938,7 +1929,6 @@ export default function App(){
             overflow:'hidden',
           }}
         >
-          {/* Верхний слой: обложка + название + кнопки, z-index:2 */}
           <div style={{
             position:'relative',
             zIndex:2,
@@ -1957,7 +1947,7 @@ export default function App(){
             >
               <Img src={current.cover} size={52} radius={10}/>
             </button>
-
+ 
             <button
               type="button"
               onClick={(e)=>{e.stopPropagation();setFullPlayer(true);}}
@@ -1970,7 +1960,7 @@ export default function App(){
                 {current.artist}
               </div>
             </button>
-
+ 
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
               <button className="prev-next-btn"
                 onClick={(e)=>{e.stopPropagation();playPrev();}}
@@ -1983,16 +1973,14 @@ export default function App(){
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
-
+ 
             <button className="play-btn"
               onClick={(e)=>{e.stopPropagation();togglePlay();}}
               style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-
-          {/* Нижний слой: seek bar, position:absolute снизу, z-index:1 */}
-          {/* z-index:1 < z-index:2 верхнего слоя — клики по названию НЕ попадают сюда */}
+ 
           <div style={{
             position:'absolute',
             left:12,right:12,
@@ -2011,9 +1999,8 @@ export default function App(){
           </div>
         </div>
       )}
-
-
-            {/* ── NAV ── */}
+ 
+      {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
           {NAV.map(item=>(
