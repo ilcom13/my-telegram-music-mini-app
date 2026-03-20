@@ -266,43 +266,58 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
   );
 }
 
-// ── MiniSlider — pointer-events:none на обёртке, auto только на полоске ──
+// ── MiniSlider — финальная версия по рекомендации GPT-4 ──
 function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
-  const ref=useRef<HTMLDivElement>(null);
-  const dragging=useRef(false);
+  const trackRef=useRef<HTMLDivElement>(null);
+  const[dragging,setDragging]=useState(false);
   const[disp,setDisp]=useState(val);
-  useEffect(()=>{if(!dragging.current)setDisp(val);},[val]);
-  const calc=(cx:number)=>{
-    if(!ref.current)return;
-    const r=ref.current.getBoundingClientRect();
-    const v=Math.max(0,Math.min(1,(cx-r.left)/r.width));
-    setDisp(v);onChange(v);
+
+  useEffect(()=>{
+    if(!dragging)setDisp(val);
+  },[val,dragging]);
+
+  const updateFromClientX=useCallback((clientX:number)=>{
+    const el=trackRef.current;
+    if(!el)return;
+    const rect=el.getBoundingClientRect();
+    const next=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
+    setDisp(next);
+    onChange(next);
+  },[onChange]);
+
+  const onPointerDown=(e:React.PointerEvent<HTMLDivElement>)=>{
+    e.stopPropagation();
+    const el=trackRef.current;
+    if(!el)return;
+    setDragging(true);
+    el.setPointerCapture(e.pointerId);
+    updateFromClientX(e.clientX);
   };
+  const onPointerMove=(e:React.PointerEvent<HTMLDivElement>)=>{
+    if(!dragging)return;
+    e.stopPropagation();
+    updateFromClientX(e.clientX);
+  };
+  const onPointerUp=(e:React.PointerEvent<HTMLDivElement>)=>{
+    if(!dragging)return;
+    e.stopPropagation();
+    updateFromClientX(e.clientX);
+    setDragging(false);
+  };
+  const onPointerCancel=()=>{setDragging(false);};
+
   return(
-    // Внешняя обёртка: pointer-events:none — не перехватывает клики вообще
-    <div style={{flex:1,display:'flex',alignItems:'center',pointerEvents:'none' as const}}>
-      {/* Только полоска: pointer-events:auto — ловит клики строго по себе */}
-      <div
-        ref={ref}
-        onPointerDown={e=>{e.stopPropagation();e.preventDefault();dragging.current=true;ref.current?.setPointerCapture(e.pointerId);calc(e.clientX);}}
-        onPointerMove={e=>{if(!dragging.current)return;calc(e.clientX);}}
-        onPointerUp={e=>{if(!dragging.current)return;calc(e.clientX);dragging.current=false;}}
-        onPointerCancel={()=>{dragging.current=false;}}
-        style={{
-          flex:1,
-          height:16,  // строго маленькая высота — только полоска
-          display:'flex',
-          alignItems:'center',
-          cursor:'pointer',
-          touchAction:'none',
-          userSelect:'none' as const,
-          pointerEvents:'auto' as const,  // только здесь ловим клики
-        }}
-      >
-        <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative'}}>
-          <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:3}}/>
-          <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:12,height:12,background:ACC,borderRadius:'50%',pointerEvents:'none' as const}}/>
-        </div>
+    <div
+      ref={trackRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      style={{width:'100%',height:18,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none' as const}}
+    >
+      <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:999,position:'relative'}}>
+        <div style={{width:`${disp*100}%`,height:'100%',background:ACC,borderRadius:999}}/>
+        <div style={{position:'absolute',top:'50%',left:`${disp*100}%`,transform:'translate(-50%,-50%)',width:12,height:12,borderRadius:'50%',background:ACC,pointerEvents:'none'}}/>
       </div>
     </div>
   );
@@ -1388,7 +1403,7 @@ export default function App(){
         .full-player-cover{transition:transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease}
         .full-player-cover:active{transform:scale(0.97)}
       `}</style>
-      <div style={{paddingBottom:current?NAV_H+120:NAV_H+6,minHeight:'100vh'}}>
+      <div style={{paddingBottom:current?NAV_H+5+96+8:NAV_H+6,minHeight:'100vh'}}>
 
         {/* ── ARTIST ── */}
         {screen==='artist'&&(
@@ -1901,81 +1916,98 @@ export default function App(){
 
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
 
-      {/* ── MINI PLAYER — финальная версия без перемотки при клике по названию ── */}
+      {/* ── MINI PLAYER — один контейнер, seek absolute снизу, нет overlap ── */}
       {current && screen !== 'profile' && (
-        <div className="mini-player" style={{
-          position:'fixed',
-          bottom:NAV_H+5,
-          left:8,right:8,
-          zIndex:100,
-          background:'rgba(18,18,18,0.98)',
-          backdropFilter:'blur(20px)',
-          border:'1px solid #252525',
-          borderRadius:16,
-          overflow:'hidden',
-        }}>
-          {/* Верхняя часть: обложка + название + кнопки (клик → full player) */}
-          <div
-            onPointerDown={(e)=>{
-              e.stopPropagation();
-              e.preventDefault();
-              setFullPlayer(true);
-            }}
-            style={{
-              padding:'10px 12px 8px',
-              display:'flex',
-              alignItems:'center',
-              gap:12,
-              cursor:'pointer',
-              userSelect:'none' as const,
-            }}
-          >
-            <div className="mini-cover" style={{flexShrink:0,borderRadius:10,overflow:'hidden'}}>
+        <div
+          className="mini-player"
+          style={{
+            position:'fixed',
+            left:8,right:8,
+            bottom:NAV_H+5,
+            height:96,
+            background:'rgba(18,18,18,0.98)',
+            backdropFilter:'blur(20px)',
+            border:'1px solid #252525',
+            borderRadius:16,
+            zIndex:100,
+            boxSizing:'border-box' as const,
+            overflow:'hidden',
+          }}
+        >
+          {/* Верхний слой: обложка + название + кнопки, z-index:2 */}
+          <div style={{
+            position:'relative',
+            zIndex:2,
+            display:'flex',
+            alignItems:'center',
+            gap:12,
+            padding:'10px 12px 34px',
+            height:'100%',
+            boxSizing:'border-box' as const,
+          }}>
+            <button
+              type="button"
+              className="mini-cover"
+              onClick={(e)=>{e.stopPropagation();setFullPlayer(true);}}
+              style={{background:'none',border:'none',padding:0,margin:0,cursor:'pointer',borderRadius:10,overflow:'hidden',flexShrink:0,display:'block',...tap}}
+            >
               <Img src={current.cover} size={52} radius={10}/>
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none' as const}}>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e)=>{e.stopPropagation();setFullPlayer(true);}}
+              style={{flex:1,minWidth:0,background:'none',border:'none',padding:0,margin:0,cursor:'pointer',textAlign:'left' as const,display:'block',...tap}}
+            >
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const}}>
                 {current.title}
               </div>
-              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none' as const}}>
+              <div style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const}}>
                 {current.artist}
               </div>
-            </div>
+            </button>
+
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
               <button className="prev-next-btn"
-                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playPrev();}}
+                onClick={(e)=>{e.stopPropagation();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:playHistory.length>0?1:0.35,...tap}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
               </button>
               <button className="prev-next-btn"
-                onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();playNext();}}
+                onClick={(e)=>{e.stopPropagation();playNext();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
+
             <button className="play-btn"
-              onPointerDown={(e)=>{e.stopPropagation();e.preventDefault();togglePlay();}}
+              onClick={(e)=>{e.stopPropagation();togglePlay();}}
               style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
-          {/* Нижняя часть: pointer-events:none на контейнере, клики только на слайдере */}
-          <div
-            style={{
-              padding:'0 12px 10px',
-              display:'flex',
-              alignItems:'center',
-              gap:8,
-              borderTop:'1px solid #1e1e1e',
-              pointerEvents:'none' as const,  // контейнер не перехватывает клики
-            }}
-          >
-            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,pointerEvents:'none' as const}}>{curTime}</span>
-            <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
-            <span style={{fontSize:10,color:'#555',minWidth:28,pointerEvents:'none' as const}}>{current.duration}</span>
+
+          {/* Нижний слой: seek bar, position:absolute снизу, z-index:1 */}
+          {/* z-index:1 < z-index:2 верхнего слоя — клики по названию НЕ попадают сюда */}
+          <div style={{
+            position:'absolute',
+            left:12,right:12,
+            bottom:8,
+            height:18,
+            zIndex:1,
+            display:'flex',
+            alignItems:'center',
+            gap:8,
+          }}>
+            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0}}>{curTime}</span>
+            <div style={{flex:1,minWidth:0}}>
+              <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
+            </div>
+            <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0}}>{current.duration}</span>
           </div>
         </div>
       )}
+
 
             {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
