@@ -476,7 +476,7 @@ export default function App(){
   const[risingTracks,setRisingTracks]=useState<Track[]>([]);
   const[trendLoading,setTrendLoading]=useState(false);
   const[trendSection,setTrendSection]=useState<'hot'|'rising'>('hot');
-  const[trendOffset,setTrendOffset]=useState<Record<'hot'|'rising',number>>({hot:0,rising:0});
+  const[trendNextCursor,setTrendNextCursor]=useState<Record<'hot'|'rising',string>>({hot:'',rising:''});
   const[trends]=useState<Record<string,Track[]>>({});
   const[trendGenre]=useState('top');
   const[trendOff]=useState<Record<string,number>>({});
@@ -890,20 +890,24 @@ export default function App(){
   const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
   const loadTrend=async(genre='top',reset=false)=>{
     const section=genre==='top'?'hot':'rising';
-    const offset=reset?0:trendOffset[section];
+    // При reset — курсор пустой (первая страница), иначе берём сохранённый
+    const cursor=reset?'':trendNextCursor[section];
     setTrendLoading(true);
     try{
-      const r=await fetch(`${W}/trending?genre=${genre}&offset=${offset}`);
+      const params=new URLSearchParams({genre});
+      if(cursor)params.set('cursor',cursor);
+      const r=await fetch(`${W}/trending?${params}`);
       if(!r.ok)throw new Error(`HTTP ${r.status}`);
       const d=await r.json();
       if(reset){
         if(section==='hot')setHotTracks(d.tracks||[]);
         else setRisingTracks(d.tracks||[]);
-        setTrendOffset(prev=>({...prev,[section]:0}));
+        // Сохраняем cursor для следующей страницы
+        setTrendNextCursor(prev=>({...prev,[section]:d.nextCursor||''}));
       }else{
         if(section==='hot'){setHotTracks(prev=>[...prev,...(d.tracks||[])]);}
         else{setRisingTracks(prev=>[...prev,...(d.tracks||[])]);}
-        if(d.hasMore){setTrendOffset(prev=>({...prev,[section]:(d.currentOffset||offset)+1}));}
+        setTrendNextCursor(prev=>({...prev,[section]:d.nextCursor||''}));
       }
     }catch(e){console.error('trend load error:',e);}
     setTrendLoading(false);
