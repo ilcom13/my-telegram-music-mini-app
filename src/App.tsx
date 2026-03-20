@@ -189,9 +189,36 @@ function extractColors(src: string): Promise<{dark: string; mid: string; accent:
 
 function Img({src,size,radius,fb='🎵'}:{src:string;size:number;radius:number;fb?:string}){
   const[e,sE]=useState(false);
+  const[loaded,setLoaded]=useState(false);
+  const prevSrc=useRef('');
+
+  useEffect(()=>{
+    if(src!==prevSrc.current){
+      prevSrc.current=src;
+      sE(false);
+      setLoaded(false);
+    }
+  },[src]);
+
   const s:React.CSSProperties={width:size,height:size,borderRadius:radius,flexShrink:0,display:'block'};
-  if(src&&!e)return<img src={src} style={{...s,objectFit:'cover'}} onError={()=>sE(true)}/>;
-  return<div style={{...s,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:Math.floor(size*.36),color:ACC}}>{fb}</div>;
+
+  if(!src||e){
+    return<div style={{...s,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:Math.floor(size*.36),color:ACC}}>{fb}</div>;
+  }
+
+  return(
+    <div style={{...s,position:'relative',overflow:'hidden'}}>
+      {!loaded&&(
+        <div style={{...s,position:'absolute',inset:0,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:Math.floor(size*.36),color:ACC}}>{fb}</div>
+      )}
+      <img
+        src={src}
+        style={{...s,objectFit:'cover',opacity:loaded?1:0,transition:'opacity 0.2s ease'}}
+        onLoad={()=>setLoaded(true)}
+        onError={()=>{sE(true);setLoaded(false);}}
+      />
+    </div>
+  );
 }
 
 function AlbumImg({src,radius=0}:{src:string;radius?:number}){
