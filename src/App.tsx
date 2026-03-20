@@ -28,7 +28,7 @@ interface ArtistInfo {
 
 const T: Record<string,Record<string,string>> = {
   uk: {
-    home:'Головна',search:'Пошук',library:'Бібліотека',trending:'Тренди',profile:'Профіль',
+    home:'Головна',search:'Пошук',library:'Бібліотека',trending:'Для тебе',profile:'Профіль',
     find:'Знайти',notFound:'Нічого не знайдено',recent:'Недавнє',recommended:'Рекомендовані',
     likedTracks:'Лайки',playlists:'Плейлисти',albums:'Альбоми',createPlaylist:'Створити плейлист',
     playlistName:'Назва',create:'Створити',cancel:'Скасувати',addToPlaylist:'До плейлиста',
@@ -45,7 +45,7 @@ const T: Record<string,Record<string,string>> = {
     blockArtist:'Не рекомендувати',
   },
   kk: {
-    home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Трендтер',profile:'Профиль',
+    home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Сен үшін',profile:'Профиль',
     find:'Табу',notFound:'Ештеңе табылмады',recent:'Жақында',recommended:'Ұсынылған',
     likedTracks:'Ұнатқандар',playlists:'Ойнату тізімдері',albums:'Альбомдар',createPlaylist:'Тізім жасау',
     playlistName:'Атауы',create:'Жасау',cancel:'Болдырмау',addToPlaylist:'Тізімге қосу',
@@ -62,7 +62,7 @@ const T: Record<string,Record<string,string>> = {
     blockArtist:'Ұсынбау',
   },
   pl: {
-    home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Trendy',profile:'Profil',
+    home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Dla Ciebie',profile:'Profil',
     find:'Szukaj',notFound:'Nic nie znaleziono',recent:'Ostatnie',recommended:'Polecane',
     likedTracks:'Polubione',playlists:'Playlisty',albums:'Albumy',createPlaylist:'Utwórz playlistę',
     playlistName:'Nazwa',create:'Utwórz',cancel:'Anuluj',addToPlaylist:'Do playlisty',
@@ -79,7 +79,7 @@ const T: Record<string,Record<string,string>> = {
     blockArtist:'Nie polecaj',
   },
   tr: {
-    home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Trendler',profile:'Profil',
+    home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Senin İçin',profile:'Profil',
     find:'Ara',notFound:'Hiçbir şey bulunamadı',recent:'Son Dinlenen',recommended:'Önerilen',
     likedTracks:'Beğenilenler',playlists:'Çalma Listeleri',albums:'Albümler',createPlaylist:'Liste Oluştur',
     playlistName:'İsim',create:'Oluştur',cancel:'İptal',addToPlaylist:'Listeye Ekle',
@@ -96,7 +96,7 @@ const T: Record<string,Record<string,string>> = {
     blockArtist:'Önerme',
   },
   en: {
-    home:'Home',search:'Search',library:'Library',trending:'Trending',profile:'Profile',
+    home:'Home',search:'Search',library:'Library',trending:'For You',profile:'Profile',
     find:'Find',notFound:'Nothing found',recent:'Recent',recommended:'Recommended',
     likedTracks:'Liked',playlists:'Playlists',albums:'Albums',createPlaylist:'Create playlist',
     playlistName:'Playlist name',create:'Create',cancel:'Cancel',addToPlaylist:'Add to playlist',
@@ -112,7 +112,7 @@ const T: Record<string,Record<string,string>> = {
     blockArtist:'Not interested',
   },
   ru: {
-    home:'Главная',search:'Поиск',library:'Библиотека',trending:'Тренды',profile:'Профиль',
+    home:'Главная',search:'Поиск',library:'Библиотека',trending:'Для тебя',profile:'Профиль',
     find:'Найти',notFound:'Ничего не найдено',recent:'Недавнее',recommended:'Рекомендованное',
     likedTracks:'Лайки',playlists:'Плейлисты',albums:'Альбомы',createPlaylist:'Создать плейлист',
     playlistName:'Название',create:'Создать',cancel:'Отмена',addToPlaylist:'В плейлист',
@@ -482,6 +482,9 @@ export default function App(){
   const[trends]=useState<Record<string,Track[]>>({});
   const[trendGenre]=useState('top');
   const[trendOff]=useState<Record<string,number>>({});
+  const[forYouTracks,setForYouTracks]=useState<Track[]>([]);
+  const[forYouLoading,setForYouLoading]=useState(false);
+  const[forYouLoaded,setForYouLoaded]=useState(false);
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -913,7 +916,44 @@ export default function App(){
     }
   },[screen]);
 
-  const doSearch=async(mode=searchMode)=>{
+  const loadForYou=useCallback(async(reset=false)=>{
+    const hist=historyRef.current;
+    const blocked=blockedRef.current;
+    if(hist.length<1)return;
+    setForYouLoading(true);
+    try{
+      const allCounts=getArtistPlayCounts(hist.slice(0,100));
+      const recentCounts=getArtistPlayCounts(hist.slice(0,20));
+      const merged:Record<string,number>={};
+      for(const[a,n] of Object.entries(allCounts))merged[a]=n;
+      for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
+      const sortedArtists=Object.entries(merged)
+        .filter(([a])=>!blocked.includes(a))
+        .sort((a,b)=>b[1]-a[1])
+        .map(([a])=>a)
+        .slice(0,10);
+      if(!sortedArtists.length){setForYouLoading(false);return;}
+      // Берём больше треков и более широкий пул артистов для разнообразия
+      const excludeIds=reset?'':hist.slice(0,20).map(tr=>tr.id).join(',');
+      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=30`);
+      if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+      const d=await resp.json();
+      if(d.tracks?.length){
+        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist));
+        if(fresh.length>0){
+          setForYouTracks(prev=>reset?fresh:[...prev.filter(t=>!fresh.some((f:Track)=>f.id===t.id)),...fresh]);
+          setForYouLoaded(true);
+        }
+      }
+    }catch(e){console.warn('forYou failed:',e);}
+    setForYouLoading(false);
+  },[]);
+
+  useEffect(()=>{
+    if(screen==='trending'&&!forYouLoaded&&history.length>=1){
+      loadForYou(true);
+    }
+  },[screen,history.length]);
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
     try{
@@ -1111,6 +1151,7 @@ export default function App(){
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
       ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
@@ -1194,7 +1235,7 @@ export default function App(){
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
     {id:'search',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,lbl:()=>t('search')},
     {id:'library',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,lbl:()=>t('library')},
-    {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,lbl:()=>t('trending')},
+    {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>,lbl:()=>t('trending')},
   ];
 
   if(fullPlayer&&current)return(
@@ -1546,6 +1587,19 @@ export default function App(){
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}
                   </button>
                   <button onPointerDown={()=>toggleFavAl(albumPage)} style={{padding:'10px 14px',borderRadius:10,border:`1px solid ${isFavAl(albumPage.id)?ACC:'#3a3a3a'}`,background:isFavAl(albumPage.id)?ACC_DIM:'transparent',color:isFavAl(albumPage.id)?ACC:TEXT_SEC,fontSize:15,cursor:'pointer',transition:'all 0.2s ease',...tap}}>{isFavAl(albumPage.id)?'♥':'♡'}</button>
+                  <button onPointerDown={()=>{
+                    const deepLink=`https://t.me/forty7mbot?startapp=album-${albumPage.id}`;
+                    const text=`${albumPage.title} — ${albumPage.artist} 💿\nListen on Forty7`;
+                    const tgApp=window.Telegram?.WebApp;
+                    if(tgApp){
+                      if(typeof tgApp.shareUrl==='function'){tgApp.shareUrl(deepLink,text);return;}
+                      if(typeof tgApp.openTelegramLink==='function'){tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
+                      if(typeof tgApp.openLink==='function'){tgApp.openLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
+                    }
+                    window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
+                  }} style={{padding:'10px 14px',borderRadius:10,border:'1px solid #3a3a3a',background:'transparent',color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s ease',...tap}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  </button>
                 </div>
                 {albumPage.tracks.length===0?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>:
                   <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
@@ -1685,121 +1739,65 @@ export default function App(){
           </div>
         )}
  
-        {/* ── TRENDING ── */}
-        {screen==='trending'&&(()=>{
-          const BEI='#EFBF7F';
-          const BEI_DIM='rgba(239,191,127,0.13)';
-          const BEI_GLOW='rgba(239,191,127,0.35)';
-          const activeTracks=hotTracks;
-          return(
+        {/* ── FOR YOU ── */}
+        {screen==='trending'&&(
           <div className="screen-fade" style={{minHeight:'100vh'}}>
             <div style={{padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>
-                  {lang==='ru'?'🔥 Тренды':lang==='uk'?'🔥 Тренди':lang==='kk'?'🔥 Трендтер':lang==='pl'?'🔥 Trendy':lang==='tr'?'🔥 Trendler':'🔥 Trending'}
+                  {lang==='ru'?'✨ Для тебя':lang==='uk'?'✨ Для тебе':lang==='kk'?'✨ Сен үшін':lang==='pl'?'✨ Dla Ciebie':lang==='tr'?'✨ Senin İçin':'✨ For You'}
                 </div>
                 <div style={{fontSize:11,color:'#666',marginTop:3,letterSpacing:0.3}}>
-                  {lang==='ru'?'Что слушают прямо сейчас':lang==='uk'?'Що слухають прямо зараз':lang==='kk'?'Қазір тыңдалатындар':lang==='pl'?'Teraz słuchane':lang==='tr'?'Şu anda dinleniyor':'Listening now'}
+                  {lang==='ru'?'Подобрано по твоему вкусу':lang==='uk'?'Підібрано за твоїм смаком':lang==='kk'?'Талғамыңа сай':lang==='pl'?'Dobrane dla Ciebie':lang==='tr'?'Zevkine göre seçildi':'Curated just for you'}
                 </div>
               </div>
+              <button onPointerDown={()=>loadForYou(true)} disabled={forYouLoading} style={{background:'none',border:'none',cursor:forYouLoading?'default':'pointer',padding:4,...tap,opacity:forYouLoading?0.5:1}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:forYouLoading?'spin 0.8s linear infinite':undefined}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              </button>
             </div>
- 
-            {trendLoading&&activeTracks.length===0?(
+
+            {forYouLoading&&forYouTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,gap:12}}>
-                <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${BEI}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+                <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
                 <div style={{fontSize:12,color:'#555'}}>
-                  {lang==='ru'?'Загружаем тренды...':lang==='uk'?'Завантажуємо тренди...':lang==='kk'?'Трендтерді жүктеу...':lang==='pl'?'Ładowanie trendów...':lang==='tr'?'Trendler yükleniyor...':'Loading trends...'}
+                  {lang==='ru'?'Подбираем треки...':lang==='uk'?'Підбираємо треки...':lang==='kk'?'Жүктелуде...':lang==='pl'?'Dobieramy utwory...':lang==='tr'?'Parçalar seçiliyor...':'Finding tracks for you...'}
                 </div>
               </div>
-            ):activeTracks.length===0?(
+            ):!forYouLoaded&&history.length<1?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12,animation:'fadeIn 0.3s ease'}}>
-                <div style={{fontSize:40}}>📈</div>
+                <div style={{fontSize:40}}>🎵</div>
+                <div style={{fontSize:13,color:TEXT_MUTED,textAlign:'center',padding:'0 32px',lineHeight:1.6}}>
+                  {lang==='ru'?'Послушай несколько треков, и мы подберём музыку специально для тебя':lang==='uk'?'Послухай кілька треків, і ми підберемо музику спеціально для тебе':lang==='kk'?'Бірнеше трек тыңда, сосын саған арнайы музыка ұсынамыз':lang==='pl'?'Posłuchaj kilku utworów, a my dobierzemy muzykę specjalnie dla Ciebie':lang==='tr'?'Birkaç parça dinle, sana özel müzik seçelim':'Listen to some tracks and we\'ll find music just for you'}
+                </div>
+              </div>
+            ):forYouTracks.length===0?(
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12,animation:'fadeIn 0.3s ease'}}>
+                <div style={{fontSize:40}}>🔍</div>
                 <div style={{fontSize:13,color:'#555'}}>
                   {lang==='ru'?'Нет данных':lang==='uk'?'Немає даних':lang==='kk'?'Деректер жоқ':lang==='pl'?'Brak danych':lang==='tr'?'Veri yok':'No data'}
                 </div>
-                <button onPointerDown={()=>loadTrend('top',true)}
-                  style={{padding:'9px 24px',background:BEI_DIM,border:`1px solid ${BEI}44`,borderRadius:10,color:BEI,fontSize:12,cursor:'pointer',transition:'background 0.2s ease',...tap}}>
+                <button onPointerDown={()=>loadForYou(true)}
+                  style={{padding:'9px 24px',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:10,color:ACC,fontSize:12,cursor:'pointer',transition:'background 0.2s ease',...tap}}>
                   {lang==='ru'?'Обновить':lang==='uk'?'Оновити':lang==='kk'?'Жаңарту':lang==='pl'?'Odśwież':lang==='tr'?'Yenile':'Refresh'}
                 </button>
               </div>
             ):(
-              <div style={{padding:'0 12px 16px'}}>
-                {activeTracks.map((tr,i)=>{
-                  const isFirst=i===0;
-                  const isActive=current?.id===tr.id;
-                  return(
-                    <div
-                      key={tr.id+i}
-                      className="tcard"
-                      onPointerDown={()=>playTrack(tr)}
-                      style={{
-                        display:'flex',alignItems:'center',gap:12,
-                        padding:isFirst?'12px 14px':'9px 12px',
-                        borderRadius:isFirst?18:14,
-                        marginBottom:isFirst?10:5,
-                        background:isActive
-                          ?`linear-gradient(135deg,rgba(239,191,127,0.18),rgba(239,191,127,0.08))`
-                          :isFirst?'rgba(239,191,127,0.08)':'rgba(255,255,255,0.03)',
-                        border:isFirst?`1px solid rgba(239,191,127,0.25)`:isActive?`1px solid rgba(239,191,127,0.2)`:'1px solid rgba(255,255,255,0.04)',
-                        cursor:'pointer',
-                        animation:`fadeUp 0.3s ease ${Math.min(i*0.04,0.5)}s both`,
-                        boxShadow:isFirst?`0 4px 24px rgba(239,191,127,0.12)`:isActive?`0 2px 12px rgba(239,191,127,0.15)`:'none',
-                        ...tap
-                      }}>
-                      <div style={{width:isFirst?24:20,flexShrink:0,textAlign:'center',fontSize:isFirst?15:12,fontWeight:700,color:i<3?BEI:'#444'}}>
-                        {i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
-                      </div>
-                      <div style={{position:'relative',flexShrink:0}}>
-                        <div style={{borderRadius:isFirst?14:12,overflow:'hidden',width:isFirst?58:50,height:isFirst?58:50,boxShadow:isFirst?`0 4px 16px rgba(0,0,0,0.5)`:undefined}}>
-                          <Img src={tr.cover} size={isFirst?58:50} radius={isFirst?14:12}/>
-                        </div>
-                        {isActive&&(
-                          <div style={{position:'absolute',inset:0,borderRadius:isFirst?14:12,background:'rgba(0,0,0,0.45)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                            {playing
-                              ?<div style={{display:'flex',gap:2,alignItems:'flex-end',height:14}}>
-                                {[0,1,2].map(b=><div key={b} style={{width:3,background:BEI,borderRadius:2,height:[10,14,8][b],animation:`pulse 0.8s ease ${b*0.15}s infinite`}}/>)}
-                              </div>
-                              :<span style={{color:'#fff',fontSize:14}}>▶</span>
-                            }
-                          </div>
-                        )}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:isFirst?14:13,fontWeight:isFirst?700:600,color:isActive?BEI:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.1,transition:'color 0.2s ease'}}>{tr.title}</div>
-                        <div style={{fontSize:11,color:isActive?`rgba(239,191,127,0.7)`:'#5a5a5a',marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{tr.artist}</div>
-                        {tr.plays>0&&(
-                          <div style={{display:'flex',alignItems:'center',gap:4,marginTop:4}}>
-                            <div style={{height:2,width:Math.min(Math.max((tr.plays/1000000)*60,8),60),background:`linear-gradient(90deg,${BEI},rgba(239,191,127,0.3))`,borderRadius:2}}/>
-                            <span style={{fontSize:9,color:'#444',letterSpacing:0.3}}>{fmtP(tr.plays)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        className="tplay"
-                        onPointerDown={e=>{e.stopPropagation();playTrack(tr);}}
-                        style={{width:44,height:44,minWidth:44,borderRadius:'50%',border:'none',background:isActive?BEI:BEI_DIM,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:isActive?`0 0 16px ${BEI_GLOW}`:isFirst?`0 2px 10px ${BEI_GLOW}`:'none',transition:'background 0.2s ease,box-shadow 0.2s ease',...tap}}>
-                        {isActive&&playing
-                          ?<div style={{display:'flex',gap:2}}><div style={{width:3,height:10,background:isActive?'#0e0e0e':'#EFBF7F',borderRadius:2}}/><div style={{width:3,height:10,background:isActive?'#0e0e0e':'#EFBF7F',borderRadius:2}}/></div>
-                          :<div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${isActive?'#0e0e0e':'#EFBF7F'}`,marginLeft:2}}/>
-                        }
-                      </button>
-                    </div>
-                  );
-                })}
-                {hotTracks.length>0&&(
-                  <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
-                    <button
-                      onPointerDown={()=>loadTrend('top',false)}
-                      disabled={trendLoading}
-                      style={{padding:'11px 28px',background:trendLoading?'#2a2a2a':BEI_DIM,border:`1px solid ${BEI}33`,borderRadius:12,color:trendLoading?'#5a5a5a':BEI,fontSize:13,fontWeight:600,cursor:trendLoading?'not-allowed':'pointer',opacity:trendLoading?0.6:1,transition:'background 0.2s ease,opacity 0.2s ease',...tap}}>
-                      {trendLoading?'...':(lang==='ru'?'Загрузить ещё':lang==='uk'?'Завантажити ще':lang==='kk'?'Тағы жүктеу':lang==='pl'?'Wczytaj więcej':lang==='tr'?'Daha fazla yükle':'Load more')}
-                    </button>
-                  </div>
-                )}
+              <div style={{padding:'0 4px 16px'}}>
+                {forYouTracks.map((tr,i)=>(
+                  <TRow key={tr.id+'fy'+i} track={tr} num={i+1} showBlockBtn={true} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>
+                ))}
+                <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
+                  <button
+                    onPointerDown={()=>loadForYou(false)}
+                    disabled={forYouLoading}
+                    style={{padding:'11px 28px',background:forYouLoading?'#2a2a2a':ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:12,color:forYouLoading?'#5a5a5a':ACC,fontSize:13,fontWeight:600,cursor:forYouLoading?'not-allowed':'pointer',opacity:forYouLoading?0.6:1,transition:'background 0.2s ease,opacity 0.2s ease',...tap}}>
+                    {forYouLoading?'...':(lang==='ru'?'Ещё треки':lang==='uk'?'Ще треки':lang==='kk'?'Тағы жүктеу':lang==='pl'?'Więcej':'More tracks')}
+                  </button>
+                </div>
               </div>
             )}
           </div>
-        );})()}
+        )}
  
         {/* ── PROFILE ── */}
         {screen==='profile'&&(
