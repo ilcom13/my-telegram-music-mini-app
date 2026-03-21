@@ -1172,6 +1172,9 @@ export default function App(){
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
+  const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});if(openPlId===plId)setOpenPlId(null);};
+  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
+  const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;playTrack(sh[0]);setQueue(sh.slice(1));};
@@ -1903,7 +1906,23 @@ export default function App(){
               </button>
             </div>
             {recs.length===0&&history.length<1
-              ?<div style={{padding:'0 16px',fontSize:12,color:TEXT_MUTED}}>{t('noRecommended')}</div>
+              ?<div style={{padding:'0 16px'}}>
+                <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:12}}>{t('noRecommended')}</div>
+                <div style={{background:`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,animation:'slideUp 0.3s ease both'}}>
+                  <div style={{fontSize:28,flexShrink:0}}>🎵</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:3}}>
+                      {lang==='ru'?'Перенеси свои плейлисты':lang==='uk'?'Перенеси свої плейлисти':'Import your playlists'}
+                    </div>
+                    <div style={{fontSize:11,color:TEXT_SEC}}>
+                      {lang==='ru'?'Spotify, YouTube, Яндекс Музыка':'Spotify, YouTube, Yandex Music'}
+                    </div>
+                  </div>
+                  <button onPointerDown={()=>{setScreen('library');setLibTab('playlists');setTimeout(()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);},100);}} style={{flexShrink:0,padding:'8px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                    {lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}
+                  </button>
+                </div>
+              </div>
               :recsLoading&&recs.length===0
                 ?<div style={{padding:'0 16px 8px'}}><Spinner/></div>
                 :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} showBlockBtn={true}/>)}</div>
@@ -1970,13 +1989,36 @@ export default function App(){
                       <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                       <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div></div>
                       <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/></button>
+                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,...tap}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      </button>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
                     {isOpen&&(<div className="playlist-tracks"><div style={{display:'flex',gap:5,padding:'0 13px 9px'}}>
                       <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'7px',background:ACC_DIM,border:'none',borderRadius:7,color:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'background 0.2s ease',...tap}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}</button>
                       <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{flex:1,padding:'7px',background:pl.repeat?ACC:ACC_DIM,border:'none',borderRadius:7,color:pl.repeat?BG:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'background 0.2s ease,color 0.2s ease',...tap}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>{t('repeatPl')}</button>
                     </div>
-                    <div style={{borderTop:'1px solid #1e1e1e'}}>{pl.tracks.length===0?<div style={{padding:'14px',textAlign:'center',color:TEXT_MUTED,fontSize:11}}>{lang==='ru'?'Нет треков':'No tracks'}</div>:pl.tracks.map((tr,i)=>(<div key={tr.id+i} onClick={()=>{playTrack(tr);setQueue(pl.tracks.slice(i+1));}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 13px',cursor:'pointer',background:current?.id===tr.id?ACC_DIM:'transparent',borderBottom:'1px solid #1a1a1a',transition:'background 0.15s ease',...tap}}><Img src={tr.cover} size={36} radius={6}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,color:current?.id===tr.id?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{tr.title}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{tr.artist}</div></div><div style={{fontSize:10,color:TEXT_SEC}}>{tr.duration}</div></div>))}</div></div>)}
+                    <div style={{borderTop:'1px solid #1e1e1e'}}>{pl.tracks.length===0?<div style={{padding:'14px',textAlign:'center',color:TEXT_MUTED,fontSize:11}}>{lang==='ru'?'Нет треков':'No tracks'}</div>:pl.tracks.map((tr,i)=>(
+                      <div key={tr.id+i}
+                        draggable
+                        onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(i));e.dataTransfer.setData('plId',pl.id);}}
+                        onDragOver={e=>e.preventDefault()}
+                        onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==i)moveTrackInPl(pl.id,from,i);}}
+                        style={{display:'flex',alignItems:'center',gap:10,padding:'8px 13px',cursor:'pointer',background:current?.id===tr.id?ACC_DIM:'transparent',borderBottom:'1px solid #1a1a1a',transition:'background 0.15s ease',...tap}}>
+                        <div style={{color:'#444',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>
+                        <div onClick={()=>{playTrack(tr);setQueue(pl.tracks.slice(i+1));}} style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
+                          <Img src={tr.cover} size={36} radius={6}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,color:current?.id===tr.id?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{tr.title}</div>
+                            <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{tr.artist}</div>
+                          </div>
+                          <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0}}>{tr.duration}</div>
+                        </div>
+                        <button onPointerDown={e=>{e.stopPropagation();removeFromPl(pl.id,tr.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 4px',flexShrink:0,...tap}}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </div>
+                    ))}</div></div>)}
                   </div>
                 );})}
               </div>
