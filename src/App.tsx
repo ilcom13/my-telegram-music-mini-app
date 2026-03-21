@@ -485,6 +485,13 @@ export default function App(){
   const[forYouTracks,setForYouTracks]=useState<Track[]>([]);
   const[forYouLoading,setForYouLoading]=useState(false);
   const[forYouLoaded,setForYouLoaded]=useState(false);
+  const[showImport,setShowImport]=useState(false);
+  const[importUrl,setImportUrl]=useState('');
+  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'>('idle');
+  const[importError,setImportError]=useState('');
+  const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
+  const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
+  const[importProgress,setImportProgress]=useState(0);
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -1018,6 +1025,43 @@ export default function App(){
     }
   },[screen,history.length]);
 
+  const runImport=async()=>{
+    if(!importUrl.trim())return;
+    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
+    try{
+      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim()})});
+      const d=await r.json();
+      if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
+      setImportPreview(d);
+      setImportStep('preview');
+    }catch(e:any){setImportError(e.message);setImportStep('error');}
+  };
+
+  const runMatch=async(playlistName:string)=>{
+    if(!importPreview)return;
+    setImportStep('matching');setImportResults([]);setImportProgress(0);
+    const tracks=importPreview.tracks;
+    const allResults:{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]=[];
+    const batchSize=10;
+    for(let i=0;i<tracks.length;i+=batchSize){
+      const batch=tracks.slice(i,i+batchSize);
+      try{
+        const r=await fetch(`${W}/import/match`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tracks:batch})});
+        const d=await r.json();
+        if(d.results)allResults.push(...d.results);
+      }catch{}
+      setImportProgress(Math.round(((i+batchSize)/tracks.length)*100));
+      setImportResults([...allResults]);
+    }
+    // Create playlist with matched tracks
+    const matched=allResults.filter(r=>r.status==='found'&&r.matched).map(r=>r.matched as Track);
+    if(matched.length>0){
+      const pl:Playlist={id:Date.now().toString(),name:playlistName,tracks:matched,repeat:false};
+      setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
+    }
+    setImportStep('done');
+  };
+
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
@@ -1283,6 +1327,136 @@ export default function App(){
       </div>
     );
   };
+
+  const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
+  const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
+
+  const ImportModal=()=>(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'85vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY}}>
+            {lang==='ru'?'Импорт плейлиста':lang==='uk'?'Імпорт плейлиста':'Import Playlist'}
+          </div>
+          {importStep!=='matching'&&<button onPointerDown={()=>setShowImport(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:18,padding:4,...tap}}>×</button>}
+        </div>
+
+        {(importStep==='idle'||importStep==='error')&&(
+          <div>
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>
+              {lang==='ru'?'Вставь ссылку на плейлист из Spotify, YouTube или Яндекс Музыки':lang==='uk'?'Вставте посилання на плейлист із Spotify, YouTube або Яндекс Музики':'Paste a playlist link from Spotify, YouTube or Yandex Music'}
+            </div>
+            <div style={{display:'flex',gap:6,marginBottom:10}}>
+              {['🟢 Spotify','🔴 YouTube','🟡 Яндекс'].map(s=>(
+                <div key={s} style={{padding:'4px 9px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED}}>{s}</div>
+              ))}
+            </div>
+            <input
+              autoFocus
+              placeholder="https://open.spotify.com/playlist/..."
+              value={importUrl}
+              onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'11px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
+            />
+            {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={runImport} disabled={!importUrl.trim()} style={{width:'100%',padding:'12px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s ease',...tap}}>
+              {lang==='ru'?'Найти плейлист':lang==='uk'?'Знайти плейлист':'Find Playlist'}
+            </button>
+          </div>
+        )}
+
+        {importStep==='fetching'&&(
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'30px 0',gap:12}}>
+            <div style={{width:32,height:32,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+            <div style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Загружаем плейлист...':'Loading playlist...'}</div>
+          </div>
+        )}
+
+        {importStep==='preview'&&importPreview&&(
+          <div>
+            <div style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0 16px',borderBottom:'1px solid #252525',marginBottom:14}}>
+              {importPreview.cover
+                ?<img src={importPreview.cover} style={{width:56,height:56,borderRadius:8,objectFit:'cover',flexShrink:0}}/>
+                :<div style={{width:56,height:56,borderRadius:8,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{sourceIcon(importPreview.source)}</div>
+              }
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:3}}>{sourceIcon(importPreview.source)} {sourceName(importPreview.source)}</div>
+                <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{importPreview.title}</div>
+                <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{importPreview.totalTracks} {lang==='ru'?'треков':'tracks'}</div>
+              </div>
+            </div>
+            <div style={{maxHeight:220,overflowY:'auto',marginBottom:14}}>
+              {importPreview.tracks.slice(0,10).map((tr,i)=>(
+                <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
+                  <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right',flexShrink:0}}>{i+1}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.sourceTitle}</div>
+                    <div style={{fontSize:10,color:TEXT_SEC}}>{tr.sourceArtist}</div>
+                  </div>
+                </div>
+              ))}
+              {importPreview.totalTracks>10&&<div style={{textAlign:'center',padding:'8px',fontSize:11,color:TEXT_MUTED}}>+{importPreview.totalTracks-10} {lang==='ru'?'треков':'more tracks'}</div>}
+            </div>
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:12,padding:'8px 12px',background:BG2,borderRadius:8,lineHeight:1.5}}>
+              {lang==='ru'?'Треки будут найдены на SoundCloud и добавлены в плейлист. Часть треков может не совпасть.':'Tracks will be matched on SoundCloud. Some may not be found.'}
+            </div>
+            <button onPointerDown={()=>runMatch(importPreview.title)} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>
+              {lang==='ru'?'Импортировать плейлист':lang==='uk'?'Імпортувати плейлист':'Import Playlist'}
+            </button>
+          </div>
+        )}
+
+        {importStep==='matching'&&(
+          <div>
+            <div style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:TEXT_SEC,marginBottom:6}}>
+                <span>{lang==='ru'?'Ищем треки на SoundCloud...':'Matching tracks on SoundCloud...'}</span>
+                <span>{importProgress}%</span>
+              </div>
+              <div style={{width:'100%',height:4,background:BG3,borderRadius:4}}>
+                <div style={{width:`${importProgress}%`,height:'100%',background:ACC,borderRadius:4,transition:'width 0.3s ease'}}/>
+              </div>
+            </div>
+            {importResults.length>0&&(
+              <div style={{maxHeight:300,overflowY:'auto'}}>
+                {importResults.map((r,i)=>(
+                  <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
+                    <div style={{fontSize:14,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:11,color:r.status==='found'?TEXT_PRIMARY:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.imported.sourceTitle}</div>
+                      {r.matched&&<div style={{fontSize:10,color:TEXT_SEC}}>{r.matched.artist}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {importStep==='done'&&(()=>{
+          const found=importResults.filter(r=>r.status==='found').length;
+          const total=importResults.length;
+          return(
+            <div>
+              <div style={{textAlign:'center',padding:'16px 0'}}>
+                <div style={{fontSize:36,marginBottom:8}}>🎵</div>
+                <div style={{fontSize:16,fontWeight:600,color:TEXT_PRIMARY,marginBottom:4}}>
+                  {lang==='ru'?'Готово!':lang==='uk'?'Готово!':'Done!'}
+                </div>
+                <div style={{fontSize:13,color:TEXT_SEC,marginBottom:4}}>
+                  {lang==='ru'?`Найдено ${found} из ${total} треков`:`Found ${found} of ${total} tracks`}
+                </div>
+                {found<total&&<div style={{fontSize:11,color:TEXT_MUTED}}>{lang==='ru'?`${total-found} треков не найдено на SoundCloud`:`${total-found} tracks not found on SoundCloud`}</div>}
+              </div>
+              <button onPointerDown={()=>{setShowImport(false);setLibTab('playlists');}} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',...tap}}>
+                {lang==='ru'?'Открыть плейлист':lang==='uk'?'Відкрити плейлист':'Open Playlist'}
+              </button>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
 
   const PlModal=({track}:{track:Track})=>(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
@@ -1780,9 +1954,15 @@ export default function App(){
             {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
             {libTab==='playlists'&&(
               <div style={{padding:'0 16px'}}>
-                <button onPointerDown={()=>setShowNewPl(true)} style={{width:'100%',padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',marginBottom:9,display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background 0.2s ease',...tap}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{t('createPlaylist')}
-                </button>
+                <div style={{display:'flex',gap:7,marginBottom:9}}>
+                  <button onPointerDown={()=>setShowNewPl(true)} style={{flex:1,padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background 0.2s ease',...tap}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{t('createPlaylist')}
+                  </button>
+                  <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}} style={{padding:'10px 13px',background:BG2,border:'1px solid #2a2a2a',borderRadius:11,color:TEXT_SEC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'background 0.2s ease',...tap}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    {lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}
+                  </button>
+                </div>
                 {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
                 {playlists.map(pl=>{const isOpen=openPlId===pl.id;return(
                   <div key={pl.id} style={{background:BG2,border:'1px solid #1e1e1e',borderRadius:12,marginBottom:7,overflow:'hidden'}}>
@@ -1966,6 +2146,7 @@ export default function App(){
       </div>
  
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
+      {showImport&&<ImportModal/>}
  
       {/* ── MINI PLAYER ── */}
       {current && screen !== 'profile' && (
