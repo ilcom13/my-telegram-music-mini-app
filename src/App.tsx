@@ -794,31 +794,26 @@ export default function App(){
   const deepLinkHandled=useRef(false);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-    if(!startParam||!startParam.startsWith('track-')||deepLinkHandled.current)return;
-
+    if(!startParam||deepLinkHandled.current)return;
+    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-'))return;
     deepLinkHandled.current=true;
-    const trackId=startParam.replace('track-','');
-
     const openAndPlay=async()=>{
       try{
-        const r=await fetch(`${W}/resolve?id=${trackId}`);
-        const d=await r.json();
-        if(d.mp3){
-          const track:Track={
-            id:trackId,
-            title:d.title||'',
-            artist:d.artist||'',
-            cover:d.cover||'',
-            duration:d.duration||'',
-            plays:d.plays||0,
-            mp3:d.mp3,
-          };
-          setCurrent(track);
-          playDirect(track);
+        if(startParam.startsWith('album-')){
+          const albumId=startParam.replace('album-','');
+          openAlbum(albumId,'','','');
+        } else {
+          const trackId=startParam.replace('track-','');
+          const r=await fetch(`${W}/resolve?id=${trackId}`);
+          const d=await r.json();
+          if(d.mp3){
+            const track:Track={id:trackId,title:d.title||'',artist:d.artist||'',cover:d.cover||'',duration:d.duration||'',plays:d.plays||0,mp3:d.mp3};
+            setCurrent(track);
+            playDirect(track);
+          }
         }
       }catch(e){console.warn('deeplink error:',e);}
     };
-
     setTimeout(openAndPlay,800);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
@@ -930,20 +925,44 @@ export default function App(){
       const sortedArtists=Object.entries(merged)
         .filter(([a])=>!blocked.includes(a))
         .sort((a,b)=>b[1]-a[1])
-        .map(([a])=>a)
-        .slice(0,10);
+        .map(([a])=>a);
       if(!sortedArtists.length){setForYouLoading(false);return;}
-      // Берём больше треков и более широкий пул артистов для разнообразия
-      const excludeIds=reset?'':hist.slice(0,20).map(tr=>tr.id).join(',');
-      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=30`);
-      if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-      const d=await resp.json();
-      if(d.tracks?.length){
-        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist));
-        if(fresh.length>0){
-          setForYouTracks(prev=>reset?fresh:[...prev.filter(t=>!fresh.some((f:Track)=>f.id===t.id)),...fresh]);
-          setForYouLoaded(true);
-        }
+
+      const listenedSet=new Set(listenedIdsRef.current);
+      const excludeIds=hist.slice(0,50).map(tr=>tr.id).join(',');
+      const knownArtists=sortedArtists.slice(0,5);
+      const midArtists=sortedArtists.slice(5,10);
+      const seedTracks=hist.filter(tr=>!REMIX_W.some(w=>tr.title.toLowerCase().includes(w))).slice(0,5);
+      const seedQuery=seedTracks.length>0?seedTracks[Math.floor(Math.random()*seedTracks.length)].title.split(' ').slice(0,2).join(' '):'';
+
+      const [r1,r2,r3]=await Promise.allSettled([
+        fetch(`${W}/recommend?artists=${encodeURIComponent(knownArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=15`),
+        midArtists.length>0?fetch(`${W}/recommend?artists=${encodeURIComponent(midArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=10`):Promise.resolve(null),
+        seedQuery?fetch(`${W}/search?q=${encodeURIComponent(seedQuery)}&mode=sound`):Promise.resolve(null),
+      ]);
+
+      const pool1:Track[]=r1.status==='fulfilled'&&r1.value?.ok?(await r1.value.json()).tracks||[]:[];
+      const pool2:Track[]=r2.status==='fulfilled'&&r2.value&&(r2.value as Response).ok?(await (r2.value as Response).json()).tracks||[]:[];
+      const pool3:Track[]=r3.status==='fulfilled'&&r3.value&&(r3.value as Response).ok?(await (r3.value as Response).json()).tracks||[]:[];
+
+      const knownSet=new Set(sortedArtists);
+      const filter=(t:Track)=>!!(!blocked.includes(t.artist)&&!listenedSet.has(t.id)&&t.mp3);
+      const fresh1=pool1.filter(filter);
+      const fresh2=pool2.filter(filter);
+      const fresh3=pool3.filter(t=>filter(t)&&!knownSet.has(t.artist));
+
+      const result:Track[]=[];
+      const seen=new Set<string>();
+      const addUniq=(arr:Track[],max:number)=>{let c=0;for(const t of arr){if(c>=max)break;if(!seen.has(t.id)){seen.add(t.id);result.push(t);c++;}}};
+      const shuffle=(arr:Track[])=>[...arr].sort(()=>Math.random()-0.5);
+      addUniq(shuffle(fresh1),15);
+      addUniq(shuffle(fresh2),10);
+      addUniq(shuffle(fresh3),5);
+      const final=result.sort(()=>Math.random()-0.35);
+
+      if(final.length>0){
+        setForYouTracks(prev=>reset?final:[...prev.filter(t=>!final.some((f:Track)=>f.id===t.id)),...final]);
+        setForYouLoaded(true);
       }
     }catch(e){console.warn('forYou failed:',e);}
     setForYouLoading(false);
@@ -1153,7 +1172,6 @@ export default function App(){
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
       ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
@@ -1589,19 +1607,6 @@ export default function App(){
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}
                   </button>
                   <button onPointerDown={()=>toggleFavAl(albumPage)} style={{padding:'10px 14px',borderRadius:10,border:`1px solid ${isFavAl(albumPage.id)?ACC:'#3a3a3a'}`,background:isFavAl(albumPage.id)?ACC_DIM:'transparent',color:isFavAl(albumPage.id)?ACC:TEXT_SEC,fontSize:15,cursor:'pointer',transition:'all 0.2s ease',...tap}}>{isFavAl(albumPage.id)?'♥':'♡'}</button>
-                  <button onPointerDown={()=>{
-                    const deepLink=`https://t.me/forty7mbot?startapp=album-${albumPage.id}`;
-                    const text=`${albumPage.title} — ${albumPage.artist} 💿\nListen on Forty7`;
-                    const tgApp=window.Telegram?.WebApp;
-                    if(tgApp){
-                      if(typeof tgApp.shareUrl==='function'){tgApp.shareUrl(deepLink,text);return;}
-                      if(typeof tgApp.openTelegramLink==='function'){tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
-                      if(typeof tgApp.openLink==='function'){tgApp.openLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
-                    }
-                    window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
-                  }} style={{padding:'10px 14px',borderRadius:10,border:'1px solid #3a3a3a',background:'transparent',color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s ease',...tap}}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                  </button>
                 </div>
                 {albumPage.tracks.length===0?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>:
                   <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
@@ -1757,29 +1762,23 @@ export default function App(){
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:forYouLoading?'spin 0.8s linear infinite':undefined}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
               </button>
             </div>
-
             {forYouLoading&&forYouTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,gap:12}}>
                 <div style={{width:36,height:36,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
-                <div style={{fontSize:12,color:'#555'}}>
-                  {lang==='ru'?'Подбираем треки...':lang==='uk'?'Підбираємо треки...':lang==='kk'?'Жүктелуде...':lang==='pl'?'Dobieramy utwory...':lang==='tr'?'Parçalar seçiliyor...':'Finding tracks for you...'}
-                </div>
+                <div style={{fontSize:12,color:'#555'}}>{lang==='ru'?'Подбираем треки...':lang==='uk'?'Підбираємо треки...':lang==='kk'?'Жүктелуде...':lang==='pl'?'Dobieramy utwory...':lang==='tr'?'Parçalar seçiliyor...':'Finding tracks for you...'}</div>
               </div>
             ):!forYouLoaded&&history.length<1?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12,animation:'fadeIn 0.3s ease'}}>
                 <div style={{fontSize:40}}>🎵</div>
                 <div style={{fontSize:13,color:TEXT_MUTED,textAlign:'center',padding:'0 32px',lineHeight:1.6}}>
-                  {lang==='ru'?'Послушай несколько треков, и мы подберём музыку специально для тебя':lang==='uk'?'Послухай кілька треків, і ми підберемо музику спеціально для тебе':lang==='kk'?'Бірнеше трек тыңда, сосын саған арнайы музыка ұсынамыз':lang==='pl'?'Posłuchaj kilku utworów, a my dobierzemy muzykę specjalnie dla Ciebie':lang==='tr'?'Birkaç parça dinle, sana özel müzik seçelim':'Listen to some tracks and we\'ll find music just for you'}
+                  {lang==='ru'?'Послушай несколько треков — и мы подберём музыку специально для тебя':lang==='uk'?'Послухай кілька треків — і ми підберемо музику спеціально для тебе':lang==='kk'?'Бірнеше трек тыңда, сосын саған арнайы музыка ұсынамыз':lang==='pl'?'Posłuchaj kilku utworów, a my dobierzemy muzykę specjalnie dla Ciebie':lang==='tr'?'Birkaç parça dinle, sana özel müzik seçelim':'Listen to some tracks and we\'ll find music just for you'}
                 </div>
               </div>
             ):forYouTracks.length===0?(
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:70,gap:12,animation:'fadeIn 0.3s ease'}}>
                 <div style={{fontSize:40}}>🔍</div>
-                <div style={{fontSize:13,color:'#555'}}>
-                  {lang==='ru'?'Нет данных':lang==='uk'?'Немає даних':lang==='kk'?'Деректер жоқ':lang==='pl'?'Brak danych':lang==='tr'?'Veri yok':'No data'}
-                </div>
-                <button onPointerDown={()=>loadForYou(true)}
-                  style={{padding:'9px 24px',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:10,color:ACC,fontSize:12,cursor:'pointer',transition:'background 0.2s ease',...tap}}>
+                <div style={{fontSize:13,color:'#555'}}>{lang==='ru'?'Нет данных':lang==='uk'?'Немає даних':lang==='kk'?'Деректер жоқ':lang==='pl'?'Brak danych':lang==='tr'?'Veri yok':'No data'}</div>
+                <button onPointerDown={()=>loadForYou(true)} style={{padding:'9px 24px',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:10,color:ACC,fontSize:12,cursor:'pointer',transition:'background 0.2s ease',...tap}}>
                   {lang==='ru'?'Обновить':lang==='uk'?'Оновити':lang==='kk'?'Жаңарту':lang==='pl'?'Odśwież':lang==='tr'?'Yenile':'Refresh'}
                 </button>
               </div>
@@ -1789,9 +1788,7 @@ export default function App(){
                   <TRow key={tr.id+'fy'+i} track={tr} num={i+1} showBlockBtn={true} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
-                  <button
-                    onPointerDown={()=>loadForYou(false)}
-                    disabled={forYouLoading}
+                  <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
                     style={{padding:'11px 28px',background:forYouLoading?'#2a2a2a':ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:12,color:forYouLoading?'#5a5a5a':ACC,fontSize:13,fontWeight:600,cursor:forYouLoading?'not-allowed':'pointer',opacity:forYouLoading?0.6:1,transition:'background 0.2s ease,opacity 0.2s ease',...tap}}>
                     {forYouLoading?'...':(lang==='ru'?'Ещё треки':lang==='uk'?'Ще треки':lang==='kk'?'Тағы жүктеу':lang==='pl'?'Więcej':'More tracks')}
                   </button>
