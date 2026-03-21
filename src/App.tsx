@@ -487,11 +487,12 @@ export default function App(){
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const[importUrl,setImportUrl]=useState('');
-  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'>('idle');
+  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'|'needs_token'>('idle');
   const[importError,setImportError]=useState('');
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
+  const[yandexToken,setYandexToken]=useState(()=>{try{return localStorage.getItem('ym_token')||'';}catch{return '';}});
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -1025,12 +1026,19 @@ export default function App(){
     }
   },[screen,history.length]);
 
-  const runImport=async()=>{
+  const saveYandexToken=(tok:string)=>{
+    setYandexToken(tok);
+    try{if(tok)localStorage.setItem('ym_token',tok);else localStorage.removeItem('ym_token');}catch{}
+  };
+
+  const runImport=async(tokenOverride?:string)=>{
     if(!importUrl.trim())return;
     setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
+    const token=tokenOverride!==undefined?tokenOverride:yandexToken;
     try{
-      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim()})});
+      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim(),yandexToken:token||undefined})});
       const d=await r.json();
+      if(d.needsToken){setImportStep('needs_token');return;}
       if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
       setImportPreview(d);
       setImportStep('preview');
@@ -1334,7 +1342,9 @@ export default function App(){
   const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
   const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
 
-  const ImportModal=()=>(
+  const ImportModal=()=>{
+    const[tokenInput,setTokenInput]=useState(yandexToken);
+    return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
       <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'85vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
@@ -1362,8 +1372,54 @@ export default function App(){
               style={{width:'100%',padding:'11px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
             {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={runImport} disabled={!importUrl.trim()} style={{width:'100%',padding:'12px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s ease',...tap}}>
+            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()} style={{width:'100%',padding:'12px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s ease',...tap}}>
               {lang==='ru'?'Найти плейлист':lang==='uk'?'Знайти плейлист':'Find Playlist'}
+            </button>
+          </div>
+        )}
+
+        {importStep==='needs_token'&&(
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'12px',background:'rgba(239,191,127,0.08)',borderRadius:10,border:'1px solid rgba(239,191,127,0.2)'}}>
+              <div style={{fontSize:22,flexShrink:0}}>🟡</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:3}}>
+                  {lang==='ru'?'Нужен токен Яндекс Музыки':'Yandex Music Token Required'}
+                </div>
+                <div style={{fontSize:11,color:TEXT_SEC,lineHeight:1.5}}>
+                  {lang==='ru'
+                    ?'UUID-плейлисты (ссылки вида /playlists/xxxx-xxxx) требуют авторизации. Вставь свой OAuth-токен.'
+                    :'UUID playlists require authorization. Paste your OAuth token below.'}
+                </div>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:6,lineHeight:1.6}}>
+              {lang==='ru'
+                ?'Как получить токен: открой music.yandex.ru → F12 → Console → вставь:'
+                :'How to get token: open music.yandex.ru → F12 → Console → paste:'}
+            </div>
+            <div style={{background:'#0e0e0e',borderRadius:8,padding:'8px 10px',marginBottom:10,overflowX:'auto'}}>
+              <code style={{fontSize:10,color:'#7ec8a0',whiteSpace:'nowrap',display:'block'}}>
+                {"JSON.parse(document.cookie.split('Session_id=')[1]?.split(';')[0]||'{}')"}
+              </code>
+              <div style={{fontSize:10,color:TEXT_MUTED,marginTop:4}}>
+                {lang==='ru'?'или в Network → Headers → найди Authorization: OAuth ...':'or Network → Headers → find Authorization: OAuth ...'}
+              </div>
+            </div>
+            <input
+              placeholder="OAuth y0_AgAAAA..."
+              value={tokenInput}
+              onChange={e=>setTokenInput(e.target.value)}
+              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8,fontFamily:'monospace'}}
+            />
+            <button
+              onPointerDown={()=>{if(!tokenInput.trim())return;saveYandexToken(tokenInput.trim());runImport(tokenInput.trim());}}
+              disabled={!tokenInput.trim()}
+              style={{width:'100%',padding:'12px',background:tokenInput.trim()?ACC:BG3,border:'none',borderRadius:10,color:tokenInput.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',...tap}}>
+              {lang==='ru'?'Продолжить с токеном':'Continue with Token'}
+            </button>
+            <button onPointerDown={()=>setImportStep('idle')} style={{width:'100%',padding:'10px',background:'none',border:'none',color:TEXT_MUTED,fontSize:12,cursor:'pointer',marginTop:6,...tap}}>
+              {lang==='ru'?'← Назад':'← Back'}
             </button>
           </div>
         )}
@@ -1459,7 +1515,8 @@ export default function App(){
         })()}
       </div>
     </div>
-  );
+  );};
+
 
   const PlModal=({track}:{track:Track})=>(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
