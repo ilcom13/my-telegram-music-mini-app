@@ -930,35 +930,79 @@ export default function App(){
 
       const listenedSet=new Set(listenedIdsRef.current);
       const excludeIds=hist.slice(0,50).map(tr=>tr.id).join(',');
+
+      // Извлекаем featured-артистов из истории (feat., ft., &, x )
+      const featRegex=/(?:feat\.|ft\.|featuring|&|\bx\b)\s+([^,)\]]+)/gi;
+      const featArtists=new Set<string>();
+      hist.slice(0,30).forEach(tr=>{
+        const combined=`${tr.title} ${tr.artist}`;
+        let m;
+        while((m=featRegex.exec(combined))!==null){
+          const name=m[1].trim().split(/[\s,]/)[0];
+          if(name.length>2&&!blocked.includes(name)&&!sortedArtists.includes(name))featArtists.add(name);
+        }
+      });
+
       const knownArtists=sortedArtists.slice(0,5);
       const midArtists=sortedArtists.slice(5,10);
-      const seedTracks=hist.filter(tr=>!REMIX_W.some(w=>tr.title.toLowerCase().includes(w))).slice(0,5);
-      const seedQuery=seedTracks.length>0?seedTracks[Math.floor(Math.random()*seedTracks.length)].title.split(' ').slice(0,2).join(' '):'';
+      const featArr=[...featArtists].slice(0,5);
 
-      const [r1,r2,r3]=await Promise.allSettled([
-        fetch(`${W}/recommend?artists=${encodeURIComponent(knownArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=15`),
-        midArtists.length>0?fetch(`${W}/recommend?artists=${encodeURIComponent(midArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=10`):Promise.resolve(null),
-        seedQuery?fetch(`${W}/search?q=${encodeURIComponent(seedQuery)}&mode=sound`):Promise.resolve(null),
+      // Seed-запросы: берём случайные треки из истории для поиска похожего
+      const seedTracks=hist.filter(tr=>!REMIX_W.some(w=>tr.title.toLowerCase().includes(w))).slice(0,8);
+      const seed1=seedTracks[Math.floor(Math.random()*Math.min(3,seedTracks.length))];
+      const seed2=seedTracks[Math.floor(Math.random()*seedTracks.length)];
+
+      // 4 параллельных запроса:
+      // 1. Топ артисты (знакомое)
+      // 2. Средние артисты + featured (новое из вкуса)
+      // 3. Поиск по треку seed1 — похожие треки
+      // 4. Поиск по треку seed2 — ещё похожие
+      const allDiscovery=[...midArtists,...featArr].filter(Boolean);
+      const [r1,r2,r3,r4]=await Promise.allSettled([
+        fetch(`${W}/recommend?artists=${encodeURIComponent(knownArtists.join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=12`),
+        allDiscovery.length>0
+          ?fetch(`${W}/recommend?artists=${encodeURIComponent(allDiscovery.slice(0,8).join(','))}&exclude=${encodeURIComponent(excludeIds)}&limit=10`)
+          :Promise.resolve(null),
+        seed1?fetch(`${W}/search?q=${encodeURIComponent(seed1.artist)}&mode=sound`):Promise.resolve(null),
+        seed2&&seed2.id!==seed1?.id?fetch(`${W}/search?q=${encodeURIComponent(seed2.title.split(' ').slice(0,2).join(' '))}&mode=sound`):Promise.resolve(null),
       ]);
 
-      const pool1:Track[]=r1.status==='fulfilled'&&r1.value?.ok?(await r1.value.json()).tracks||[]:[];
-      const pool2:Track[]=r2.status==='fulfilled'&&r2.value&&(r2.value as Response).ok?(await (r2.value as Response).json()).tracks||[]:[];
-      const pool3:Track[]=r3.status==='fulfilled'&&r3.value&&(r3.value as Response).ok?(await (r3.value as Response).json()).tracks||[]:[];
+      const g=async(r:PromiseSettledResult<Response|null>):Promise<Track[]>=>{
+        if(r.status!=='fulfilled'||!r.value)return[];
+        const resp=r.value as Response;
+        if(!resp.ok)return[];
+        const d=await resp.json();
+        return d.tracks||[];
+      };
+
+      const [pool1,pool2,pool3,pool4]=await Promise.all([g(r1),g(r2),g(r3),g(r4)]);
 
       const knownSet=new Set(sortedArtists);
       const filter=(t:Track)=>!!(!blocked.includes(t.artist)&&!listenedSet.has(t.id)&&t.mp3);
+
       const fresh1=pool1.filter(filter);
+      // Из пула 2 берём всё (и знакомых из середины и feat-артистов)
       const fresh2=pool2.filter(filter);
+      // Из поиска по seed-артисту: приоритет незнакомым артистам
       const fresh3=pool3.filter(t=>filter(t)&&!knownSet.has(t.artist));
+      // Из поиска по названию: только совсем новые артисты
+      const fresh4=pool4.filter(t=>filter(t)&&!knownSet.has(t.artist));
 
       const result:Track[]=[];
       const seen=new Set<string>();
-      const addUniq=(arr:Track[],max:number)=>{let c=0;for(const t of arr){if(c>=max)break;if(!seen.has(t.id)){seen.add(t.id);result.push(t);c++;}}};
-      const shuffle=(arr:Track[])=>[...arr].sort(()=>Math.random()-0.5);
-      addUniq(shuffle(fresh1),15);
-      addUniq(shuffle(fresh2),10);
-      addUniq(shuffle(fresh3),5);
-      const final=result.sort(()=>Math.random()-0.35);
+      const addUniq=(arr:Track[],max:number)=>{
+        let c=0;
+        const sh=[...arr].sort(()=>Math.random()-0.5);
+        for(const t of sh){if(c>=max)break;if(!seen.has(t.id)){seen.add(t.id);result.push(t);c++;}}
+      };
+
+      addUniq(fresh1,12);   // знакомое
+      addUniq(fresh2,8);    // feat + средние артисты
+      addUniq(fresh3,6);    // похожие по артисту
+      addUniq(fresh4,4);    // похожие по названию
+
+      // Лёгкое перемешивание чтобы новое не всегда в конце
+      const final=result.sort(()=>Math.random()-0.38);
 
       if(final.length>0){
         setForYouTracks(prev=>reset?final:[...prev.filter(t=>!final.some((f:Track)=>f.id===t.id)),...final]);
@@ -1172,6 +1216,7 @@ export default function App(){
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
       ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
@@ -1607,6 +1652,19 @@ export default function App(){
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}
                   </button>
                   <button onPointerDown={()=>toggleFavAl(albumPage)} style={{padding:'10px 14px',borderRadius:10,border:`1px solid ${isFavAl(albumPage.id)?ACC:'#3a3a3a'}`,background:isFavAl(albumPage.id)?ACC_DIM:'transparent',color:isFavAl(albumPage.id)?ACC:TEXT_SEC,fontSize:15,cursor:'pointer',transition:'all 0.2s ease',...tap}}>{isFavAl(albumPage.id)?'♥':'♡'}</button>
+                  <button onPointerDown={()=>{
+                    const deepLink=`https://t.me/forty7mbot?startapp=album-${albumPage.id}`;
+                    const text=`${albumPage.title} — ${albumPage.artist} 💿\nListen on Forty7`;
+                    const tgApp=window.Telegram?.WebApp;
+                    if(tgApp){
+                      if(typeof tgApp.shareUrl==='function'){tgApp.shareUrl(deepLink,text);return;}
+                      if(typeof tgApp.openTelegramLink==='function'){tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
+                      if(typeof tgApp.openLink==='function'){tgApp.openLink(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`);return;}
+                    }
+                    window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
+                  }} style={{padding:'10px 14px',borderRadius:10,border:'1px solid #3a3a3a',background:'transparent',color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s ease',...tap}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  </button>
                 </div>
                 {albumPage.tracks.length===0?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>:
                   <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
