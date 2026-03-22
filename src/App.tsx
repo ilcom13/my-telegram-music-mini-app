@@ -487,7 +487,7 @@ export default function App(){
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const[importUrl,setImportUrl]=useState('');
-  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'|'needs_token'>('idle');
+  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'|'needs_token'|'needs_token_done'>('idle');
   const[importError,setImportError]=useState('');
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
@@ -585,8 +585,27 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
+  // Parse Yandex OAuth token from URL hash (Implicit Flow callback)
   useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
+    const hash=window.location.hash;
+    if(hash&&hash.includes('access_token=')){
+      try{
+        const params=new URLSearchParams(hash.replace('#',''));
+        const token=params.get('access_token');
+        if(token){
+          saveYandexToken(token);
+          window.history.replaceState(null,'',window.location.pathname+window.location.search);
+          // Restore import URL saved before redirect
+          const savedUrl=sessionStorage.getItem('ym_import_url')||'';
+          if(savedUrl){sessionStorage.removeItem('ym_import_url');setImportUrl(savedUrl);}
+          setShowImport(true);
+          setImportStep('needs_token_done');
+        }
+      }catch{}
+    }
+  },[]);
+
+
       if(e.code==='Space'&&e.target===document.body){
         e.preventDefault();
         if(audio.current){
@@ -1378,34 +1397,54 @@ export default function App(){
           </div>
         )}
 
-        {importStep==='needs_token'&&(
+        {(importStep==='needs_token'||importStep==='needs_token_done')&&(
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'12px',background:'rgba(239,191,127,0.08)',borderRadius:10,border:'1px solid rgba(239,191,127,0.2)'}}>
-              <div style={{fontSize:22,flexShrink:0}}>🟡</div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,padding:'12px',background:'rgba(239,191,127,0.08)',borderRadius:10,border:'1px solid rgba(239,191,127,0.2)'}}>
+              <div style={{fontSize:24,flexShrink:0}}>🟡</div>
               <div>
-                <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:3}}>
-                  {lang==='ru'?'Нужен токен Яндекс Музыки':'Yandex Music Token Required'}
+                <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>
+                  {lang==='ru'?'Нужна авторизация Яндекс Музыки':'Yandex Music Login Required'}
                 </div>
                 <div style={{fontSize:11,color:TEXT_SEC,lineHeight:1.5}}>
-                  {lang==='ru'
-                    ?'UUID-плейлисты (ссылки вида /playlists/xxxx-xxxx) требуют авторизации. Вставь свой OAuth-токен.'
-                    :'UUID playlists require authorization. Paste your OAuth token below.'}
+                  {lang==='ru'?'UUID-плейлисты доступны только авторизованным пользователям':'UUID playlists require authorization'}
                 </div>
               </div>
             </div>
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:6,lineHeight:1.6}}>
-              {lang==='ru'
-                ?'Как получить токен: открой music.yandex.ru → F12 → Console → вставь:'
-                :'How to get token: open music.yandex.ru → F12 → Console → paste:'}
-            </div>
-            <div style={{background:'#0e0e0e',borderRadius:8,padding:'8px 10px',marginBottom:10,overflowX:'auto'}}>
-              <code style={{fontSize:10,color:'#7ec8a0',whiteSpace:'nowrap',display:'block'}}>
-                {"JSON.parse(document.cookie.split('Session_id=')[1]?.split(';')[0]||'{}')"}
-              </code>
-              <div style={{fontSize:10,color:TEXT_MUTED,marginTop:4}}>
-                {lang==='ru'?'или в Network → Headers → найди Authorization: OAuth ...':'or Network → Headers → find Authorization: OAuth ...'}
+
+            {importStep==='needs_token_done'&&yandexToken&&(
+              <div style={{padding:'10px 12px',background:'rgba(100,200,100,0.08)',border:'1px solid rgba(100,200,100,0.2)',borderRadius:10,marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
+                <div style={{fontSize:16}}>✅</div>
+                <div style={{fontSize:12,color:'#7ecf7e'}}>{lang==='ru'?'Авторизация успешна! Токен сохранён.':'Authorized! Token saved.'}</div>
               </div>
+            )}
+
+            {importStep==='needs_token_done'&&yandexToken?(
+              <button
+                onPointerDown={()=>runImport(yandexToken)}
+                style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginBottom:8,...tap}}>
+                {lang==='ru'?'▶ Импортировать плейлист':'▶ Import Playlist'}
+              </button>
+            ):(
+              <button
+                onPointerDown={()=>{
+                  const redirectUri=encodeURIComponent(window.location.href.split('#')[0]);
+                  const clientId='1da5a601d5f8434c91c01fe6befd8579';
+                  const authUrl=`https://oauth.yandex.ru/authorize?response_type=token&client_id=${clientId}&redirect_uri=${redirectUri}&force_confirm=false`;
+                  try{sessionStorage.setItem('ym_import_url',importUrl);}catch{}
+                  window.location.href=authUrl;
+                }}
+                style={{width:'100%',padding:'13px',background:'#fc0',border:'none',borderRadius:10,color:'#000',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:12,...tap}}>
+                <span style={{fontSize:16}}>🟡</span>
+                {lang==='ru'?'Войти через Яндекс':'Login with Yandex'}
+              </button>
+            )}
+
+            <div style={{position:'relative',margin:'12px 0',display:'flex',alignItems:'center',gap:8}}>
+              <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
+              <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{lang==='ru'?'или вставь токен вручную':'or paste token manually'}</span>
+              <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
             </div>
+
             <input
               placeholder="OAuth y0_AgAAAA..."
               value={tokenInput}
@@ -1415,10 +1454,11 @@ export default function App(){
             <button
               onPointerDown={()=>{if(!tokenInput.trim())return;saveYandexToken(tokenInput.trim());runImport(tokenInput.trim());}}
               disabled={!tokenInput.trim()}
-              style={{width:'100%',padding:'12px',background:tokenInput.trim()?ACC:BG3,border:'none',borderRadius:10,color:tokenInput.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',...tap}}>
+              style={{width:'100%',padding:'11px',background:tokenInput.trim()?BG3:BG3,border:`1px solid ${tokenInput.trim()?'#3a3a3a':'#252525'}`,borderRadius:10,color:tokenInput.trim()?TEXT_PRIMARY:TEXT_MUTED,fontSize:12,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',marginBottom:6,...tap}}>
               {lang==='ru'?'Продолжить с токеном':'Continue with Token'}
             </button>
-            <button onPointerDown={()=>setImportStep('idle')} style={{width:'100%',padding:'10px',background:'none',border:'none',color:TEXT_MUTED,fontSize:12,cursor:'pointer',marginTop:6,...tap}}>
+
+            <button onPointerDown={()=>setImportStep('idle')} style={{width:'100%',padding:'9px',background:'none',border:'none',color:TEXT_MUTED,fontSize:12,cursor:'pointer',...tap}}>
               {lang==='ru'?'← Назад':'← Back'}
             </button>
           </div>
