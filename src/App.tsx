@@ -1427,11 +1427,8 @@ export default function App(){
             ):(
               <button
                 onPointerDown={()=>{
-                  const redirectUri=encodeURIComponent(window.location.href.split('#')[0]);
-                  const clientId='1da5a601d5f8434c91c01fe6befd8579';
-                  const authUrl=`https://oauth.yandex.ru/authorize?response_type=token&client_id=${clientId}&redirect_uri=${redirectUri}&force_confirm=false`;
                   try{sessionStorage.setItem('ym_import_url',importUrl);}catch{}
-                  window.location.href=authUrl;
+                  window.open(`${W}/auth`,'_blank');
                 }}
                 style={{width:'100%',padding:'13px',background:'#fc0',border:'none',borderRadius:10,color:'#000',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:12,...tap}}>
                 <span style={{fontSize:16}}>🟡</span>
@@ -1441,7 +1438,7 @@ export default function App(){
 
             <div style={{position:'relative',margin:'12px 0',display:'flex',alignItems:'center',gap:8}}>
               <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
-              <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{lang==='ru'?'или вставь токен вручную':'or paste token manually'}</span>
+              <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{lang==='ru'?'уже есть токен?':'have a token?'}</span>
               <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
             </div>
 
