@@ -2336,8 +2336,8 @@ export default function App(){
                   {/* ── MONTHLY STATS + ALL STATS ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
                   {(()=>{
-                    const stat=monthStats.prev; // show last completed month
-                    const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
+                    const stat=monthStats.prev ?? monthStats.current; // TEMP: show current if no prev yet (for testing)
+                    const isFirstEver=false; // TEMP disabled for testing
                     const now=new Date().toISOString().slice(0,7);
                     const monthNames:{[k:string]:string}={
                       '01':lang==='ru'?'января':lang==='uk'?'січня':lang==='kk'?'қаңтар':lang==='pl'?'stycznia':lang==='tr'?'Ocak':'January',
@@ -2507,7 +2507,7 @@ export default function App(){
                       </div>
                     )}
                   </div>
-                  </div>
+                  </div>{/* close monthly+all stats wrapper */}
                 </div>
               );
             })()}
