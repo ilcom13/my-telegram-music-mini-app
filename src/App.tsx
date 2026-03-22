@@ -43,7 +43,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискографія',popular:'Популярне',
     latestRelease:'Останній реліз',noTracks:'Треки не знайдені',showMore:'Показати більше',
     blockArtist:'Не рекомендувати',
-    importPlaylist:'Імпорт плейлиста',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Імпорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
     importLinkHint:'Встав посилання на плейлист',importFindBtn:'Знайти плейлист',
     importLoading:'Завантажуємо плейлист...',importMatching:'Шукаємо треки на SoundCloud...',
     importDone:'Готово!',importFound:'Знайдено',importOf:'з',importTracksWord:'треків',
@@ -69,7 +69,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Танымал',
     latestRelease:'Соңғы шығарылым',noTracks:'Треки табылмады',showMore:'Көбірек',
     blockArtist:'Ұсынбау',
-    importPlaylist:'Плейлист импорты',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Плейлист импорты',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
     importLinkHint:'Плейлист сілтемесін қой',importFindBtn:'Плейлист табу',
     importLoading:'Плейлист жүктелуде...',importMatching:'SoundCloud-та іздеуде...',
     importDone:'Дайын!',importFound:'Табылды',importOf:'/',importTracksWord:'трек',
@@ -95,7 +95,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Utwory',discography:'Dyskografia',popular:'Popularne',
     latestRelease:'Ostatnia premiera',noTracks:'Brak utworów',showMore:'Pokaż więcej',
     blockArtist:'Nie polecaj',
-    importPlaylist:'Importuj playlistę',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
+    importPlaylist:'Importuj playlistę',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
     importLinkHint:'Wklej link do playlisty',importFindBtn:'Znajdź playlistę',
     importLoading:'Ładowanie playlisty...',importMatching:'Szukamy na SoundCloud...',
     importDone:'Gotowe!',importFound:'Znaleziono',importOf:'z',importTracksWord:'utworów',
@@ -121,7 +121,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Parçalar',discography:'Diskografi',popular:'Popüler',
     latestRelease:'Son çıkan',noTracks:'Parça bulunamadı',showMore:'Daha fazla göster',
     blockArtist:'Önerme',
-    importPlaylist:'Çalma Listesi İçe Aktar',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
+    importPlaylist:'Çalma Listesi İçe Aktar',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
     importLinkHint:'Çalma listesi bağlantısını yapıştır',importFindBtn:'Çalma listesini bul',
     importLoading:'Çalma listesi yükleniyor...',importMatching:'SoundCloud\'da aranıyor...',
     importDone:'Tamam!',importFound:'Bulundu',importOf:'/',importTracksWord:'parça',
@@ -146,7 +146,7 @@ const T: Record<string,Record<string,string>> = {
     goToAlbum:'Go to album',tracks:'Tracks',discography:'Discography',popular:'Popular',
     latestRelease:'Latest release',noTracks:'No tracks found',showMore:'Show more',
     blockArtist:'Not interested',
-    importPlaylist:'Import Playlist',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
+    importPlaylist:'Import Playlist',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
     importLinkHint:'Paste a playlist link',importFindBtn:'Find Playlist',
     importLoading:'Loading playlist...',importMatching:'Searching on SoundCloud...',
     importDone:'Done!',importFound:'Found',importOf:'of',importTracksWord:'tracks',
@@ -172,7 +172,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Популярное',
     latestRelease:'Последний релиз',noTracks:'Треки не найдены',showMore:'Показать ещё',
     blockArtist:'Не рекомендовать',
-    importPlaylist:'Импорт плейлиста',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Импорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
     importLinkHint:'Вставь ссылку на плейлист',importFindBtn:'Найти плейлист',
     importLoading:'Загружаем плейлист...',importMatching:'Ищем треки на SoundCloud...',
     importDone:'Готово!',importFound:'Найдено',importOf:'из',importTracksWord:'треков',
@@ -1407,16 +1407,22 @@ export default function App(){
               <button key={tab} onPointerDown={()=>{setImportTab(tab);setImportError('');setImportUrl('');}}
                 style={{flex:1,padding:'8px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
                   background:importTab===tab?'#2a2a2a':'transparent',
-                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,transition:'all 0.18s ease',...tap}}>
+                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,transition:'all 0.22s ease',...tap}}>
                 {tab==='main'?t('importTabMain'):t('importTabOther')}
               </button>
             ))}
           </div>
         )}
 
-        {/* ── TAB MAIN: Spotify / YouTube ── */}
-        {(importStep==='idle'||importStep==='error')&&importTab==='main'&&(
-          <div>
+        {/* ── TAB MAIN: Spotify / YouTube / SoundCloud ── */}
+        {(importStep==='idle'||importStep==='error')&&(
+          <div style={{
+            overflow:'hidden',
+            maxHeight: importTab==='main' ? '400px' : '0px',
+            opacity: importTab==='main' ? 1 : 0,
+            transition:'max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
+            pointerEvents: importTab==='main' ? 'auto' : 'none',
+          }}>
             <div style={{display:'flex',gap:6,marginBottom:12}}>
               {[{icon:'🟢',label:'Spotify'},{icon:'🔴',label:'YouTube'},{icon:'🟠',label:'SoundCloud'}].map(s=>(
                 <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
@@ -1426,13 +1432,13 @@ export default function App(){
             </div>
             <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
             <input
-              autoFocus
+              autoFocus={importTab==='main'}
               placeholder="https://open.spotify.com/playlist/..."
               value={importUrl}
               onChange={e=>setImportUrl(e.target.value)}
               style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
-            {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            {importError&&importTab==='main'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
             <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
               style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
               {t('importFindBtn')}
@@ -1441,8 +1447,14 @@ export default function App(){
         )}
 
         {/* ── TAB OTHER: Яндекс / Apple via Soundiiz ── */}
-        {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(
-          <div>
+        {(importStep==='idle'||importStep==='error')&&(
+          <div style={{
+            overflow:'hidden',
+            maxHeight: importTab==='other' ? '600px' : '0px',
+            opacity: importTab==='other' ? 1 : 0,
+            transition:'max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
+            pointerEvents: importTab==='other' ? 'auto' : 'none',
+          }}>
             <div style={{display:'flex',gap:6,marginBottom:14}}>
               {[{icon:'🟡',label:'Яндекс'},{icon:'🍎',label:'Apple Music'}].map(s=>(
                 <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
@@ -1465,7 +1477,8 @@ export default function App(){
             ))}
 
             <a href="https://soundiiz.com/" target="_blank" rel="noreferrer"
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'13px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:13,fontWeight:700,cursor:'pointer',textDecoration:'none',marginBottom:14,boxSizing:'border-box' as const,...tap}}>
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'13px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:13,fontWeight:700,cursor:'pointer',textDecoration:'none',marginBottom:14,boxSizing:'border-box' as const,...tap}}
+              onClick={e=>{e.preventDefault();const tgObj=(window as any).Telegram?.WebApp;if(tgObj?.openLink)tgObj.openLink('https://soundiiz.com/');else window.open('https://soundiiz.com/','_blank');}}>
               🔗 {t('importOtherBtn')}
             </a>
 
@@ -1478,7 +1491,7 @@ export default function App(){
               onChange={e=>setImportUrl(e.target.value)}
               style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
-            {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            {importError&&importTab==='other'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
             <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
               style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
               {t('importFindBtn')}
@@ -2037,10 +2050,10 @@ export default function App(){
                   <div style={{fontSize:28,flexShrink:0}}>🎵</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:3}}>
-                      {lang==='ru'?'Перенеси свои плейлисты':lang==='uk'?'Перенеси свої плейлисти':'Import your playlists'}
+                      {lang==='ru'?'Перенеси свои плейлисты':lang==='uk'?'Перенеси свої плейлисти':lang==='kk'?'Плейлисттеріңді әкел':lang==='pl'?'Przenieś swoje playlisty':lang==='tr'?'Playlistlerini taşı':'Import your playlists'}
                     </div>
                     <div style={{fontSize:11,color:TEXT_SEC}}>
-                      {lang==='ru'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс Музыка':'Spotify, YouTube, SoundCloud, Apple Music, Яндекс Музыка'}
+                      {lang==='ru'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс':lang==='uk'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс':lang==='kk'?'Spotify, YouTube, SoundCloud, Apple Music':lang==='pl'?'Spotify, YouTube, SoundCloud, Apple Music, Yandex':lang==='tr'?'Spotify, YouTube, SoundCloud, Apple Music, Yandex':'Spotify, YouTube, SoundCloud, Apple Music, Yandex'}
                     </div>
                   </div>
                   <button onPointerDown={()=>{setScreen('library');setLibTab('playlists');setTimeout(()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);},100);}} style={{flexShrink:0,padding:'8px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
@@ -2114,7 +2127,7 @@ export default function App(){
                       <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                       <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div></div>
                       <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/></button>
-                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,...tap}}>
+                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,opacity:isOpen?1:0,transform:isOpen?'scale(1)':'scale(0.7)',transition:'opacity 0.2s ease, transform 0.2s ease',pointerEvents:isOpen?'auto':'none',...tap}}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                       </button>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
