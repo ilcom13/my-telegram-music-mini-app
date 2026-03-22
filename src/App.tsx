@@ -458,7 +458,7 @@ function makeTapHandlers(fn: ()=>void, threshold=10, maxMs=500){
 }
 
 export default function App(){
-  const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('home');
+  const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
@@ -2333,9 +2333,17 @@ export default function App(){
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
                     {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
                   </div>
-                  {/* ── MONTHLY STATS + ALL STATS ── */}
+                  {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
-                  {(()=>{const mStat=monthStats.prev??monthStats.current;const mIsFirst=false;const mNames={'01':lang==='ru'?'января':lang==='uk'?'січня':lang==='kk'?'қаңтар':lang==='pl'?'stycznia':lang==='tr'?'Ocak':'January','02':lang==='ru'?'февраля':lang==='uk'?'лютого':lang==='kk'?'ақпан':lang==='pl'?'lutego':lang==='tr'?'Şubat':'February','03':lang==='ru'?'марта':lang==='uk'?'березня':lang==='kk'?'наурыз':lang==='pl'?'marca':lang==='tr'?'Mart':'March','04':lang==='ru'?'апреля':lang==='uk'?'квітня':lang==='kk'?'сәуір':lang==='pl'?'kwietnia':lang==='tr'?'Nisan':'April','05':lang==='ru'?'мая':lang==='uk'?'травня':lang==='kk'?'мамыр':lang==='pl'?'maja':lang==='tr'?'Mayıs':'May','06':lang==='ru'?'июня':lang==='uk'?'червня':lang==='kk'?'маусым':lang==='pl'?'czerwca':lang==='tr'?'Haziran':'June','07':lang==='ru'?'июля':lang==='uk'?'липня':lang==='kk'?'шілде':lang==='pl'?'lipca':lang==='tr'?'Temmuz':'July','08':lang==='ru'?'августа':lang==='uk'?'серпня':lang==='kk'?'тамыз':lang==='pl'?'sierpnia':lang==='tr'?'Ağustos':'August','09':lang==='ru'?'сентября':lang==='uk'?'вересня':lang==='kk'?'қыркүйек':lang==='pl'?'września':lang==='tr'?'Eylül':'September','10':lang==='ru'?'октября':lang==='uk'?'жовтня':lang==='kk'?'қазан':lang==='pl'?'października':lang==='tr'?'Ekim':'October','11':lang==='ru'?'ноября':lang==='uk'?'листопада':lang==='kk'?'қараша':lang==='pl'?'listopada':lang==='tr'?'Kasım':'November','12':lang==='ru'?'декабря':lang==='uk'?'грудня':lang==='kk'?'желтоқсан':lang==='pl'?'grudnia':lang==='tr'?'Aralık':'December'} as Record<string,string>;const mFmt=(m:string)=>`${mNames[m.slice(5,7)]} ${m.slice(0,4)}`;const mSec=(sec:number)=>{const h=Math.floor(sec/3600);const m2=Math.floor((sec%3600)/60);if(lang==='ru'||lang==='uk')return h>0?`${h} ч ${m2} мин`:`${m2} мин`;if(lang==='kk')return h>0?`${h} сағ ${m2} мин`:`${m2} мин`;if(lang==='pl')return h>0?`${h} godz ${m2} min`:`${m2} min`;if(lang==='tr')return h>0?`${h} sa ${m2} dk`:`${m2} dk`;return h>0?`${h}h ${m2}m`:`${m2}m`;};const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count).slice(0,5);const mTotalP=Object.values(mStat.trackPlays).reduce((acc,v)=>acc+v.count,0);return mIsFirst?null:(<div style={{marginBottom:12}}><div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY}}>{lang==='ru'?`📊 Итоги ${mFmt(mStat.month)}`:lang==='uk'?`📊 Підсумки ${mFmt(mStat.month)}`:lang==='kk'?`📊 ${mFmt(mStat.month)} қорытындысы`:lang==='pl'?`📊 Podsumowanie ${mFmt(mStat.month)}`:lang==='tr'?`📊 ${mFmt(mStat.month)} Özeti`:`📊 ${mFmt(mStat.month)} Recap`}</div></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:7}}><div style={{background:'rgba(25,25,25,0.9)',border:`1px solid ${ACC}22`,borderRadius:11,padding:'11px 12px'}}><div style={{fontSize:9,color:TEXT_MUTED,marginBottom:5,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Время':lang==='uk'?'Час':lang==='kk'?'Уақыт':lang==='pl'?'Czas':lang==='tr'?'Süre':'Time'}</div><div style={{fontSize:17,fontWeight:700,color:ACC}}>{mSec(mStat.totalSec)}</div></div><div style={{background:'rgba(25,25,25,0.9)',border:'1px solid #222',borderRadius:11,padding:'11px 12px'}}><div style={{fontSize:9,color:TEXT_MUTED,marginBottom:5,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Треков':lang==='uk'?'Треків':lang==='kk'?'Трек':lang==='pl'?'Utworów':lang==='tr'?'Parça':'Tracks'}</div><div style={{fontSize:17,fontWeight:700,color:TEXT_PRIMARY}}>{mStat.listenedIds.length}</div></div></div>{mTop[0]&&(<div style={{background:'rgba(25,25,25,0.9)',border:`1px solid ${ACC}22`,borderRadius:11,padding:'11px 12px',marginBottom:7,display:'flex',alignItems:'center',gap:10}}><div style={{width:8,height:8,borderRadius:'50%',background:ACC,flexShrink:0}}/><Img src={mTop[0][1].cover||''} size={40} radius={7}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Трек месяца':lang==='uk'?'Трек місяця':lang==='kk'?'Ай треги':lang==='pl'?'Utwór miesiąca':lang==='tr'?'Ayın parçası':'Track of the month'}</div><div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mTop[0][1].title}</div><div style={{fontSize:10,color:TEXT_SEC}}>{mTop[0][1].artist}</div></div><div style={{textAlign:'center' as const,flexShrink:0}}><div style={{fontSize:18,fontWeight:700,color:ACC}}>{mTop[0][1].count}</div><div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'раз':lang==='uk'?'разів':lang==='kk'?'рет':lang==='pl'?'razy':lang==='tr'?'kez':'×'}</div></div></div>)}{mTop.length>1&&(<div style={{background:'rgba(25,25,25,0.9)',border:'1px solid #222',borderRadius:11,padding:'10px 12px',marginBottom:7}}><div style={{fontSize:9,color:TEXT_MUTED,marginBottom:8,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Топ треков':lang==='uk'?'Топ треків':lang==='kk'?'Ай топ':lang==='pl'?'Top miesiąca':lang==='tr'?'En çok çalınanlar':'Top tracks'}</div>{mTop.map(([,v],i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:i<mTop.length-1?'1px solid #1a1a1a':'none'}}><div style={{fontSize:11,fontWeight:700,color:i===0?ACC:TEXT_MUTED,width:14,textAlign:'right' as const,flexShrink:0}}>{i+1}</div><Img src={v.cover||''} size={30} radius={5}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:11,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div><div style={{fontSize:9,color:TEXT_SEC}}>{v.artist}</div></div><div style={{fontSize:11,fontWeight:600,color:TEXT_SEC,flexShrink:0}}>{v.count}×</div></div>))}{mTotalP>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:7,textAlign:'center' as const}}>{lang==='ru'?`${mTotalP} прослушиваний`:lang==='uk'?`${mTotalP} прослуховувань`:`${mTotalP} plays`}</div>}</div>)}</div>);})()}
+                  {(()=>{const mStat=monthStats.prev??monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
+                  <button onPointerDown={()=>setScreen('monthstats')} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
+                    <div style={{fontSize:26,flexShrink:0}}>📊</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly Stats'}</div>
+                      <div style={{fontSize:11,color:TEXT_SEC}}>{mSec(mStat.totalSec)} · {mStat.listenedIds.length} {lang==='ru'?'треков':lang==='uk'?'треків':lang==='kk'?'трек':lang==='pl'?'utworów':lang==='tr'?'parça':'tracks'}{mTop[0]?` · ${mTop[0][1].artist}`:''}</div>
+                    </div>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>);})()}
 
                   <div style={{height:1,background:'#1e1e1e',marginBottom:12}}/>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
@@ -2383,8 +2391,163 @@ export default function App(){
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
       {showImport&&<ImportModal/>}
  
+      {/* ── MONTH STATS SCREEN ── */}
+      {screen==='monthstats'&&(()=>{
+        const mStat=monthStats.prev??monthStats.current;
+        const mNames={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'} as Record<string,string>;
+        const mNamesRu={'01':'январь','02':'февраль','03':'март','04':'апрель','05':'май','06':'июнь','07':'июль','08':'август','09':'сентябрь','10':'октябрь','11':'ноябрь','12':'декабрь'} as Record<string,string>;
+        const mNamesUk={'01':'січень','02':'лютий','03':'березень','04':'квітень','05':'травень','06':'червень','07':'липень','08':'серпень','09':'вересень','10':'жовтень','11':'листопад','12':'грудень'} as Record<string,string>;
+        const mm=mStat.month.slice(5,7);const yyyy=mStat.month.slice(0,4);
+        const mName=lang==='ru'?mNamesRu[mm]:lang==='uk'?mNamesUk[mm]:mNames[mm];
+        const monthTitle=lang==='ru'?`${mName.charAt(0).toUpperCase()+mName.slice(1)} ${yyyy}`:lang==='uk'?`${mName.charAt(0).toUpperCase()+mName.slice(1)} ${yyyy}`:`${mName} ${yyyy}`;
+        const totalSecs=mStat.totalSec;
+        const hh=Math.floor(totalSecs/3600);const mm2=Math.floor((totalSecs%3600)/60);
+        const fmtT=hh>0?(lang==='ru'||lang==='uk'?`${hh} ч ${mm2} мин`:lang==='kk'?`${hh} сағ ${mm2} мин`:lang==='pl'?`${hh} godz ${mm2} min`:lang==='tr'?`${hh} sa ${mm2} dk`:`${hh}h ${mm2}m`):(lang==='ru'||lang==='uk'?`${mm2} мин`:lang==='kk'?`${mm2} мин`:lang==='pl'?`${mm2} min`:lang==='tr'?`${mm2} dk`:`${mm2}m`);
+        const topTracks=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);
+        const topArtists=(()=>{const m:Record<string,{name:string;cover:string;count:number;secs:number}>={};for(const [,v] of topTracks){if(!m[v.artist])m[v.artist]={name:v.artist,cover:v.cover,count:0,secs:0};m[v.artist].count+=v.count;m[v.artist].secs+=v.count*210;}return Object.values(m).sort((a,b)=>b.count-a.count).slice(0,5);})();
+        const totalPlays=topTracks.reduce((s,[,v])=>s+v.count,0);
+        const topCover=topTracks[0]?topTracks[0][1].cover:'';
+        const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
+        const isCollecting=!monthStats.prev;
+        return(
+        <div className="screen-fade" style={{minHeight:'100vh',background:BG,overflowY:'auto',paddingBottom:100}}>
+          {/* Hero */}
+          <div style={{position:'relative',minHeight:220,overflow:'hidden',marginBottom:0}}>
+            {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
+            <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.95) 100%)'}}/>
+            <div style={{position:'relative',zIndex:1,padding:'14px 16px 24px'}}>
+              <button onPointerDown={()=>setScreen('profile')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px 4px 0',display:'flex',alignItems:'center',gap:4,marginBottom:16,...tap}}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <span style={{fontSize:12,color:TEXT_SEC}}>{lang==='ru'?'Профиль':lang==='uk'?'Профіль':lang==='kk'?'Профиль':lang==='pl'?'Profil':lang==='tr'?'Profil':'Profile'}</span>
+              </button>
+              <div style={{fontSize:11,color:ACC,fontWeight:600,marginBottom:6,letterSpacing:1,textTransform:'uppercase' as const}}>
+                {lang==='ru'?'Итоги месяца':lang==='uk'?'Підсумки місяця':lang==='kk'?'Ай қорытындысы':lang==='pl'?'Podsumowanie miesiąca':lang==='tr'?'Aylık özet':'Monthly Recap'}
+              </div>
+              <div style={{fontSize:28,fontWeight:800,color:TEXT_PRIMARY,marginBottom:4,letterSpacing:-0.5}}>{monthTitle}</div>
+              {isFirstEver?(
+                <div style={{fontSize:13,color:TEXT_SEC,marginTop:8,lineHeight:1.6}}>
+                  {lang==='ru'?'Слушай музыку весь месяц — в конце покажем твои итоги 🎵':lang==='uk'?'Слухай музику весь місяць — наприкінці покажемо підсумки 🎵':'Listen all month — we\'ll show your recap at the end 🎵'}
+                </div>
+              ):isCollecting?(
+                <div>
+                  <div style={{display:'flex',gap:16,marginTop:8}}>
+                    <div><div style={{fontSize:30,fontWeight:800,color:ACC,lineHeight:1}}>{fmtT}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{lang==='ru'?'прослушано':lang==='uk'?'прослухано':'listened'}</div></div>
+                    <div><div style={{fontSize:30,fontWeight:800,color:TEXT_PRIMARY,lineHeight:1}}>{mStat.listenedIds.length}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div></div>
+                  </div>
+                  <div style={{marginTop:10,fontSize:11,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:6}}>
+                    <div style={{width:6,height:6,borderRadius:'50%',background:'#7ecf7e',animation:'dotPulse 1.6s ease infinite',flexShrink:0}}/>
+                    {lang==='ru'?'Идёт сбор статистики...':lang==='uk'?'Збирається статистика...':'Collecting stats...'}
+                  </div>
+                </div>
+              ):(
+                <div>
+                  <div style={{display:'flex',gap:16,marginTop:8}}>
+                    <div><div style={{fontSize:30,fontWeight:800,color:ACC,lineHeight:1}}>{fmtT}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{lang==='ru'?'прослушано':lang==='uk'?'прослухано':'listened'}</div></div>
+                    <div><div style={{fontSize:30,fontWeight:800,color:TEXT_PRIMARY,lineHeight:1}}>{mStat.listenedIds.length}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div></div>
+                    {totalPlays>0&&<div><div style={{fontSize:30,fontWeight:800,color:TEXT_PRIMARY,lineHeight:1}}>{totalPlays}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div></div>}
+                  </div>
+                  {topArtists[0]&&<div style={{marginTop:10,fontSize:11,color:TEXT_SEC}}>{'🎤 '}{lang==='ru'?'Топ-артист:':lang==='uk'?'Топ-артист:':'Top artist:'} <span style={{color:ACC,fontWeight:600}}>{topArtists[0].name}</span></div>}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{padding:'0 16px'}}>
+
+          {/* Top track card */}
+          {topTracks[0]&&!isFirstEver&&(
+            <div style={{background:'rgba(20,20,20,0.9)',border:`1px solid ${ACC}22`,borderRadius:16,overflow:'hidden',marginBottom:14,animation:'slideUp 0.3s ease both'}}>
+              <div style={{position:'relative',height:160,overflow:'hidden'}}>
+                <img src={topTracks[0][1].cover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'brightness(0.6)'}} onError={()=>{}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(14,14,14,0.95) 0%,transparent 60%)'}}/>
+                <div style={{position:'absolute',bottom:12,left:14,right:14}}>
+                  <div style={{fontSize:9,color:ACC,fontWeight:700,letterSpacing:1,textTransform:'uppercase' as const,marginBottom:4}}>
+                    {lang==='ru'?'🔥 Трек месяца':lang==='uk'?'🔥 Трек місяця':lang==='kk'?'🔥 Ай треги':lang==='pl'?'🔥 Utwór miesiąca':lang==='tr'?'🔥 Ayın parçası':'🔥 Track of the month'}
+                  </div>
+                  <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
+                  <div style={{fontSize:12,color:TEXT_SEC,marginTop:2}}>{topTracks[0][1].artist}</div>
+                </div>
+              </div>
+              <div style={{padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{display:'flex',gap:16}}>
+                  <div style={{textAlign:'center' as const}}><div style={{fontSize:18,fontWeight:700,color:ACC}}>{topTracks[0][1].count}</div><div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div></div>
+                  {totalPlays>0&&<div style={{textAlign:'center' as const}}><div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{Math.round(topTracks[0][1].count/totalPlays*100)}%</div><div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'от всего':lang==='uk'?'від усього':'of total'}</div></div>}
+                </div>
+                <button onPointerDown={()=>{const t=topTracks[0];if(t)playTrack({id:t[0],title:t[1].title,artist:t[1].artist,cover:t[1].cover,duration:'',plays:t[1].count,mp3:null});}} style={{padding:'7px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:11,fontWeight:700,cursor:'pointer',...tap}}>
+                  {lang==='ru'?'▶ Слушать':lang==='uk'?'▶ Слухати':'▶ Play'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Top 5 tracks */}
+          {topTracks.length>1&&!isFirstEver&&(
+            <div style={{background:'rgba(20,20,20,0.8)',border:'1px solid #222',borderRadius:14,padding:'12px 14px',marginBottom:14,animation:'slideUp 0.35s ease both'}}>
+              <div style={{fontSize:11,fontWeight:700,color:TEXT_PRIMARY,marginBottom:10}}>
+                {lang==='ru'?'🎵 Топ-5 треков':lang==='uk'?'🎵 Топ-5 треків':lang==='kk'?'🎵 Топ-5 трек':lang==='pl'?'🎵 Top 5 utworów':lang==='tr'?'🎵 Top 5 parça':'🎵 Top 5 Tracks'}
+              </div>
+              {topTracks.slice(0,5).map(([id,v],i)=>(
+                <div key={id} onPointerDown={()=>playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null})} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
+                  <div style={{fontSize:13,fontWeight:800,color:i===0?ACC:'#444',width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+                  <Img src={v.cover||''} size={38} radius={7}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:i===0?ACC:TEXT_PRIMARY,fontWeight:i===0?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
+                    <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{v.artist}</div>
+                  </div>
+                  <div style={{textAlign:'right' as const,flexShrink:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:i===0?ACC:TEXT_SEC}}>{v.count}</div>
+                    <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'раз':lang==='uk'?'разів':'×'}</div>
+                  </div>
+                </div>
+              ))}
+              {topTracks.length>=3&&(
+                <button onPointerDown={()=>{const tracks=topTracks.slice(0,10).map(([id,v])=>({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null} as Track));const pl:Playlist={id:Date.now().toString(),name:`${monthTitle} top`,tracks,repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setScreen('library');setLibTab('playlists');}} style={{width:'100%',marginTop:10,padding:'9px',background:ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:9,color:ACC,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
+                  {lang==='ru'?`💾 Создать плейлист «${monthTitle} top»`:lang==='uk'?`💾 Створити плейлист «${monthTitle} top»`:`💾 Create playlist "${monthTitle} top"`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Top artists */}
+          {topArtists.length>0&&!isFirstEver&&(
+            <div style={{background:'rgba(20,20,20,0.8)',border:'1px solid #222',borderRadius:14,padding:'12px 14px',marginBottom:14,animation:'slideUp 0.4s ease both'}}>
+              <div style={{fontSize:11,fontWeight:700,color:TEXT_PRIMARY,marginBottom:10}}>
+                {lang==='ru'?'🎤 Топ артистов':lang==='uk'?'🎤 Топ артистів':lang==='kk'?'🎤 Топ орындаушылар':lang==='pl'?'🎤 Top artystów':lang==='tr'?'🎤 Top sanatçılar':'🎤 Top Artists'}
+              </div>
+              {topArtists.map((a,i)=>(
+                <div key={a.name} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<topArtists.length-1?'1px solid #1a1a1a':'none'}}>
+                  <div style={{fontSize:13,fontWeight:800,color:i===0?ACC:'#444',width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+                  <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',flexShrink:0,background:BG3}}><Img src={a.cover||''} size={38} radius={19}/></div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:i===0?ACC:TEXT_PRIMARY,fontWeight:i===0?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.name}</div>
+                    <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{a.count} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+                  </div>
+                  {totalPlays>0&&<div style={{fontSize:11,color:TEXT_MUTED,flexShrink:0}}>{Math.round(a.count/totalPlays*100)}%</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {isFirstEver&&(
+            <div style={{textAlign:'center' as const,padding:'40px 20px',animation:'fadeIn 0.4s ease'}}>
+              <div style={{fontSize:48,marginBottom:16}}>🎵</div>
+              <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY,marginBottom:8}}>
+                {lang==='ru'?'Статистика пока не готова':lang==='uk'?'Статистика ще не готова':'Stats not ready yet'}
+              </div>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.6}}>
+                {lang==='ru'?'Слушай музыку в течение месяца — в конце января покажем все твои итоги':lang==='uk'?'Слухай музику протягом місяця — наприкінці покажемо підсумки':'Listen to music this month — we\'ll show your full recap at the end of the month'}
+              </div>
+            </div>
+          )}
+
+          </div>
+        </div>
+        );
+      })()}
+
       {/* ── MINI PLAYER ── */}
-      {current && screen !== 'profile' && (
+      {current && screen !== 'profile' && screen !== 'monthstats' && (
         <div
           className="mini-player"
           style={{
@@ -2473,7 +2636,7 @@ export default function App(){
       )}
  
       {/* ── NAV ── */}
-      {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&(
+      {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&screen!=='monthstats'&&(
         <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
           {NAV.map(item=>(
             <NavItem
