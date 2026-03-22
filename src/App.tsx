@@ -43,6 +43,15 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискографія',popular:'Популярне',
     latestRelease:'Останній реліз',noTracks:'Треки не знайдені',showMore:'Показати більше',
     blockArtist:'Не рекомендувати',
+    importPlaylist:'Імпорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importLinkHint:'Встав посилання на плейлист',importFindBtn:'Знайти плейлист',
+    importLoading:'Завантажуємо плейлист...',importMatching:'Шукаємо треки на SoundCloud...',
+    importDone:'Готово!',importFound:'Знайдено',importOf:'з',importTracksWord:'треків',
+    importOpen:'Відкрити плейлист',importOtherTitle:'Яндекс Музика або Apple Music?',
+    importOtherStep1:'Відкрий',importOtherStep2:'і підключи свій акаунт',
+    importOtherStep3:'Вибери плейлист і перенеси його в SoundCloud',
+    importOtherStep4:'Поверніться сюди і вставте посилання SoundCloud плейлиста',
+    importOtherBtn:'Відкрити Soundiiz',importNotFound:'не знайдено на SoundCloud',
   },
   kk: {
     home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Сен үшін',profile:'Профиль',
@@ -60,6 +69,15 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Танымал',
     latestRelease:'Соңғы шығарылым',noTracks:'Треки табылмады',showMore:'Көбірек',
     blockArtist:'Ұсынбау',
+    importPlaylist:'Плейлист импорты',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importLinkHint:'Плейлист сілтемесін қой',importFindBtn:'Плейлист табу',
+    importLoading:'Плейлист жүктелуде...',importMatching:'SoundCloud-та іздеуде...',
+    importDone:'Дайын!',importFound:'Табылды',importOf:'/',importTracksWord:'трек',
+    importOpen:'Плейлистті ашу',importOtherTitle:'Яндекс Музыка немесе Apple Music?',
+    importOtherStep1:'Ашу',importOtherStep2:'және аккаунтты қосу',
+    importOtherStep3:'Плейлистті таңдап SoundCloud-қа көшір',
+    importOtherStep4:'Осында оралып SoundCloud плейлист сілтемесін қой',
+    importOtherBtn:'Soundiiz ашу',importNotFound:'SoundCloud-та табылмады',
   },
   pl: {
     home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Dla Ciebie',profile:'Profil',
@@ -77,6 +95,15 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Utwory',discography:'Dyskografia',popular:'Popularne',
     latestRelease:'Ostatnia premiera',noTracks:'Brak utworów',showMore:'Pokaż więcej',
     blockArtist:'Nie polecaj',
+    importPlaylist:'Importuj playlistę',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importLinkHint:'Wklej link do playlisty',importFindBtn:'Znajdź playlistę',
+    importLoading:'Ładowanie playlisty...',importMatching:'Szukamy na SoundCloud...',
+    importDone:'Gotowe!',importFound:'Znaleziono',importOf:'z',importTracksWord:'utworów',
+    importOpen:'Otwórz playlistę',importOtherTitle:'Yandex Music lub Apple Music?',
+    importOtherStep1:'Otwórz',importOtherStep2:'i połącz swoje konto',
+    importOtherStep3:'Wybierz playlistę i przenieś ją do SoundCloud',
+    importOtherStep4:'Wróć tutaj i wklej link do playlisty SoundCloud',
+    importOtherBtn:'Otwórz Soundiiz',importNotFound:'nie znaleziono na SoundCloud',
   },
   tr: {
     home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Senin İçin',profile:'Profil',
@@ -94,6 +121,15 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Parçalar',discography:'Diskografi',popular:'Popüler',
     latestRelease:'Son çıkan',noTracks:'Parça bulunamadı',showMore:'Daha fazla göster',
     blockArtist:'Önerme',
+    importPlaylist:'Çalma Listesi İçe Aktar',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importLinkHint:'Çalma listesi bağlantısını yapıştır',importFindBtn:'Çalma listesini bul',
+    importLoading:'Çalma listesi yükleniyor...',importMatching:'SoundCloud\'da aranıyor...',
+    importDone:'Tamam!',importFound:'Bulundu',importOf:'/',importTracksWord:'parça',
+    importOpen:'Çalma listesini aç',importOtherTitle:'Yandex Music veya Apple Music?',
+    importOtherStep1:'Aç',importOtherStep2:'ve hesabını bağla',
+    importOtherStep3:'Çalma listeni seç ve SoundCloud\'a aktar',
+    importOtherStep4:'Buraya dön ve SoundCloud çalma listesi bağlantısını yapıştır',
+    importOtherBtn:'Soundiiz\'i Aç',importNotFound:'SoundCloud\'da bulunamadı',
   },
   en: {
     home:'Home',search:'Search',library:'Library',trending:'For You',profile:'Profile',
@@ -110,6 +146,15 @@ const T: Record<string,Record<string,string>> = {
     goToAlbum:'Go to album',tracks:'Tracks',discography:'Discography',popular:'Popular',
     latestRelease:'Latest release',noTracks:'No tracks found',showMore:'Show more',
     blockArtist:'Not interested',
+    importPlaylist:'Import Playlist',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importLinkHint:'Paste a playlist link',importFindBtn:'Find Playlist',
+    importLoading:'Loading playlist...',importMatching:'Searching on SoundCloud...',
+    importDone:'Done!',importFound:'Found',importOf:'of',importTracksWord:'tracks',
+    importOpen:'Open Playlist',importOtherTitle:'Yandex Music or Apple Music?',
+    importOtherStep1:'Open',importOtherStep2:'and connect your account',
+    importOtherStep3:'Select your playlist and transfer it to SoundCloud',
+    importOtherStep4:'Come back here and paste the SoundCloud playlist link',
+    importOtherBtn:'Open Soundiiz',importNotFound:'not found on SoundCloud',
   },
   ru: {
     home:'Главная',search:'Поиск',library:'Библиотека',trending:'Для тебя',profile:'Профиль',
@@ -127,6 +172,15 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Популярное',
     latestRelease:'Последний релиз',noTracks:'Треки не найдены',showMore:'Показать ещё',
     blockArtist:'Не рекомендовать',
+    importPlaylist:'Импорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importLinkHint:'Вставь ссылку на плейлист',importFindBtn:'Найти плейлист',
+    importLoading:'Загружаем плейлист...',importMatching:'Ищем треки на SoundCloud...',
+    importDone:'Готово!',importFound:'Найдено',importOf:'из',importTracksWord:'треков',
+    importOpen:'Открыть плейлист',importOtherTitle:'Яндекс Музыка или Apple Music?',
+    importOtherStep1:'Открой',importOtherStep2:'и подключи свой аккаунт',
+    importOtherStep3:'Выбери плейлист и перенеси его в SoundCloud',
+    importOtherStep4:'Вернись сюда и вставь ссылку на плейлист SoundCloud',
+    importOtherBtn:'Открыть Soundiiz',importNotFound:'не найден на SoundCloud',
   },
 };
 
@@ -487,12 +541,12 @@ export default function App(){
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const[importUrl,setImportUrl]=useState('');
-  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'|'needs_token'|'needs_token_done'>('idle');
+  const[importTab,setImportTab]=useState<'main'|'other'>('main');
+  const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'>('idle');
   const[importError,setImportError]=useState('');
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
-  const[yandexToken,setYandexToken]=useState(()=>{try{return localStorage.getItem('ym_token')||'';}catch{return '';}});
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -583,25 +637,6 @@ export default function App(){
       }).catch(()=>{});
     }
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
-  },[]);
-
-  // Parse Yandex OAuth token from URL hash (Implicit Flow callback)
-  useEffect(()=>{
-    const hash=window.location.hash;
-    if(hash&&hash.includes('access_token=')){
-      try{
-        const params=new URLSearchParams(hash.replace('#',''));
-        const token=params.get('access_token');
-        if(token){
-          saveYandexToken(token);
-          window.history.replaceState(null,'',window.location.pathname+window.location.search);
-          const savedUrl=sessionStorage.getItem('ym_import_url')||'';
-          if(savedUrl){sessionStorage.removeItem('ym_import_url');setImportUrl(savedUrl);}
-          setShowImport(true);
-          setImportStep('needs_token_done');
-        }
-      }catch{}
-    }
   },[]);
 
   useEffect(()=>{
@@ -1045,19 +1080,12 @@ export default function App(){
     }
   },[screen,history.length]);
 
-  const saveYandexToken=(tok:string)=>{
-    setYandexToken(tok);
-    try{if(tok)localStorage.setItem('ym_token',tok);else localStorage.removeItem('ym_token');}catch{}
-  };
-
-  const runImport=async(tokenOverride?:string)=>{
+  const runImport=async()=>{
     if(!importUrl.trim())return;
     setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
-    const token=tokenOverride!==undefined?tokenOverride:yandexToken;
     try{
-      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim(),yandexToken:token||undefined})});
+      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim()})});
       const d=await r.json();
-      if(d.needsToken){setImportStep('needs_token');return;}
       if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
       setImportPreview(d);
       setImportStep('preview');
@@ -1362,140 +1390,130 @@ export default function App(){
   const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
 
   const ImportModal=()=>{
-    const[tokenInput,setTokenInput]=useState(yandexToken);
     return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'85vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-          <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY}}>
-            {lang==='ru'?'Импорт плейлиста':lang==='uk'?'Імпорт плейлиста':'Import Playlist'}
-          </div>
-          {importStep!=='matching'&&<button onPointerDown={()=>setShowImport(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:18,padding:4,...tap}}>×</button>}
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>{t('importPlaylist')}</div>
+          {importStep!=='matching'&&<button onPointerDown={()=>setShowImport(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:20,padding:4,lineHeight:1,...tap}}>×</button>}
         </div>
 
-        {(importStep==='idle'||importStep==='error')&&(()=>{
-          const isYandexHtml=importUrl.trim().startsWith('<iframe')&&importUrl.includes('music.yandex.ru');
-          const isYandexUrl=importUrl.includes('yandex')&&!importUrl.startsWith('<');
-          return(
+        {/* Tabs — only show on idle/error */}
+        {(importStep==='idle'||importStep==='error')&&(
+          <div style={{display:'flex',gap:6,marginBottom:16,background:BG,borderRadius:12,padding:4}}>
+            {(['main','other'] as const).map(tab=>(
+              <button key={tab} onPointerDown={()=>{setImportTab(tab);setImportError('');setImportUrl('');}}
+                style={{flex:1,padding:'8px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
+                  background:importTab===tab?'#2a2a2a':'transparent',
+                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,transition:'all 0.18s ease',...tap}}>
+                {tab==='main'?t('importTabMain'):t('importTabOther')}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── TAB MAIN: Spotify / YouTube ── */}
+        {(importStep==='idle'||importStep==='error')&&importTab==='main'&&(
           <div>
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:10,lineHeight:1.6}}>
-              {lang==='ru'?'Spotify и YouTube — по ссылке. Яндекс Музыка — вставь HTML-код (Поделиться → HTML-код)':'Spotify & YouTube by link. Yandex Music — paste embed HTML (Share → Embed code)'}
-            </div>
-            <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap' as const}}>
-              {['🟢 Spotify','🔴 YouTube','🟡 Яндекс HTML'].map(s=>(
-                <div key={s} style={{padding:'4px 9px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED}}>{s}</div>
+            <div style={{display:'flex',gap:6,marginBottom:12}}>
+              {[{icon:'🟢',label:'Spotify'},{icon:'🔴',label:'YouTube'},{icon:'🟠',label:'SoundCloud'}].map(s=>(
+                <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
+                  <span>{s.icon}</span><span>{s.label}</span>
+                </div>
               ))}
             </div>
-            <textarea
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
+            <input
               autoFocus
-              rows={importUrl.startsWith('<')?4:2}
-              placeholder={lang==='ru'
-                ?'Ссылка: https://open.spotify.com/playlist/...\nЯндекс: <iframe ... src="https://music.yandex.ru/iframe/playlist/...">...'
-                :'Link: https://open.spotify.com/playlist/...\nYandex: <iframe ... src="https://music.yandex.ru/iframe/playlist/...">...'}
+              placeholder="https://open.spotify.com/playlist/..."
               value={importUrl}
               onChange={e=>setImportUrl(e.target.value)}
-              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:`1px solid ${isYandexHtml?'rgba(239,191,127,0.4)':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:6,resize:'none' as const,lineHeight:1.6,fontFamily:'inherit'}}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
-            {isYandexHtml&&(
-              <div style={{fontSize:10,color:'#EFBF7F',marginBottom:8,padding:'6px 10px',background:'rgba(239,191,127,0.06)',borderRadius:8}}>
-                ✓ {lang==='ru'?'Обнаружен HTML-код Яндекс Музыки':'Yandex Music embed HTML detected'}
-              </div>
-            )}
-            {isYandexUrl&&(
-              <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:8,padding:'6px 10px',background:BG2,borderRadius:8,lineHeight:1.5}}>
-                💡 {lang==='ru'?'Для Яндекс плейлистов лучше вставить HTML-код: откройте плейлист → ··· → Поделиться → HTML-код':'For Yandex playlists paste the embed HTML: open playlist → ··· → Share → Embed code'}
-              </div>
-            )}
             {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()} style={{width:'100%',padding:'12px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s ease',...tap}}>
-              {lang==='ru'?'Найти плейлист':lang==='uk'?'Знайти плейлист':'Find Playlist'}
+            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
+              {t('importFindBtn')}
             </button>
           </div>
-          );
-        })()}
+        )}
 
-        {(importStep==='needs_token'||importStep==='needs_token_done')&&(
+        {/* ── TAB OTHER: Яндекс / Apple via Soundiiz ── */}
+        {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'11px 12px',background:'rgba(239,191,127,0.07)',borderRadius:10,border:'1px solid rgba(239,191,127,0.18)'}}>
-              <div style={{fontSize:20,flexShrink:0}}>🟡</div>
-              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.5}}>
-                {lang==='ru'
-                  ?'Яндекс Музыка не даёт читать плейлисты напрямую. Вставь список треков вручную — мы найдём их на SoundCloud.'
-                  :'Yandex Music doesn\'t allow direct playlist access. Paste your track list and we\'ll find them on SoundCloud.'}
+            <div style={{display:'flex',gap:6,marginBottom:14}}>
+              {[{icon:'🟡',label:'Яндекс'},{icon:'🍎',label:'Apple Music'}].map(s=>(
+                <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
+                  <span>{s.icon}</span><span>{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
+
+            {[
+              {num:'1',text:<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>},
+              {num:'2',text:t('importOtherStep3')},
+              {num:'3',text:t('importOtherStep4')},
+            ].map(step=>(
+              <div key={step.num} style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-start'}}>
+                <div style={{width:24,height:24,borderRadius:'50%',background:ACC_DIM,border:`1px solid ${ACC}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:11,fontWeight:700,color:ACC}}>{step.num}</div>
+                <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.55,paddingTop:2}}>{step.text}</div>
               </div>
-            </div>
+            ))}
 
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:6,lineHeight:1.6}}>
-              {lang==='ru'
-                ?'Как скопировать: открой плейлист в Яндекс Музыке → выдели все треки → скопируй в формате "Артист — Трек"'
-                :'Open playlist in Yandex Music → copy track list in "Artist — Track" format'}
-            </div>
+            <a href="https://soundiiz.com/" target="_blank" rel="noreferrer"
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'13px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:13,fontWeight:700,cursor:'pointer',textDecoration:'none',marginBottom:14,boxSizing:'border-box' as const,...tap}}>
+              🔗 {t('importOtherBtn')}
+            </a>
 
-            <textarea
-              placeholder={'Артист — Название трека\nАртист2 — Название трека 2\n...'}
-              value={tokenInput}
-              onChange={e=>setTokenInput(e.target.value)}
-              rows={8}
-              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8,fontFamily:'inherit',resize:'vertical' as const,lineHeight:1.6}}
+            <div style={{height:1,background:'#252525',marginBottom:14}}/>
+
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')} (SoundCloud)</div>
+            <input
+              placeholder="https://soundcloud.com/user/sets/playlist-name"
+              value={importUrl}
+              onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
-
-            <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:10}}>
-              {lang==='ru'
-                ?`Найдено строк: ${tokenInput.split('\n').filter(l=>l.trim()&&l.includes('—')||l.includes('-')).length}`
-                :`Lines found: ${tokenInput.split('\n').filter(l=>l.trim()&&(l.includes('—')||l.includes('-'))).length}`}
-            </div>
-
-            <button
-              onPointerDown={()=>{
-                if(!tokenInput.trim())return;
-                // Parse "Artist — Track" lines into importPreview format
-                const lines=tokenInput.split('\n').map(l=>l.trim()).filter(Boolean);
-                const parsed:{sourceTitle:string;sourceArtist:string}[]=[];
-                for(const line of lines){
-                  const sep=line.includes('—')?'—':line.includes(' - ')?' - ':null;
-                  if(!sep)continue;
-                  const idx=line.indexOf(sep);
-                  const artist=line.slice(0,idx).trim();
-                  const title=line.slice(idx+sep.length).trim();
-                  if(artist&&title)parsed.push({sourceTitle:title,sourceArtist:artist});
-                }
-                if(!parsed.length){setImportError(lang==='ru'?'Не найдено строк в формате "Артист — Трек"':'No lines in "Artist — Track" format');return;}
-                setImportPreview({source:'yandex',title:lang==='ru'?'Яндекс плейлист':'Yandex Playlist',cover:'',totalTracks:parsed.length,tracks:parsed});
-                setImportStep('preview');
-              }}
-              disabled={!tokenInput.trim()}
-              style={{width:'100%',padding:'12px',background:tokenInput.trim()?ACC:BG3,border:'none',borderRadius:10,color:tokenInput.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',marginBottom:6,...tap}}>
-              {lang==='ru'?`Найти треки на SoundCloud`:'Find on SoundCloud'}
-            </button>
-
-            <button onPointerDown={()=>setImportStep('idle')} style={{width:'100%',padding:'9px',background:'none',border:'none',color:TEXT_MUTED,fontSize:12,cursor:'pointer',...tap}}>
-              {lang==='ru'?'← Назад':'← Back'}
+            {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
+              {t('importFindBtn')}
             </button>
           </div>
         )}
 
+        {/* Fetching */}
         {importStep==='fetching'&&(
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'30px 0',gap:12}}>
-            <div style={{width:32,height:32,borderRadius:'50%',border:`2px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
-            <div style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Загружаем плейлист...':'Loading playlist...'}</div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'36px 0',gap:14}}>
+            <div style={{width:36,height:36,borderRadius:'50%',border:`3px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+            <div style={{fontSize:13,color:TEXT_SEC}}>{t('importLoading')}</div>
           </div>
         )}
 
+        {/* Preview */}
         {importStep==='preview'&&importPreview&&(
           <div>
             <div style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0 16px',borderBottom:'1px solid #252525',marginBottom:14}}>
               {importPreview.cover
-                ?<img src={importPreview.cover} style={{width:56,height:56,borderRadius:8,objectFit:'cover',flexShrink:0}}/>
-                :<div style={{width:56,height:56,borderRadius:8,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{sourceIcon(importPreview.source)}</div>
+                ?<img src={importPreview.cover} style={{width:58,height:58,borderRadius:9,objectFit:'cover',flexShrink:0}}/>
+                :<div style={{width:58,height:58,borderRadius:9,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,flexShrink:0}}>
+                  {importPreview.source==='spotify'?'🟢':importPreview.source==='youtube'?'🔴':'🟠'}
+                </div>
               }
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:3}}>{sourceIcon(importPreview.source)} {sourceName(importPreview.source)}</div>
-                <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{importPreview.title}</div>
-                <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{importPreview.totalTracks} {lang==='ru'?'треков':'tracks'}</div>
+                <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:3,textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                  {importPreview.source==='spotify'?'Spotify':importPreview.source==='youtube'?'YouTube':'SoundCloud'}
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{importPreview.title}</div>
+                <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{importPreview.totalTracks} {t('importTracksWord')}</div>
               </div>
             </div>
-            <div style={{maxHeight:220,overflowY:'auto',marginBottom:14}}>
-              {importPreview.tracks.slice(0,10).map((tr,i)=>(
+            <div style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
+              {importPreview.tracks.slice(0,8).map((tr,i)=>(
                 <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
                   <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right',flexShrink:0}}>{i+1}</div>
                   <div style={{flex:1,minWidth:0}}>
@@ -1504,36 +1522,36 @@ export default function App(){
                   </div>
                 </div>
               ))}
-              {importPreview.totalTracks>10&&<div style={{textAlign:'center',padding:'8px',fontSize:11,color:TEXT_MUTED}}>+{importPreview.totalTracks-10} {lang==='ru'?'треков':'more tracks'}</div>}
+              {importPreview.totalTracks>8&&<div style={{textAlign:'center',padding:'8px',fontSize:11,color:TEXT_MUTED}}>+{importPreview.totalTracks-8} {t('importTracksWord')}</div>}
             </div>
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:12,padding:'8px 12px',background:BG2,borderRadius:8,lineHeight:1.5}}>
-              {lang==='ru'?'Треки будут найдены на SoundCloud и добавлены в плейлист. Часть треков может не совпасть.':'Tracks will be matched on SoundCloud. Some may not be found.'}
-            </div>
-            <button onPointerDown={()=>runMatch(importPreview.title)} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>
-              {lang==='ru'?'Импортировать плейлист':lang==='uk'?'Імпортувати плейлист':'Import Playlist'}
+            <button onPointerDown={()=>runMatch(importPreview.title)}
+              style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              {t('importPlaylist')}
             </button>
           </div>
         )}
 
+        {/* Matching */}
         {importStep==='matching'&&(
           <div>
             <div style={{marginBottom:14}}>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:TEXT_SEC,marginBottom:6}}>
-                <span>{lang==='ru'?'Ищем треки на SoundCloud...':'Matching tracks on SoundCloud...'}</span>
-                <span>{importProgress}%</span>
+                <span>{t('importMatching')}</span>
+                <span style={{color:ACC,fontWeight:600}}>{importProgress}%</span>
               </div>
               <div style={{width:'100%',height:4,background:BG3,borderRadius:4}}>
                 <div style={{width:`${importProgress}%`,height:'100%',background:ACC,borderRadius:4,transition:'width 0.3s ease'}}/>
               </div>
             </div>
             {importResults.length>0&&(
-              <div style={{maxHeight:300,overflowY:'auto'}}>
+              <div style={{maxHeight:320,overflowY:'auto'}}>
                 {importResults.map((r,i)=>(
                   <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
-                    <div style={{fontSize:14,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
+                    <div style={{fontSize:13,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,color:r.status==='found'?TEXT_PRIMARY:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.imported.sourceTitle}</div>
                       {r.matched&&<div style={{fontSize:10,color:TEXT_SEC}}>{r.matched.artist}</div>}
+                      {r.status==='not_found'&&<div style={{fontSize:10,color:TEXT_MUTED}}>{t('importNotFound')}</div>}
                     </div>
                   </div>
                 ))}
@@ -1542,31 +1560,31 @@ export default function App(){
           </div>
         )}
 
+        {/* Done */}
         {importStep==='done'&&(()=>{
           const found=importResults.filter(r=>r.status==='found').length;
           const total=importResults.length;
           return(
-            <div>
-              <div style={{textAlign:'center',padding:'16px 0'}}>
-                <div style={{fontSize:36,marginBottom:8}}>🎵</div>
-                <div style={{fontSize:16,fontWeight:600,color:TEXT_PRIMARY,marginBottom:4}}>
-                  {lang==='ru'?'Готово!':lang==='uk'?'Готово!':'Done!'}
-                </div>
-                <div style={{fontSize:13,color:TEXT_SEC,marginBottom:4}}>
-                  {lang==='ru'?`Найдено ${found} из ${total} треков`:`Found ${found} of ${total} tracks`}
-                </div>
-                {found<total&&<div style={{fontSize:11,color:TEXT_MUTED}}>{lang==='ru'?`${total-found} треков не найдено на SoundCloud`:`${total-found} tracks not found on SoundCloud`}</div>}
+            <div style={{textAlign:'center',padding:'8px 0'}}>
+              <div style={{fontSize:40,marginBottom:12}}>🎵</div>
+              <div style={{fontSize:17,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>{t('importDone')}</div>
+              <div style={{fontSize:13,color:TEXT_SEC,marginBottom:4}}>
+                {t('importFound')} {found} {t('importOf')} {total} {t('importTracksWord')}
               </div>
-              <button onPointerDown={()=>{setShowImport(false);setLibTab('playlists');}} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:600,cursor:'pointer',...tap}}>
-                {lang==='ru'?'Открыть плейлист':lang==='uk'?'Відкрити плейлист':'Open Playlist'}
+              {found<total&&(
+                <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:16}}>{total-found} {t('importNotFound')}</div>
+              )}
+              <button onPointerDown={()=>{setShowImport(false);setLibTab('playlists');}}
+                style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:8,...tap}}>
+                {t('importOpen')}
               </button>
             </div>
           );
         })()}
+
       </div>
     </div>
   );};
-
 
   const PlModal=({track}:{track:Track})=>(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
