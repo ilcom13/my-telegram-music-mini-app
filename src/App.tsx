@@ -43,7 +43,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискографія',popular:'Популярне',
     latestRelease:'Останній реліз',noTracks:'Треки не знайдені',showMore:'Показати більше',
     blockArtist:'Не рекомендувати',
-    importPlaylist:'Імпорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Імпорт плейлиста',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
     importLinkHint:'Встав посилання на плейлист',importFindBtn:'Знайти плейлист',
     importLoading:'Завантажуємо плейлист...',importMatching:'Шукаємо треки на SoundCloud...',
     importDone:'Готово!',importFound:'Знайдено',importOf:'з',importTracksWord:'треків',
@@ -69,7 +69,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Танымал',
     latestRelease:'Соңғы шығарылым',noTracks:'Треки табылмады',showMore:'Көбірек',
     blockArtist:'Ұсынбау',
-    importPlaylist:'Плейлист импорты',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Плейлист импорты',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
     importLinkHint:'Плейлист сілтемесін қой',importFindBtn:'Плейлист табу',
     importLoading:'Плейлист жүктелуде...',importMatching:'SoundCloud-та іздеуде...',
     importDone:'Дайын!',importFound:'Табылды',importOf:'/',importTracksWord:'трек',
@@ -95,7 +95,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Utwory',discography:'Dyskografia',popular:'Popularne',
     latestRelease:'Ostatnia premiera',noTracks:'Brak utworów',showMore:'Pokaż więcej',
     blockArtist:'Nie polecaj',
-    importPlaylist:'Importuj playlistę',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importPlaylist:'Importuj playlistę',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
     importLinkHint:'Wklej link do playlisty',importFindBtn:'Znajdź playlistę',
     importLoading:'Ładowanie playlisty...',importMatching:'Szukamy na SoundCloud...',
     importDone:'Gotowe!',importFound:'Znaleziono',importOf:'z',importTracksWord:'utworów',
@@ -121,7 +121,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Parçalar',discography:'Diskografi',popular:'Popüler',
     latestRelease:'Son çıkan',noTracks:'Parça bulunamadı',showMore:'Daha fazla göster',
     blockArtist:'Önerme',
-    importPlaylist:'Çalma Listesi İçe Aktar',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importPlaylist:'Çalma Listesi İçe Aktar',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
     importLinkHint:'Çalma listesi bağlantısını yapıştır',importFindBtn:'Çalma listesini bul',
     importLoading:'Çalma listesi yükleniyor...',importMatching:'SoundCloud\'da aranıyor...',
     importDone:'Tamam!',importFound:'Bulundu',importOf:'/',importTracksWord:'parça',
@@ -146,7 +146,7 @@ const T: Record<string,Record<string,string>> = {
     goToAlbum:'Go to album',tracks:'Tracks',discography:'Discography',popular:'Popular',
     latestRelease:'Latest release',noTracks:'No tracks found',showMore:'Show more',
     blockArtist:'Not interested',
-    importPlaylist:'Import Playlist',importTabMain:'Spotify / YouTube',importTabOther:'Yandex / Apple',
+    importPlaylist:'Import Playlist',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Yandex / Apple',
     importLinkHint:'Paste a playlist link',importFindBtn:'Find Playlist',
     importLoading:'Loading playlist...',importMatching:'Searching on SoundCloud...',
     importDone:'Done!',importFound:'Found',importOf:'of',importTracksWord:'tracks',
@@ -172,7 +172,7 @@ const T: Record<string,Record<string,string>> = {
     tracks:'Треки',discography:'Дискография',popular:'Популярное',
     latestRelease:'Последний релиз',noTracks:'Треки не найдены',showMore:'Показать ещё',
     blockArtist:'Не рекомендовать',
-    importPlaylist:'Импорт плейлиста',importTabMain:'Spotify / YouTube',importTabOther:'Яндекс / Apple',
+    importPlaylist:'Импорт плейлиста',importTabMain:'Spotify / YouTube / SoundCloude',importTabOther:'Яндекс / Apple',
     importLinkHint:'Вставь ссылку на плейлист',importFindBtn:'Найти плейлист',
     importLoading:'Загружаем плейлист...',importMatching:'Ищем треки на SoundCloud...',
     importDone:'Готово!',importFound:'Найдено',importOf:'из',importTracksWord:'треков',
@@ -2040,7 +2040,7 @@ export default function App(){
                       {lang==='ru'?'Перенеси свои плейлисты':lang==='uk'?'Перенеси свої плейлисти':'Import your playlists'}
                     </div>
                     <div style={{fontSize:11,color:TEXT_SEC}}>
-                      {lang==='ru'?'Spotify, YouTube, Яндекс Музыка':'Spotify, YouTube, Yandex Music'}
+                      {lang==='ru'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс Музыка':'Spotify, YouTube, SoundCloud, Apple Music, Яндекс Музыка'}
                     </div>
                   </div>
                   <button onPointerDown={()=>{setScreen('library');setLibTab('playlists');setTimeout(()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);},100);}} style={{flexShrink:0,padding:'8px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
