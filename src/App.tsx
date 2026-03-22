@@ -1373,29 +1373,46 @@ export default function App(){
           {importStep!=='matching'&&<button onPointerDown={()=>setShowImport(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:18,padding:4,...tap}}>×</button>}
         </div>
 
-        {(importStep==='idle'||importStep==='error')&&(
+        {(importStep==='idle'||importStep==='error')&&(()=>{
+          const isYandexHtml=importUrl.trim().startsWith('<iframe')&&importUrl.includes('music.yandex.ru');
+          const isYandexUrl=importUrl.includes('yandex')&&!importUrl.startsWith('<');
+          return(
           <div>
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>
-              {lang==='ru'?'Вставь ссылку на плейлист из Spotify, YouTube или Яндекс Музыки':lang==='uk'?'Вставте посилання на плейлист із Spotify, YouTube або Яндекс Музики':'Paste a playlist link from Spotify, YouTube or Yandex Music'}
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:10,lineHeight:1.6}}>
+              {lang==='ru'?'Spotify и YouTube — по ссылке. Яндекс Музыка — вставь HTML-код (Поделиться → HTML-код)':'Spotify & YouTube by link. Yandex Music — paste embed HTML (Share → Embed code)'}
             </div>
-            <div style={{display:'flex',gap:6,marginBottom:10}}>
-              {['🟢 Spotify','🔴 YouTube','🟡 Яндекс'].map(s=>(
+            <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap' as const}}>
+              {['🟢 Spotify','🔴 YouTube','🟡 Яндекс HTML'].map(s=>(
                 <div key={s} style={{padding:'4px 9px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED}}>{s}</div>
               ))}
             </div>
-            <input
+            <textarea
               autoFocus
-              placeholder="https://open.spotify.com/playlist/..."
+              rows={importUrl.startsWith('<')?4:2}
+              placeholder={lang==='ru'
+                ?'Ссылка: https://open.spotify.com/playlist/...\nЯндекс: <iframe ... src="https://music.yandex.ru/iframe/playlist/...">...'
+                :'Link: https://open.spotify.com/playlist/...\nYandex: <iframe ... src="https://music.yandex.ru/iframe/playlist/...">...'}
               value={importUrl}
               onChange={e=>setImportUrl(e.target.value)}
-              style={{width:'100%',padding:'11px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
+              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:`1px solid ${isYandexHtml?'rgba(239,191,127,0.4)':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:6,resize:'none' as const,lineHeight:1.6,fontFamily:'inherit'}}
             />
+            {isYandexHtml&&(
+              <div style={{fontSize:10,color:'#EFBF7F',marginBottom:8,padding:'6px 10px',background:'rgba(239,191,127,0.06)',borderRadius:8}}>
+                ✓ {lang==='ru'?'Обнаружен HTML-код Яндекс Музыки':'Yandex Music embed HTML detected'}
+              </div>
+            )}
+            {isYandexUrl&&(
+              <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:8,padding:'6px 10px',background:BG2,borderRadius:8,lineHeight:1.5}}>
+                💡 {lang==='ru'?'Для Яндекс плейлистов лучше вставить HTML-код: откройте плейлист → ··· → Поделиться → HTML-код':'For Yandex playlists paste the embed HTML: open playlist → ··· → Share → Embed code'}
+              </div>
+            )}
             {importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
             <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()} style={{width:'100%',padding:'12px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s ease',...tap}}>
               {lang==='ru'?'Найти плейлист':lang==='uk'?'Знайти плейлист':'Find Playlist'}
             </button>
           </div>
-        )}
+          );
+        })()}
 
         {(importStep==='needs_token'||importStep==='needs_token_done')&&(
           <div>
