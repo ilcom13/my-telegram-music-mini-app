@@ -2443,7 +2443,7 @@ export default function App(){
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
-            <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.95) 100%)'}}/>
+            {topCover&&<div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.95) 100%)'}}/>}
             <div style={{position:'relative',zIndex:1,padding:'14px 16px 20px'}}>
               <button onPointerDown={()=>setScreen('profile')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px 4px 0',display:'flex',alignItems:'center',gap:4,marginBottom:16,...tap}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2645,21 +2645,26 @@ export default function App(){
             </button>
           </div>
  
-          <div style={{
+          <div
+            style={{
             position:'absolute',
             left:12,right:12,
             bottom:8,
-            height:18,
-            zIndex:1,
+            height:22,
+            zIndex:10,
             display:'flex',
             alignItems:'center',
             gap:8,
-          }}>
-            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0}}>{curTime}</span>
+            pointerEvents:'auto',
+          }}
+            onPointerDown={e=>e.stopPropagation()}
+            onClick={e=>e.stopPropagation()}
+          >
+            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0,pointerEvents:'none' as const}}>{curTime}</span>
             <div style={{flex:1,minWidth:0}}>
               <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
             </div>
-            <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0}}>{current.duration}</span>
+            <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0,pointerEvents:'none' as const}}>{current.duration}</span>
           </div>
         </div>
       )}
