@@ -489,6 +489,16 @@ export default function App(){
   const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
   const[streakDays,setStreakDays]=useState<string[]>([]);
   const[maxStreak,setMaxStreak]=useState(0);
+
+  // Monthly stats: current month accumulator + last completed month archive
+  type MonthTrackEntry={title:string;artist:string;cover:string;count:number};
+  type MonthData={month:string;totalSec:number;trackPlays:Record<string,MonthTrackEntry>;listenedIds:string[]};
+  const[monthStats,setMonthStats]=useState<{current:MonthData;prev:MonthData|null;firstEverMonth:string|null}>(()=>{
+    try{const s=localStorage.getItem('mst47');if(s)return JSON.parse(s);}catch{}
+    const m=new Date().toISOString().slice(0,7);
+    return{current:{month:m,totalSec:0,trackPlays:{},listenedIds:[]},prev:null,firstEverMonth:null};
+  });
+  const monthStatsRef=useRef(monthStats);
   const listenTimer=useRef<ReturnType<typeof setInterval>|null>(null);
   const listenSec=useRef(0);
   const listenTrackId=useRef('');
@@ -666,6 +676,29 @@ export default function App(){
   useEffect(()=>{trackPlaysRef.current=trackPlays;},[trackPlays]);
   useEffect(()=>{streakDaysRef.current=streakDays;},[streakDays]);
   useEffect(()=>{maxStreakRef.current=maxStreak;},[maxStreak]);
+  useEffect(()=>{monthStatsRef.current=monthStats;},[monthStats]);
+
+  // Month rollover check — runs on mount and when app becomes active
+  useEffect(()=>{
+    const checkMonthRollover=()=>{
+      const now=new Date().toISOString().slice(0,7); // "2026-03"
+      setMonthStats(prev=>{
+        if(prev.current.month===now)return prev; // same month, no change
+        // Month changed — archive current into prev, start fresh
+        const isFirst=prev.firstEverMonth===null;
+        const next={
+          current:{month:now,totalSec:0,trackPlays:{},listenedIds:[]},
+          prev: isFirst?null:prev.current, // don't archive if it was the very first month (incomplete)
+          firstEverMonth: prev.firstEverMonth??prev.current.month,
+        };
+        try{localStorage.setItem('mst47',JSON.stringify(next));}catch{}
+        return next;
+      });
+    };
+    checkMonthRollover();
+    const interval=setInterval(checkMonthRollover,60*1000); // check every minute
+    return()=>clearInterval(interval);
+  },[]);
   useEffect(()=>{likedRef.current=liked;},[liked]);
   useEffect(()=>{playlistsRef.current=playlists;},[playlists]);
   useEffect(()=>{volumeRef.current=volume;},[volume]);
@@ -836,10 +869,32 @@ export default function App(){
       if(!isPlayingRef.current||!audio.current||audio.current.paused)return;
       listenSec.current+=1;
       setTotalSec(prev=>{const n=prev+1;try{localStorage.setItem('tsec47',String(n));}catch{}return n;});
+      // Monthly stats: accumulate seconds
+      setMonthStats(prev=>{
+        const now=new Date().toISOString().slice(0,7);
+        if(prev.current.month!==now)return prev; // rollover will handle it
+        const next={...prev,current:{...prev.current,totalSec:prev.current.totalSec+1}};
+        try{localStorage.setItem('mst47',JSON.stringify(next));}catch{}
+        return next;
+      });
       if(listenSec.current===40){
         const tid=listenTrackId.current;
         setListenedIds(prev=>{if(prev.includes(tid))return prev;const n=[...prev,tid];try{localStorage.setItem('lst47',JSON.stringify(n));}catch{}return n;});
         setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
+        // Monthly stats: record track play
+        setMonthStats(prev=>{
+          const now=new Date().toISOString().slice(0,7);
+          if(prev.current.month!==now)return prev;
+          const cur=prev.current;
+          const entry=cur.trackPlays[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};
+          const newListenedIds=cur.listenedIds.includes(tid)?cur.listenedIds:[...cur.listenedIds,tid];
+          const next={...prev,current:{...cur,
+            trackPlays:{...cur.trackPlays,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}},
+            listenedIds:newListenedIds,
+          }};
+          try{localStorage.setItem('mst47',JSON.stringify(next));}catch{}
+          return next;
+        });
       }
     },1000);
 
@@ -1779,6 +1834,7 @@ export default function App(){
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
+        @keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.65)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
@@ -2126,9 +2182,9 @@ export default function App(){
                     <div onPointerDown={()=>setOpenPlId(isOpen?null:pl.id)} style={{padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
                       <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                       <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div></div>
-                      <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/></button>
-                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,opacity:isOpen?1:0,transform:isOpen?'scale(1)':'scale(0.7)',transition:'opacity 0.2s ease, transform 0.2s ease',pointerEvents:isOpen?'auto':'none',...tap}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,marginRight:isOpen?6:0,transition:'margin-right 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/></button>
+                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,opacity:isOpen?0.5:0,transform:isOpen?'scale(1)':'scale(0.6)',transition:'opacity 0.22s ease, transform 0.22s ease',pointerEvents:isOpen?'auto':'none',...tap}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c06060" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                       </button>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
@@ -2277,14 +2333,147 @@ export default function App(){
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
                     {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
                   </div>
-                  <div style={{position:'relative',zIndex:1,padding:'0 16px',animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
-                    <button onPointerDown={()=>{}} style={{width:'100%',padding:'11px 14px',background:'rgba(30,30,30,0.8)',border:'1px solid #252525',borderRadius:12,color:TEXT_SEC,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,marginBottom:12,transition:'background 0.2s ease',...tap}}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                      <span style={{color:TEXT_PRIMARY,fontSize:13}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly stats'}</span>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{marginLeft:'auto'}}><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
-                      <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'12px'}}>
+                  {/* ── MONTHLY STATS + ALL STATS ── */}
+                  <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
+                  {(()=>{
+                    const stat=monthStats.prev; // show last completed month
+                    const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
+                    const now=new Date().toISOString().slice(0,7);
+                    const monthNames:{[k:string]:string}={
+                      '01':lang==='ru'?'января':lang==='uk'?'січня':lang==='kk'?'қаңтар':lang==='pl'?'stycznia':lang==='tr'?'Ocak':'January',
+                      '02':lang==='ru'?'февраля':lang==='uk'?'лютого':lang==='kk'?'ақпан':lang==='pl'?'lutego':lang==='tr'?'Şubat':'February',
+                      '03':lang==='ru'?'марта':lang==='uk'?'березня':lang==='kk'?'наурыз':lang==='pl'?'marca':lang==='tr'?'Mart':'March',
+                      '04':lang==='ru'?'апреля':lang==='uk'?'квітня':lang==='kk'?'сәуір':lang==='pl'?'kwietnia':lang==='tr'?'Nisan':'April',
+                      '05':lang==='ru'?'мая':lang==='uk'?'травня':lang==='kk'?'мамыр':lang==='pl'?'maja':lang==='tr'?'Mayıs':'May',
+                      '06':lang==='ru'?'июня':lang==='uk'?'червня':lang==='kk'?'маусым':lang==='pl'?'czerwca':lang==='tr'?'Haziran':'June',
+                      '07':lang==='ru'?'июля':lang==='uk'?'липня':lang==='kk'?'шілде':lang==='pl'?'lipca':lang==='tr'?'Temmuz':'July',
+                      '08':lang==='ru'?'августа':lang==='uk'?'серпня':lang==='kk'?'тамыз':lang==='pl'?'sierpnia':lang==='tr'?'Ağustos':'August',
+                      '09':lang==='ru'?'сентября':lang==='uk'?'вересня':lang==='kk'?'қыркүйек':lang==='pl'?'września':lang==='tr'?'Eylül':'September',
+                      '10':lang==='ru'?'октября':lang==='uk'?'жовтня':lang==='kk'?'қазан':lang==='pl'?'października':lang==='tr'?'Ekim':'October',
+                      '11':lang==='ru'?'ноября':lang==='uk'?'листопада':lang==='kk'?'қараша':lang==='pl'?'listopada':lang==='tr'?'Kasım':'November',
+                      '12':lang==='ru'?'декабря':lang==='uk'?'грудня':lang==='kk'?'желтоқсан':lang==='pl'?'grudnia':lang==='tr'?'Aralık':'December',
+                    };
+                    const fmtMonth=(m:string)=>{
+                      const mm=m.slice(5,7);const yyyy=m.slice(0,4);
+                      return lang==='ru'||lang==='uk'||lang==='kk'?`${monthNames[mm]} ${yyyy}`:`${monthNames[mm]} ${yyyy}`;
+                    };
+                    const fmtSec=(s:number)=>{
+                      const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);
+                      if(lang==='ru'||lang==='uk')return h>0?`${h} ч ${m} мин`:`${m} мин`;
+                      if(lang==='kk')return h>0?`${h} сағ ${m} мин`:`${m} мин`;
+                      if(lang==='pl')return h>0?`${h} godz ${m} min`:`${m} min`;
+                      if(lang==='tr')return h>0?`${h} sa ${m} dk`:`${m} dk`;
+                      return h>0?`${h}h ${m}m`:`${m}m`;
+                    };
+
+                    if(isFirstEver){
+                      return(
+                        <div style={{background:'rgba(25,25,25,0.85)',border:'1px solid #222',borderRadius:12,padding:'14px',marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
+                          <div style={{fontSize:22}}>📊</div>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>
+                              {lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly Stats'}
+                            </div>
+                            <div style={{fontSize:11,color:TEXT_SEC,lineHeight:1.5}}>
+                              {lang==='ru'?'Дождись конца месяца — покажем твою статистику за этот месяц':lang==='uk'?'Дочекайся кінця місяця — покажемо статистику':lang==='kk'?'Ай соңын күт — статистика дайын болады':lang==='pl'?'Poczekaj do końca miesiąca':lang==='tr'?'Ayın sonunu bekle':'Wait until end of month — we\'ll show your stats then'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if(!stat){
+                      // Has firstEverMonth but no prev — current month is being collected, show progress
+                      const cur=monthStats.current;
+                      const topTracks=Object.entries(cur.trackPlays).sort((a,b)=>b[1].count-a[1].count).slice(0,3);
+                      return(
+                        <div style={{background:'rgba(25,25,25,0.85)',border:`1px solid ${ACC}22`,borderRadius:12,padding:'14px',marginBottom:12}}>
+                          <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7,display:'flex',alignItems:'center',gap:6}}>
+                            <div style={{width:6,height:6,borderRadius:'50%',background:'#7ecf7e',animation:'dotPulse 1.6s ease infinite'}}/>
+                            {lang==='ru'?`Собираем ${fmtMonth(cur.month)}...`:lang==='uk'?`Збираємо ${fmtMonth(cur.month)}...`:`Collecting ${fmtMonth(cur.month)}...`}
+                          </div>
+                          <div style={{fontSize:14,fontWeight:700,color:ACC,marginBottom:2}}>{fmtSec(cur.totalSec)}</div>
+                          <div style={{fontSize:11,color:TEXT_SEC}}>{cur.listenedIds.length} {lang==='ru'?'треков прослушано':lang==='uk'?'треків прослухано':'tracks listened'}</div>
+                          {topTracks.length>0&&<div style={{marginTop:8,fontSize:11,color:TEXT_MUTED}}>{lang==='ru'?'Топ пока:':lang==='uk'?'Топ поки:':'Top so far:'} {topTracks.map(([,v])=>v.artist).filter((v,i,a)=>a.indexOf(v)===i).slice(0,2).join(', ')}</div>}
+                        </div>
+                      );
+                    }
+
+                    // Full month stats to display
+                    const topTracks=Object.entries(stat.trackPlays).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+                    const topTrack=topTracks[0];
+                    const totalPlays=Object.values(stat.trackPlays).reduce((s,v)=>s+v.count,0);
+
+                    return(
+                      <div style={{marginBottom:12}}>
+                        {/* Header */}
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                          <div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY}}>
+                            {lang==='ru'?`📊 Итоги ${fmtMonth(stat.month)}`:lang==='uk'?`📊 Підсумки ${fmtMonth(stat.month)}`:lang==='kk'?`📊 ${fmtMonth(stat.month)} қорытындысы`:lang==='pl'?`📊 Podsumowanie ${fmtMonth(stat.month)}`:lang==='tr'?`📊 ${fmtMonth(stat.month)} Özeti`:`📊 ${fmtMonth(stat.month)} Recap`}
+                          </div>
+                        </div>
+
+                        {/* Time + tracks grid */}
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:7}}>
+                          <div style={{background:'rgba(25,25,25,0.9)',border:`1px solid ${ACC}22`,borderRadius:11,padding:'11px 12px'}}>
+                            <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:5,textTransform:'uppercase' as const,letterSpacing:0.7}}>
+                              {lang==='ru'?'Время':lang==='uk'?'Час':lang==='kk'?'Уақыт':lang==='pl'?'Czas':lang==='tr'?'Süre':'Time'}
+                            </div>
+                            <div style={{fontSize:17,fontWeight:700,color:ACC}}>{fmtSec(stat.totalSec)}</div>
+                          </div>
+                          <div style={{background:'rgba(25,25,25,0.9)',border:'1px solid #222',borderRadius:11,padding:'11px 12px'}}>
+                            <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:5,textTransform:'uppercase' as const,letterSpacing:0.7}}>
+                              {lang==='ru'?'Треков':lang==='uk'?'Треків':lang==='kk'?'Трек':lang==='pl'?'Utworów':lang==='tr'?'Parça':'Tracks'}
+                            </div>
+                            <div style={{fontSize:17,fontWeight:700,color:TEXT_PRIMARY}}>{stat.listenedIds.length}</div>
+                          </div>
+                        </div>
+
+                        {/* Top track */}
+                        {topTrack&&(
+                          <div style={{background:'rgba(25,25,25,0.9)',border:`1px solid ${ACC}22`,borderRadius:11,padding:'11px 12px',marginBottom:7,display:'flex',alignItems:'center',gap:10}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',background:ACC,flexShrink:0}}/>
+                            <Img src={topTrack[1].cover||''} size={40} radius={7}/>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2,textTransform:'uppercase' as const,letterSpacing:0.7}}>
+                                {lang==='ru'?'Трек месяца':lang==='uk'?'Трек місяця':lang==='kk'?'Ай треги':lang==='pl'?'Utwór miesiąca':lang==='tr'?'Ayın parçası':'Track of the month'}
+                              </div>
+                              <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTrack[1].title}</div>
+                              <div style={{fontSize:10,color:TEXT_SEC}}>{topTrack[1].artist}</div>
+                            </div>
+                            <div style={{textAlign:'center' as const,flexShrink:0}}>
+                              <div style={{fontSize:18,fontWeight:700,color:ACC}}>{topTrack[1].count}</div>
+                              <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'раз':lang==='uk'?'разів':lang==='kk'?'рет':lang==='pl'?'razy':lang==='tr'?'kez':'×'}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Top 5 list */}
+                        {topTracks.length>1&&(
+                          <div style={{background:'rgba(25,25,25,0.9)',border:'1px solid #222',borderRadius:11,padding:'10px 12px',marginBottom:7}}>
+                            <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:8,textTransform:'uppercase' as const,letterSpacing:0.7}}>
+                              {lang==='ru'?'Топ треков за месяц':lang==='uk'?'Топ треків за місяць':lang==='kk'?'Ай топ тректері':lang==='pl'?'Top utworów miesiąca':lang==='tr'?'Ayın en çok çalınanları':'Top tracks of the month'}
+                            </div>
+                            {topTracks.map(([,v],i)=>(
+                              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:i<topTracks.length-1?'1px solid #1a1a1a':'none'}}>
+                                <div style={{fontSize:11,fontWeight:700,color:i===0?ACC:TEXT_MUTED,width:14,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+                                <Img src={v.cover||''} size={30} radius={5}/>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:11,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
+                                  <div style={{fontSize:9,color:TEXT_SEC}}>{v.artist}</div>
+                                </div>
+                                <div style={{fontSize:11,fontWeight:600,color:TEXT_SEC,flexShrink:0}}>{v.count}×</div>
+                              </div>
+                            ))}
+                            {totalPlays>0&&<div style={{fontSize:10,color:TEXT_MUTED,marginTop:7,textAlign:'center' as const}}>{lang==='ru'?`${totalPlays} прослушиваний за месяц`:lang==='uk'?`${totalPlays} прослуховувань за місяць`:`${totalPlays} plays this month`}</div>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{height:1,background:'#1e1e1e',marginBottom:12}}/>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
                         <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Времени в музыке':lang==='uk'?'В музиці':lang==='kk'?'Музыкада':lang==='pl'?'W muzyce':lang==='tr'?'Müzikte':'Time in music'}</div>
                         <div style={{fontSize:18,fontWeight:700,color:ACC}}>{fmtTime()}</div>
                       </div>
@@ -2317,6 +2506,7 @@ export default function App(){
                         </div>
                       </div>
                     )}
+                  </div>
                   </div>
                 </div>
               );
