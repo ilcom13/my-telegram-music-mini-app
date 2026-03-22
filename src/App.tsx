@@ -342,6 +342,7 @@ function MiniSlider({val,onChange}:{val:number;onChange:(v:number)=>void}){
 
   const onPointerDown=(e:React.PointerEvent<HTMLDivElement>)=>{
     e.stopPropagation();
+    e.preventDefault();
     const el=trackRef.current;
     if(!el)return;
     setDragging(true);
@@ -534,6 +535,9 @@ export default function App(){
   const[liked,setLiked]=useState<Track[]>([]);
   const[playlists,setPlaylists]=useState<Playlist[]>([]);
   const[openPlId,setOpenPlId]=useState<string|null>(null);
+  const[plMenuId,setPlMenuId]=useState<string|null>(null);
+  const[renamePlId,setRenamePlId]=useState<string|null>(null);
+  const[renamePlVal,setRenamePlVal]=useState('');
   const[history,setHistory]=useState<Track[]>([]);
   const[recs,setRecs]=useState<Track[]>([]);
   const[recsVersion,setRecsVersion]=useState(0);
@@ -1823,7 +1827,7 @@ export default function App(){
   );
 
   return(
-    <div onPointerDown={()=>menuId&&setMenuId(null)} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
+    <div onPointerDown={()=>{if(menuId)setMenuId(null);if(plMenuId)setPlMenuId(null);}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -2179,15 +2183,40 @@ export default function App(){
                 {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
                 {playlists.map(pl=>{const isOpen=openPlId===pl.id;return(
                   <div key={pl.id} style={{background:BG2,border:'1px solid #1e1e1e',borderRadius:12,marginBottom:7,overflow:'hidden'}}>
-                    <div onPointerDown={()=>setOpenPlId(isOpen?null:pl.id)} style={{padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
+                    {/* Rename inline */}
+                    {renamePlId===pl.id&&(
+                      <div style={{padding:'8px 13px',background:BG3,display:'flex',gap:6,alignItems:'center'}}>
+                        <input autoFocus value={renamePlVal} onChange={e=>setRenamePlVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}if(e.key==='Escape')setRenamePlId(null);}} style={{flex:1,padding:'7px 10px',fontSize:12,background:BG,border:'1px solid #3a3a3a',borderRadius:8,color:TEXT_PRIMARY,outline:'none'}}/>
+                        <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}} style={{padding:'7px 12px',background:ACC,border:'none',borderRadius:8,color:BG,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>{t('create')}</button>
+                        <button onPointerDown={()=>setRenamePlId(null)} style={{padding:'7px 10px',background:BG3,border:'none',borderRadius:8,color:TEXT_SEC,fontSize:11,cursor:'pointer',...tap}}>{t('cancel')}</button>
+                      </div>
+                    )}
+                    <div onPointerDown={()=>{setPlMenuId(null);setOpenPlId(isOpen?null:pl.id);}} style={{padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'background 0.15s ease',...tap}}>
                       <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                       <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{pl.name}</div><div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':'tracks'}</div></div>
-                      <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,marginRight:isOpen?6:0,transition:'margin-right 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'6px 0 6px 10px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:3}}/></button>
-                      <button onPointerDown={e=>{e.stopPropagation();if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 2px',flexShrink:0,opacity:isOpen?0.5:0,transform:isOpen?'scale(1)':'scale(0.6)',transition:'opacity 0.22s ease, transform 0.22s ease',pointerEvents:isOpen?'auto':'none',...tap}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c06060" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      {/* 3-dot menu */}
+                      <button onPointerDown={e=>{e.stopPropagation();setPlMenuId(plMenuId===pl.id?null:pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.5" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="1.5" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="1.5" fill={TEXT_MUTED}/></svg>
                       </button>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
+                      {/* Play + arrow grouped together */}
+                      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                        <button onPointerDown={e=>{e.stopPropagation();playPl(pl);}} style={{width:32,height:32,minWidth:32,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}><div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${BG}`,marginLeft:2}}/></button>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round" style={{transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
                     </div>
+                    {/* 3-dot dropdown */}
+                    {plMenuId===pl.id&&(
+                      <div onPointerDown={e=>e.stopPropagation()} style={{margin:'0 13px 10px',background:BG3,border:'1px solid #2a2a2a',borderRadius:10,overflow:'hidden',animation:'slideDown 0.15s ease both'}}>
+                        <button onPointerDown={()=>{setPlMenuId(null);setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{width:'100%',padding:'11px 14px',background:'none',border:'none',borderBottom:'1px solid #222',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:TEXT_PRIMARY,fontSize:13,...tap}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          {lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':lang==='kk'?'Атын өзгерту':lang==='pl'?'Zmień nazwę':lang==='tr'?'Yeniden adlandır':'Rename'}
+                        </button>
+                        <button onPointerDown={()=>{setPlMenuId(null);if(window.confirm(lang==='ru'?`Удалить плейлист "${pl.name}"?`:`Delete playlist "${pl.name}"?`))deletePl(pl.id);}} style={{width:'100%',padding:'11px 14px',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:'#d06060',fontSize:13,...tap}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                          {lang==='ru'?'Удалить плейлист':lang==='uk'?'Видалити плейлист':lang==='kk'?'Жою':lang==='pl'?'Usuń playlistę':lang==='tr'?'Çalma listesini sil':'Delete playlist'}
+                        </button>
+                      </div>
+                    )}
                     {isOpen&&(<div className="playlist-tracks"><div style={{display:'flex',gap:5,padding:'0 13px 9px'}}>
                       <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'7px',background:ACC_DIM,border:'none',borderRadius:7,color:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'background 0.2s ease',...tap}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>{t('shuffle')}</button>
                       <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{flex:1,padding:'7px',background:pl.repeat?ACC:ACC_DIM,border:'none',borderRadius:7,color:pl.repeat?BG:ACC,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'background 0.2s ease,color 0.2s ease',...tap}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>{t('repeatPl')}</button>
@@ -2412,10 +2441,10 @@ export default function App(){
         return(
         <div className="screen-fade" style={{minHeight:'100vh',background:BG,overflowY:'auto',paddingBottom:100}}>
           {/* Hero */}
-          <div style={{position:'relative',minHeight:220,overflow:'hidden',marginBottom:0}}>
+          <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
             <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.95) 100%)'}}/>
-            <div style={{position:'relative',zIndex:1,padding:'14px 16px 24px'}}>
+            <div style={{position:'relative',zIndex:1,padding:'14px 16px 20px'}}>
               <button onPointerDown={()=>setScreen('profile')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 8px 4px 0',display:'flex',alignItems:'center',gap:4,marginBottom:16,...tap}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                 <span style={{fontSize:12,color:TEXT_SEC}}>{lang==='ru'?'Профиль':lang==='uk'?'Профіль':lang==='kk'?'Профиль':lang==='pl'?'Profil':lang==='tr'?'Profil':'Profile'}</span>
