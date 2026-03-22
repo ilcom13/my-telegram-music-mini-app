@@ -2439,7 +2439,7 @@ export default function App(){
         const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
         const isCollecting=!monthStats.prev;
         return(
-        <div className="screen-fade" style={{minHeight:'100vh',background:BG,overflowY:'auto',paddingBottom:100}}>
+        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
