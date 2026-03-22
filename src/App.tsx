@@ -1399,60 +1399,56 @@ export default function App(){
 
         {(importStep==='needs_token'||importStep==='needs_token_done')&&(
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,padding:'12px',background:'rgba(239,191,127,0.08)',borderRadius:10,border:'1px solid rgba(239,191,127,0.2)'}}>
-              <div style={{fontSize:24,flexShrink:0}}>🟡</div>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>
-                  {lang==='ru'?'Нужна авторизация Яндекс Музыки':'Yandex Music Login Required'}
-                </div>
-                <div style={{fontSize:11,color:TEXT_SEC,lineHeight:1.5}}>
-                  {lang==='ru'?'UUID-плейлисты доступны только авторизованным пользователям':'UUID playlists require authorization'}
-                </div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'11px 12px',background:'rgba(239,191,127,0.07)',borderRadius:10,border:'1px solid rgba(239,191,127,0.18)'}}>
+              <div style={{fontSize:20,flexShrink:0}}>🟡</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.5}}>
+                {lang==='ru'
+                  ?'Яндекс Музыка не даёт читать плейлисты напрямую. Вставь список треков вручную — мы найдём их на SoundCloud.'
+                  :'Yandex Music doesn\'t allow direct playlist access. Paste your track list and we\'ll find them on SoundCloud.'}
               </div>
             </div>
 
-            {importStep==='needs_token_done'&&yandexToken&&(
-              <div style={{padding:'10px 12px',background:'rgba(100,200,100,0.08)',border:'1px solid rgba(100,200,100,0.2)',borderRadius:10,marginBottom:12,display:'flex',alignItems:'center',gap:8}}>
-                <div style={{fontSize:16}}>✅</div>
-                <div style={{fontSize:12,color:'#7ecf7e'}}>{lang==='ru'?'Авторизация успешна! Токен сохранён.':'Authorized! Token saved.'}</div>
-              </div>
-            )}
-
-            {importStep==='needs_token_done'&&yandexToken?(
-              <button
-                onPointerDown={()=>runImport(yandexToken)}
-                style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginBottom:8,...tap}}>
-                {lang==='ru'?'▶ Импортировать плейлист':'▶ Import Playlist'}
-              </button>
-            ):(
-              <button
-                onPointerDown={()=>{
-                  try{sessionStorage.setItem('ym_import_url',importUrl);}catch{}
-                  window.open(`${W}/auth`,'_blank');
-                }}
-                style={{width:'100%',padding:'13px',background:'#fc0',border:'none',borderRadius:10,color:'#000',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:12,...tap}}>
-                <span style={{fontSize:16}}>🟡</span>
-                {lang==='ru'?'Войти через Яндекс':'Login with Yandex'}
-              </button>
-            )}
-
-            <div style={{position:'relative',margin:'12px 0',display:'flex',alignItems:'center',gap:8}}>
-              <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
-              <span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{lang==='ru'?'уже есть токен?':'have a token?'}</span>
-              <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
+            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:6,lineHeight:1.6}}>
+              {lang==='ru'
+                ?'Как скопировать: открой плейлист в Яндекс Музыке → выдели все треки → скопируй в формате "Артист — Трек"'
+                :'Open playlist in Yandex Music → copy track list in "Artist — Track" format'}
             </div>
 
-            <input
-              placeholder="OAuth y0_AgAAAA..."
+            <textarea
+              placeholder={'Артист — Название трека\nАртист2 — Название трека 2\n...'}
               value={tokenInput}
               onChange={e=>setTokenInput(e.target.value)}
-              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8,fontFamily:'monospace'}}
+              rows={8}
+              style={{width:'100%',padding:'11px 13px',fontSize:12,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8,fontFamily:'inherit',resize:'vertical' as const,lineHeight:1.6}}
             />
+
+            <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:10}}>
+              {lang==='ru'
+                ?`Найдено строк: ${tokenInput.split('\n').filter(l=>l.trim()&&l.includes('—')||l.includes('-')).length}`
+                :`Lines found: ${tokenInput.split('\n').filter(l=>l.trim()&&(l.includes('—')||l.includes('-'))).length}`}
+            </div>
+
             <button
-              onPointerDown={()=>{if(!tokenInput.trim())return;saveYandexToken(tokenInput.trim());runImport(tokenInput.trim());}}
+              onPointerDown={()=>{
+                if(!tokenInput.trim())return;
+                // Parse "Artist — Track" lines into importPreview format
+                const lines=tokenInput.split('\n').map(l=>l.trim()).filter(Boolean);
+                const parsed:{sourceTitle:string;sourceArtist:string}[]=[];
+                for(const line of lines){
+                  const sep=line.includes('—')?'—':line.includes(' - ')?' - ':null;
+                  if(!sep)continue;
+                  const idx=line.indexOf(sep);
+                  const artist=line.slice(0,idx).trim();
+                  const title=line.slice(idx+sep.length).trim();
+                  if(artist&&title)parsed.push({sourceTitle:title,sourceArtist:artist});
+                }
+                if(!parsed.length){setImportError(lang==='ru'?'Не найдено строк в формате "Артист — Трек"':'No lines in "Artist — Track" format');return;}
+                setImportPreview({source:'yandex',title:lang==='ru'?'Яндекс плейлист':'Yandex Playlist',cover:'',totalTracks:parsed.length,tracks:parsed});
+                setImportStep('preview');
+              }}
               disabled={!tokenInput.trim()}
-              style={{width:'100%',padding:'11px',background:tokenInput.trim()?BG3:BG3,border:`1px solid ${tokenInput.trim()?'#3a3a3a':'#252525'}`,borderRadius:10,color:tokenInput.trim()?TEXT_PRIMARY:TEXT_MUTED,fontSize:12,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',marginBottom:6,...tap}}>
-              {lang==='ru'?'Продолжить с токеном':'Continue with Token'}
+              style={{width:'100%',padding:'12px',background:tokenInput.trim()?ACC:BG3,border:'none',borderRadius:10,color:tokenInput.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:600,cursor:tokenInput.trim()?'pointer':'default',marginBottom:6,...tap}}>
+              {lang==='ru'?`Найти треки на SoundCloud`:'Find on SoundCloud'}
             </button>
 
             <button onPointerDown={()=>setImportStep('idle')} style={{width:'100%',padding:'9px',background:'none',border:'none',color:TEXT_MUTED,fontSize:12,cursor:'pointer',...tap}}>
