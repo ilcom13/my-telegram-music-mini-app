@@ -595,7 +595,6 @@ export default function App(){
         if(token){
           saveYandexToken(token);
           window.history.replaceState(null,'',window.location.pathname+window.location.search);
-          // Restore import URL saved before redirect
           const savedUrl=sessionStorage.getItem('ym_import_url')||'';
           if(savedUrl){sessionStorage.removeItem('ym_import_url');setImportUrl(savedUrl);}
           setShowImport(true);
@@ -605,7 +604,8 @@ export default function App(){
     }
   },[]);
 
-
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
       if(e.code==='Space'&&e.target===document.body){
         e.preventDefault();
         if(audio.current){
