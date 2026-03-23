@@ -2550,7 +2550,7 @@ export default function App(){
       })()}
 
       {/* ── PLAYLIST PAGE ── */}
-      {openPlPage&&(()=>{
+      {openPlPage&&screen==='library'&&(()=>{
         const pl=playlists.find(p=>p.id===openPlPage);
         if(!pl)return null;
         const isPinned=pinnedPlId===pl.id;
@@ -2586,43 +2586,45 @@ export default function App(){
               </div>
               {/* Action buttons */}
               <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
-                <button onPointerDown={()=>playPl(pl)} style={{flex:1,padding:'11px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill={BG}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <button onPointerDown={()=>playPl(pl)} style={{flex:1,padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill={BG}><polygon points="5 3 19 12 5 21 5 3"/></svg>
                   {lang==='ru'?'Слушать':lang==='uk'?'Слухати':lang==='pl'?'Słuchaj':lang==='tr'?'Dinle':'Play'}
                 </button>
-                <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'11px',background:ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:12,color:ACC,fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-                  {lang==='ru'?'Shuffle':lang==='uk'?'Shuffle':'Shuffle'}
+                <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'12px',background:ACC_DIM,border:`1px solid ${ACC}33`,borderRadius:12,color:ACC,fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                  {lang==='ru'?'Shuffle':'Shuffle'}
                 </button>
-                <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:44,height:44,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:48,height:48,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
                 </button>
-                {/* 3 dots menu */}
-                <div style={{position:'relative'}}>
-                  <button onPointerDown={e=>{e.stopPropagation();setPlMenuId(plMenuId===pl.id?null:pl.id);}} style={{width:44,height:44,borderRadius:12,background:BG3,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.5" fill={TEXT_SEC}/><circle cx="12" cy="12" r="1.5" fill={TEXT_SEC}/><circle cx="12" cy="19" r="1.5" fill={TEXT_SEC}/></svg>
-                  </button>
-                  {plMenuId===pl.id&&(
-                    <div onPointerDown={e=>e.stopPropagation()} style={{position:'absolute',right:0,top:48,background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:12,overflow:'hidden',zIndex:10,minWidth:190,animation:'scaleIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
-                      <button onPointerDown={()=>{setPlMenuId(null);pinPl(pl.id);}} style={{width:'100%',padding:'12px 16px',background:'none',border:'none',borderBottom:'1px solid #2a2a2a',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:TEXT_PRIMARY,fontSize:13,textAlign:'left' as const,...tap}}>
-                        <span style={{fontSize:16}}>{isPinned?'📌':'📌'}</span>
-                        {isPinned?(lang==='ru'?'Открепить':lang==='uk'?'Відкріпити':'Unpin from home'):(lang==='ru'?'Закрепить на главной':lang==='uk'?'Закріпити на головній':'Pin to home')}
-                      </button>
-                      <button onPointerDown={()=>{setPlMenuId(null);setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{width:'100%',padding:'12px 16px',background:'none',border:'none',borderBottom:'1px solid #2a2a2a',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:TEXT_PRIMARY,fontSize:13,textAlign:'left' as const,...tap}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        {lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':'Rename'}
-                      </button>
-                      <button onPointerDown={()=>{setPlMenuId(null);if(window.confirm(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`)){deletePl(pl.id);setOpenPlPage(null);}}} style={{width:'100%',padding:'12px 16px',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:'#d06060',fontSize:13,textAlign:'left' as const,...tap}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                        {lang==='ru'?'Удалить плейлист':lang==='uk'?'Видалити':'Delete playlist'}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {/* 3 dots menu — fixed overlay */}
+                <button onPointerDown={e=>{e.stopPropagation();setPlMenuId(plMenuId===pl.id?null:pl.id);}} style={{width:48,height:48,borderRadius:12,background:BG3,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_SEC}/><circle cx="12" cy="12" r="2" fill={TEXT_SEC}/><circle cx="12" cy="19" r="2" fill={TEXT_SEC}/></svg>
+                </button>
               </div>
             </div>
           </div>
-          {/* Track list */}
+          {/* 3-dot dropdown — fixed on top of everything */}
+          {plMenuId===pl.id&&(
+            <>
+              <div onPointerDown={()=>setPlMenuId(null)} style={{position:'fixed',inset:0,zIndex:199}}/>
+              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:120,right:16,left:16,background:'#1e1e1e',border:'1px solid #333',borderRadius:16,overflow:'hidden',zIndex:200,animation:'scaleIn 0.15s ease both',boxShadow:'0 16px 48px rgba(0,0,0,0.7)'}}>
+                <div style={{padding:'12px 16px',borderBottom:'1px solid #2a2a2a',fontSize:11,color:TEXT_MUTED,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:0.8}}>{pl.name}</div>
+                <button onPointerDown={()=>{setPlMenuId(null);pinPl(pl.id);}} style={{width:'100%',padding:'14px 16px',background:'none',border:'none',borderBottom:'1px solid #222',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:14,textAlign:'left' as const,...tap}}>
+                  <span style={{fontSize:18,width:24,textAlign:'center' as const}}>{isPinned?'🔓':'📌'}</span>
+                  {isPinned?(lang==='ru'?'Открепить с главной':lang==='uk'?'Відкріпити з головної':'Unpin from home'):(lang==='ru'?'Закрепить на главной':lang==='uk'?'Закріпити на головній':'Pin to home')}
+                </button>
+                <button onPointerDown={()=>{setPlMenuId(null);setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{width:'100%',padding:'14px 16px',background:'none',border:'none',borderBottom:'1px solid #222',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:14,textAlign:'left' as const,...tap}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  {lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':'Rename'}
+                </button>
+                <button onPointerDown={()=>{setPlMenuId(null);if(window.confirm(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`)){deletePl(pl.id);setOpenPlPage(null);}}} style={{width:'100%',padding:'14px 16px',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:'#e06060',fontSize:14,textAlign:'left' as const,...tap}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  {lang==='ru'?'Удалить плейлист':lang==='uk'?'Видалити плейлист':'Delete playlist'}
+                </button>
+              </div>
+            </>
+          )}
           <div>
             {pl.tracks.length===0?(
               <div style={{textAlign:'center' as const,padding:'40px 16px',color:TEXT_MUTED,fontSize:13}}>
@@ -2756,7 +2758,10 @@ export default function App(){
               key={item.id}
               item={item}
               active={screen===item.id}
-              onSelect={()=>setScreen(item.id as 'home'|'search'|'library'|'trending')}
+              onSelect={()=>{
+                if(item.id!=='library')setOpenPlPage(null);
+                setScreen(item.id as 'home'|'search'|'library'|'trending');
+              }}
             />
           ))}
         </div>
