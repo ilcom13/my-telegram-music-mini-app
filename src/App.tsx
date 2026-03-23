@@ -2115,8 +2115,8 @@ export default function App(){
                     <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pp.name}</div>
                     <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
                   </div>
-                  <button onPointerDown={e=>{e.stopPropagation();playPl(pp);}} style={{width:40,height:40,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill={BG}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <button onPointerDown={e=>{e.stopPropagation();playPl(pp);}} style={{width:44,height:44,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 12px ${ACC}55`,...tap}}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
                   </button>
                 </div>
               </div>
@@ -2595,11 +2595,11 @@ export default function App(){
                   {lang==='ru'?'Shuffle':'Shuffle'}
                 </button>
                 <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:48,height:48,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
                 </button>
                 {/* 3 dots menu — fixed overlay */}
                 <button onPointerDown={e=>{e.stopPropagation();setPlMenuId(plMenuId===pl.id?null:pl.id);}} style={{width:48,height:48,borderRadius:12,background:BG3,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_SEC}/><circle cx="12" cy="12" r="2" fill={TEXT_SEC}/><circle cx="12" cy="19" r="2" fill={TEXT_SEC}/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.2" fill={TEXT_PRIMARY}/><circle cx="12" cy="12" r="2.2" fill={TEXT_PRIMARY}/><circle cx="12" cy="19" r="2.2" fill={TEXT_PRIMARY}/></svg>
                 </button>
               </div>
             </div>
@@ -2608,7 +2608,7 @@ export default function App(){
           {plMenuId===pl.id&&(
             <>
               <div onPointerDown={()=>setPlMenuId(null)} style={{position:'fixed',inset:0,zIndex:199}}/>
-              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:120,right:16,left:16,background:'#1e1e1e',border:'1px solid #333',borderRadius:16,overflow:'hidden',zIndex:200,animation:'scaleIn 0.15s ease both',boxShadow:'0 16px 48px rgba(0,0,0,0.7)'}}>
+              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',top:16,right:16,left:16,background:'#1e1e1e',border:'1px solid #333',borderRadius:16,overflow:'hidden',zIndex:200,animation:'slideDown 0.2s cubic-bezier(0.25,0.46,0.45,0.94) both',boxShadow:'0 16px 48px rgba(0,0,0,0.8)'}}>
                 <div style={{padding:'12px 16px',borderBottom:'1px solid #2a2a2a',fontSize:11,color:TEXT_MUTED,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:0.8}}>{pl.name}</div>
                 <button onPointerDown={()=>{setPlMenuId(null);pinPl(pl.id);}} style={{width:'100%',padding:'14px 16px',background:'none',border:'none',borderBottom:'1px solid #222',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:14,textAlign:'left' as const,...tap}}>
                   <span style={{fontSize:18,width:24,textAlign:'center' as const}}>{isPinned?'🔓':'📌'}</span>
