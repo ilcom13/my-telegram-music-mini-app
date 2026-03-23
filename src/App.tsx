@@ -530,6 +530,8 @@ export default function App(){
   const[fullPlayer,setFullPlayer]=useState(false);
   const[showQueue,setShowQueue]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
+  // IDs of tracks manually added to queue (not from playlist auto-queue)
+  const[manualQIds,setManualQIds]=useState<Set<string>>(new Set());
   const[playHistory,setPlayHistory]=useState<Track[]>([]);
   const[dragIdx,setDragIdx]=useState<number|null>(null);
   const[liked,setLiked]=useState<Track[]>([]);
@@ -965,6 +967,7 @@ export default function App(){
   const playNext=()=>{
     if(queue.length>0){
       const nxt=queue[0];
+      setManualQIds(prev=>{const n=new Set(prev);n.delete(nxt.id);return n;});
       setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
       playDirect(nxt);
     } else {
@@ -1298,23 +1301,30 @@ export default function App(){
   const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
-  const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;setPlayingPlId(pl.id);playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
-  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);playTrack(sh[0]);setQueue(sh.slice(1));};
+  const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
+  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
   const smartAddQ=(track:Track)=>{
-    setQueue(prev=>{
-      const filtered=prev.filter(t=>t.id!==track.id);
-      if(playingPlId){
-        // Insert after current track (position 0)
-        return[track,...filtered];
+    // Always insert as NEXT track (position 0 in queue = plays after current)
+    // If already manually queued → remove it (toggle off)
+    setManualQIds(prev=>{
+      const next=new Set(prev);
+      if(next.has(track.id)){
+        // toggle off — remove from queue
+        next.delete(track.id);
+        setQueue(q=>q.filter(t=>t.id!==track.id));
+        return next;
       }
-      // Normal append
-      const already=prev.some(t=>t.id===track.id);
-      if(already)return prev.filter(t=>t.id!==track.id);
-      return[...prev,track];
+      // Add: insert at front of queue (plays next)
+      next.add(track.id);
+      setQueue(q=>{
+        // Remove any existing copy first, then insert at position 0
+        const without=q.filter(t=>t.id!==track.id);
+        return[track,...without];
+      });
+      return next;
     });
-    try{localStorage.setItem('q47',JSON.stringify([]));}catch{}
   };
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
@@ -2678,7 +2688,6 @@ export default function App(){
                   </div>
                 </div>
                 {[
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:lang==='ru'?'В очередь':'Add to queue',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);smartAddQ(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}},
@@ -2729,12 +2738,12 @@ export default function App(){
                   </div>
                   <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
                 </div>
-                {/* Queue icon */}
+                {/* Queue icon - gold when manually queued */}
                 <button
                   onPointerDown={e=>e.stopPropagation()}
                   onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
-                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,transition:'opacity 0.15s ease',...tap}}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                 </button>
                 {/* 3-dot */}
                 <button
