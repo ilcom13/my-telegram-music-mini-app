@@ -2665,34 +2665,28 @@ export default function App(){
               </div>
             </>
           )}
-          {/* Track 3-dot menu overlay */}
+          {/* Track 3-dot menu overlay - compact, near track */}
           {trackMenuPlId===pl.id&&trackMenuTr&&(
             <>
               <div onPointerDown={()=>{setTrackMenuPlId(null);setTrackMenuTr(null);}} style={{position:'fixed',inset:0,zIndex:199}}/>
-              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:90,right:12,left:12,background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:16,overflow:'hidden',zIndex:200,animation:'slideDown 0.18s ease both',boxShadow:'0 12px 40px rgba(0,0,0,0.8)'}}>
-                <div style={{padding:'10px 14px',borderBottom:'1px solid #252525',display:'flex',alignItems:'center',gap:10}}>
-                  <Img src={trackMenuTr.cover} size={36} radius={6}/>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{trackMenuTr.title}</div>
+              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:Math.max(80,window.innerHeight/2-100),right:12,left:12,background:'#1c1c1c',border:'1px solid #2a2a2a',borderRadius:13,overflow:'hidden',zIndex:200,animation:'scaleIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.85)'}}>
+                <div style={{padding:'9px 12px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:9,background:'#222'}}>
+                  <Img src={trackMenuTr.cover} size={32} radius={5}/>
+                  <div style={{minWidth:0,flex:1}}>
+                    <div style={{fontSize:11,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{trackMenuTr.title}</div>
                     <div style={{fontSize:10,color:TEXT_SEC}}>{trackMenuTr.artist}</div>
                   </div>
                 </div>
-                <button onPointerDown={()=>{setTrackMenuPlId(null);setTrackMenuTr(null);smartAddQ(trackMenuTr);}} style={{width:'100%',padding:'13px 16px',background:'none',border:'none',borderBottom:'1px solid #1a1a1a',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:13,...tap}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  {lang==='ru'?'В очередь':lang==='uk'?'У чергу':'Add to queue'}
-                </button>
-                <button onPointerDown={()=>{setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(trackMenuTr);}} style={{width:'100%',padding:'13px 16px',background:'none',border:'none',borderBottom:'1px solid #1a1a1a',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:13,...tap}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                  {lang==='ru'?'Поделиться':lang==='uk'?'Поділитися':'Share'}
-                </button>
-                <button onPointerDown={()=>{setTrackMenuPlId(null);const t=trackMenuTr;setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}} style={{width:'100%',padding:'13px 16px',background:'none',border:'none',borderBottom:'1px solid #1a1a1a',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:TEXT_PRIMARY,fontSize:13,...tap}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  {lang==='ru'?'К артисту':lang==='uk'?'До артиста':'Go to artist'}
-                </button>
-                <button onPointerDown={()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}} style={{width:'100%',padding:'13px 16px',background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:12,color:'#e06060',fontSize:13,...tap}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                  {lang==='ru'?'Удалить из плейлиста':lang==='uk'?'Видалити з плейлиста':'Remove from playlist'}
-                </button>
+                {[
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:lang==='ru'?'В очередь':'Add to queue',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);smartAddQ(t);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}},
+                ].map((item,ii,arr)=>(
+                  <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
+                    {item.icon}{item.label}
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -2700,59 +2694,55 @@ export default function App(){
           <div>
             {pl.tracks.length===0?(
               <div style={{textAlign:'center' as const,padding:'48px 16px',color:TEXT_MUTED,fontSize:14}}>
-                {lang==='ru'?'Плейлист пустой — добавь треки через ❤️':lang==='uk'?'Плейлист порожній':'Empty — like tracks to add them ❤️'}
+                {lang==='ru'?'Плейлист пустой — добавь треки через ❤️':'Empty — like tracks to add them ❤️'}
               </div>
             ):sortedTracks.map((tr,i)=>{
-              // Swipe state per track
+              const swipeRef={x:0,swiped:false};
               return(
-              <div key={tr.id+i}
+              <div key={tr.id+String(i)}
                 draggable={curSort==='default'}
                 onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
                 onDragOver={e=>e.preventDefault()}
                 onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-                style={{position:'relative',overflow:'hidden'}}>
-                {/* Swipe hint backgrounds */}
-                <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-start',paddingLeft:20,background:'rgba(126,207,126,0.15)',pointerEvents:'none'}}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7ecf7e" strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  <span style={{fontSize:11,color:'#7ecf7e',marginLeft:6}}>{lang==='ru'?'В очередь':'Queue'}</span>
-                </div>
-                <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:20,background:'rgba(224,96,96,0.15)',pointerEvents:'none'}}>
-                  <span style={{fontSize:11,color:'#e06060',marginRight:6}}>{lang==='ru'?'Удалить':'Remove'}</span>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                </div>
-                {/* Track row with swipe */}
-                {(()=>{
-                  let sx=0;
-                  return(
-                  <div
-                    style={{display:'flex',alignItems:'center',gap:8,padding:'9px 12px 9px 16px',background:current?.id===tr.id?ACC_DIM:BG,borderBottom:'1px solid #111',touchAction:'pan-y',willChange:'transform'}}
-                    onPointerDown={e=>{sx=e.clientX;}}
-                    onPointerUp={e=>{
-                      const dx=e.clientX-sx;
-                      if(dx>60){smartAddQ(tr);}
-                      else if(dx<-60){removeFromPl(pl.id,tr.id);}
-                    }}
-                  >
-                    {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:15,cursor:'grab',flexShrink:0,userSelect:'none'}}>⠿</div>}
-                    <div onPointerDown={(e)=>{if(Math.abs(e.clientX-sx)<10){playTrack(tr);setQueue(sortedTracks.slice(i+1));}}} style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0,cursor:'pointer'}}>
-                      <Img src={tr.cover} size={46} radius={8}/>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,color:current?.id===tr.id?ACC:TEXT_PRIMARY,fontWeight:current?.id===tr.id?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-                        <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
-                      </div>
-                      <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>{tr.duration}</div>
-                    </div>
-                    {/* Queue button */}
-                    <button onPointerDown={e=>{e.stopPropagation();smartAddQ(tr);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',flexShrink:0,opacity:0.5,...tap}}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                    </button>
-                    {/* 3-dot per track */}
-                    <button onPointerDown={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',flexShrink:0,...tap}}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
-                    </button>
+                onPointerDown={e=>{swipeRef.x=e.clientX;swipeRef.swiped=false;}}
+                onPointerUp={e=>{
+                  const dx=e.clientX-swipeRef.x;
+                  if(Math.abs(dx)>55){swipeRef.swiped=true;if(dx>0)smartAddQ(tr);else removeFromPl(pl.id,tr.id);}
+                }}
+                style={{
+                  display:'flex',alignItems:'center',gap:8,
+                  padding:'10px 12px 10px 14px',
+                  background:current?.id===tr.id?ACC_DIM:BG,
+                  borderBottom:'1px solid #111',
+                  touchAction:'pan-y',
+                  userSelect:'none' as const,
+                }}>
+                {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0}}>⠿</div>}
+                {/* Cover + info — clicking plays */}
+                <div
+                  onPointerUp={e=>{if(!swipeRef.swiped&&Math.abs(e.clientX-swipeRef.x)<10){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));e.stopPropagation();}}}
+                  style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0,cursor:'pointer'}}>
+                  <Img src={tr.cover} size={44} radius={7}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,color:current?.id===tr.id?ACC:TEXT_PRIMARY,fontWeight:current?.id===tr.id?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
+                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
                   </div>
-                  );
-                })()}
+                  <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
+                </div>
+                {/* Queue icon */}
+                <button
+                  onPointerDown={e=>e.stopPropagation()}
+                  onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </button>
+                {/* 3-dot */}
+                <button
+                  onPointerDown={e=>e.stopPropagation()}
+                  onPointerUp={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
+                </button>
               </div>
               );
             })}
