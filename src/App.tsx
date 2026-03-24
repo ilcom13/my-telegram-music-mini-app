@@ -1560,47 +1560,66 @@ export default function App(){
 
   // Playlist track row — Spotify-style full-width swipe
   const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
-    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false,pid:-1});
+    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false,pid:-1,dirLocked:false,isHoriz:false});
     const[swipeDx,setSwipeDx]=useState(0);
     const[swiping,setSwiping]=useState(false);
     const rowRef=useRef<HTMLDivElement>(null);
     const isActive=current?.id===tr.id;
     const screenW=typeof window!=='undefined'?window.innerWidth:390;
     const THRESHOLD=screenW*0.22;
-    const swipeDir=swipeDx>6?'right':swipeDx<-6?'left':'';
+    const swipeDir=swipeDx>4?'right':swipeDx<-4?'left':'';
     const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
     const confirmed=Math.abs(ps.current.dx)>=THRESHOLD;
 
     const onDown=(e:React.PointerEvent)=>{
       const fromBtn=!!(e.target as HTMLElement).closest('button');
       const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
-      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn,pid:e.pointerId};
+      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn,pid:e.pointerId,dirLocked:false,isHoriz:false};
+      // Capture pointer immediately so we get all move events even if finger leaves element
+      if(!fromBtn&&rowRef.current){
+        try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
+      }
     };
+
     const onMove=(e:React.PointerEvent)=>{
       const s=ps.current;
       if(!s.pressed||!s.isTouch||s.fromBtn)return;
       const dx=e.clientX-s.sx;
-      const dy=Math.abs(e.clientY-s.sy);
-      // Vertical scroll wins early — abort before capturing
-      if(!s.captured&&dy>10&&Math.abs(dx)<dy*0.8){
-        s.pressed=false;
-        setSwiping(false);setSwipeDx(0);
-        return;
-      }
-      if(Math.abs(dx)>6&&!s.captured){
-        s.captured=true;setSwiping(true);
-        if(rowRef.current){
-          rowRef.current.style.touchAction='none';
-          try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
+      const dy=e.clientY-s.sy;
+      const absDx=Math.abs(dx);
+      const absDy=Math.abs(dy);
+
+      // Wait until movement is large enough to determine direction
+      if(!s.dirLocked&&absDx<5&&absDy<5)return;
+
+      if(!s.dirLocked){
+        // Lock direction on first significant movement
+        s.dirLocked=true;
+        s.isHoriz=absDx>=absDy*0.8;
+        if(!s.isHoriz){
+          // Vertical — release capture so native scroll works
+          try{rowRef.current?.releasePointerCapture(e.pointerId);}catch{}
+          s.pressed=false;
+          return;
         }
       }
-      if(s.captured){
-        // Clamp at threshold — no rubber band, instant action feel
-        const clamped=Math.max(-THRESHOLD*1.1,Math.min(THRESHOLD*1.1,dx));
-        s.dx=dx;setSwipeDx(clamped);e.preventDefault();
+
+      if(!s.isHoriz)return;
+
+      if(!s.captured){
+        s.captured=true;
+        setSwiping(true);
+        if(rowRef.current)rowRef.current.style.touchAction='none';
       }
+
+      // Clamp to threshold, no rubber band
+      const clamped=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.05);
+      s.dx=dx;
+      setSwipeDx(clamped);
+      e.preventDefault();
     };
-    const onUp=(e:React.PointerEvent)=>{
+
+    const onUp=(_e:React.PointerEvent)=>{
       const s=ps.current;
       if(!s.pressed)return;
       const dx=s.dx;
@@ -1613,10 +1632,13 @@ export default function App(){
         else if(dx<-THRESHOLD){removeFromPl(pl.id,tr.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);s.fired=true;}
         return;
       }
-      if(!s.fromBtn&&!s.fired){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
+      if(!s.fromBtn&&!s.fired&&s.isHoriz===false){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
+      // tap (no direction locked or horiz not triggered) — play
+      if(!s.fromBtn&&!s.fired&&!s.dirLocked){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
     };
+
     const onCancel=()=>{
-      ps.current.pressed=false;ps.current.captured=false;ps.current.dx=0;
+      ps.current.pressed=false;ps.current.captured=false;ps.current.dx=0;ps.current.dirLocked=false;ps.current.isHoriz=false;
       if(rowRef.current)rowRef.current.style.touchAction='pan-y';
       setSwiping(false);setSwipeDx(0);
     };
@@ -1670,8 +1692,7 @@ export default function App(){
           </div>
           <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:4}}>{tr.duration}</div>
           <button
-            onPointerDown={e=>e.stopPropagation()}
-            onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
+            onPointerDown={e=>{e.stopPropagation();smartAddQ(tr);}}
             style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,...tap}}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
@@ -2028,7 +2049,7 @@ export default function App(){
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:8,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
-          <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+          <button onPointerDown={e=>{e.stopPropagation();setAddToPl(current);}} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
@@ -2906,7 +2927,6 @@ export default function App(){
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tr=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(tr)setAddToPl(tr);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)shareTrack(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);if(t)openArtist('',t.artist,t.cover,0);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),color:'#d06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)blockArtist(t.artist);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t){removeFromPl(pl.id,t.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);}}},
                 ].map((item,ii,arr)=>(
                   <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
