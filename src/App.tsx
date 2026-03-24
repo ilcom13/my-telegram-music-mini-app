@@ -1380,46 +1380,60 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
-    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,pressed:false,isTouchDown:false});
+    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,pressed:false,isTouch:false});
     const[swipeDx,setSwipeDx]=useState(0);
     const rowRef=useRef<HTMLDivElement>(null);
 
-    const[swipeCaptured,setSwipeCaptured]=useState(false);
     const onRowDown=(e:React.PointerEvent)=>{
+      // ignore if click originated from a button inside
+      if((e.target as HTMLElement).closest('button'))return;
       const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
-      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,pressed:true,isTouchDown:isTouch};
-      setSwipeCaptured(false);
+      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,pressed:true,isTouch};
       if(mOpen)setMenuId(null);
     };
     const onRowMove=(e:React.PointerEvent)=>{
       const s=ps.current;
-      if(!s.pressed||!s.isTouchDown)return;
+      if(!s.pressed||!s.isTouch)return;
       const dx=e.clientX-s.sx;
       const dy=Math.abs(e.clientY-s.sy);
-      if(dy>22&&Math.abs(dx)<14){setSwipeDx(0);setSwipeCaptured(false);return;}
+      // if moving vertically — cancel swipe
+      if(dy>18&&Math.abs(dx)<12){
+        if(s.captured){s.captured=false;if(rowRef.current)rowRef.current.style.touchAction='pan-y';setSwipeDx(0);}
+        return;
+      }
       if(Math.abs(dx)>10&&!s.captured){
+        s.captured=true;
+        // switch touchAction to none so browser doesn't intercept horizontal swipe
+        if(rowRef.current)rowRef.current.style.touchAction='none';
         try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
-        s.captured=true;setSwipeCaptured(true);e.preventDefault();
+        e.preventDefault();
       }
       if(s.captured){s.dx=dx;setSwipeDx(dx);e.preventDefault();}
     };
     const onRowUp=(e:React.PointerEvent)=>{
       const s=ps.current;
+      if(!s.pressed)return;
       const dx=s.dx;const dt=Date.now()-s.st;
-      ps.current.pressed=false;ps.current.isTouchDown=false;
-      setSwipeCaptured(false);
+      s.pressed=false;s.isTouch=false;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
       setSwipeDx(0);
       if(s.captured){
+        s.captured=false;
         if(dx>50&&!track.isArtist&&!track.isAlbum){toggleQ(track);s.fired=true;}
         else if(dx<-50&&onSwipeLeft){onSwipeLeft();s.fired=true;}
         return;
       }
-      if(!s.menuWasOpen&&!s.fired&&dt<400){playTrack(track);}
+      if(!s.menuWasOpen&&!s.fired&&dt<350)playTrack(track);
     };
-    const onRowCancel=()=>{ps.current.pressed=false;ps.current.isTouchDown=false;setSwipeCaptured(false);setSwipeDx(0);};
+    const onRowCancel=()=>{
+      ps.current.pressed=false;ps.current.captured=false;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+      setSwipeDx(0);
+    };
 
     const swipeDir=swipeDx>10?'right':swipeDx<-10?'left':'';
-    const swipeProgress=Math.min(Math.abs(swipeDx)/80,1);
+    const swipeAbs=Math.abs(swipeDx);
+    const swipeProgress=Math.min(swipeAbs/70,1);
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
@@ -1447,7 +1461,7 @@ export default function App(){
           onPointerMove={onRowMove}
           onPointerUp={onRowUp}
           onPointerCancel={onRowCancel}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeDx!==0?`translateX(${Math.max(-75,Math.min(75,swipeDx))}px)`:'none',transition:swipeDx===0?'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),background 0.15s ease':'none',touchAction:swipeCaptured?'none':'pan-y',userSelect:'none'}}>
+          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeDx!==0?`translateX(${Math.max(-80,Math.min(80,swipeDx))}px)`:'none',transition:swipeDx===0?'transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94),background 0.15s ease':'none',touchAction:'pan-y',userSelect:'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right',transition:'color 0.2s ease'}}>{num}</div>}
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,...tap}}>
             <div style={{position:'relative',flexShrink:0}}>
@@ -1466,11 +1480,17 @@ export default function App(){
             </div>
           </div>
           {!track.isArtist&&!track.isAlbum&&(
-            <div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
-              <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...tap}}>
+            <div style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
+              <button
+                onPointerDown={e=>e.stopPropagation()}
+                onPointerUp={e=>{e.stopPropagation();toggleQ(track);}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 5px',transition:'transform 0.15s ease',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
+              <button
+                onPointerDown={e=>e.stopPropagation()}
+                onPointerUp={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}}
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 5px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -1487,6 +1507,115 @@ export default function App(){
             ))}
           </div>
         )}
+      </div>
+    );
+  };
+
+  // Playlist track row with proper swipe support
+  const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
+    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0});
+    const[swipeDx,setSwipeDx]=useState(0);
+    const rowRef=useRef<HTMLDivElement>(null);
+    const isActive=current?.id===tr.id;
+    const swipeAbs=Math.abs(swipeDx);
+    const swipeProgress=Math.min(swipeAbs/70,1);
+    const swipeDir=swipeDx>10?'right':swipeDx<-10?'left':'';
+
+    const onDown=(e:React.PointerEvent)=>{
+      if((e.target as HTMLElement).closest('button'))return;
+      const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
+      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0};
+    };
+    const onMove=(e:React.PointerEvent)=>{
+      const s=ps.current;
+      if(!s.pressed||!s.isTouch)return;
+      const dx=e.clientX-s.sx;
+      const dy=Math.abs(e.clientY-s.sy);
+      if(dy>18&&Math.abs(dx)<12){
+        if(s.captured){s.captured=false;if(rowRef.current)rowRef.current.style.touchAction='pan-y';setSwipeDx(0);s.dx=0;}
+        return;
+      }
+      if(Math.abs(dx)>10&&!s.captured){
+        s.captured=true;
+        if(rowRef.current)rowRef.current.style.touchAction='none';
+        try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
+        e.preventDefault();
+      }
+      if(s.captured){s.dx=dx;setSwipeDx(dx);e.preventDefault();}
+    };
+    const onUp=(e:React.PointerEvent)=>{
+      const s=ps.current;
+      if(!s.pressed)return;
+      const dx=s.dx;
+      s.pressed=false;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+      setSwipeDx(0);
+      if(s.captured){
+        s.captured=false;
+        if(dx>50){smartAddQ(tr);s.fired=true;}
+        else if(dx<-50){removeFromPl(pl.id,tr.id);s.fired=true;}
+        return;
+      }
+      if(!s.fired){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
+    };
+    const onCancel=()=>{
+      ps.current.pressed=false;ps.current.captured=false;ps.current.dx=0;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+      setSwipeDx(0);
+    };
+
+    return(
+      <div style={{position:'relative',overflow:'hidden'}}>
+        {swipeDir==='right'&&(
+          <div style={{position:'absolute',left:0,top:0,bottom:0,width:'100%',background:`rgba(239,191,127,${0.06+swipeProgress*0.16})`,display:'flex',alignItems:'center',paddingLeft:16,pointerEvents:'none'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{opacity:swipeProgress}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
+          </div>
+        )}
+        {swipeDir==='left'&&(
+          <div style={{position:'absolute',right:0,top:0,bottom:0,width:'100%',background:`rgba(200,60,60,${0.06+swipeProgress*0.16})`,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:16,pointerEvents:'none'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round" style={{opacity:swipeProgress}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
+        )}
+        <div
+          ref={rowRef}
+          draggable={curSort==='default'}
+          onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
+          onDragOver={e=>e.preventDefault()}
+          onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onCancel}
+          style={{
+            display:'flex',alignItems:'center',gap:8,
+            padding:'10px 12px 10px 14px',
+            background:isActive?ACC_DIM:BG,
+            borderBottom:'1px solid #111',
+            touchAction:'pan-y',
+            userSelect:'none' as const,
+            transform:swipeDx!==0?`translateX(${Math.max(-80,Math.min(80,swipeDx))}px)`:'none',
+            transition:swipeDx===0?'transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)':'none',
+          }}>
+          {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0,userSelect:'none'}}>⠿</div>}
+          <Img src={tr.cover} size={44} radius={7}/>
+          <div style={{flex:1,minWidth:0,cursor:'pointer'}}>
+            <div style={{fontSize:13,color:isActive?ACC:TEXT_PRIMARY,fontWeight:isActive?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
+            <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
+          </div>
+          <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:4}}>{tr.duration}</div>
+          <button
+            onPointerDown={e=>e.stopPropagation()}
+            onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
+            style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,...tap}}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button
+            onPointerDown={e=>e.stopPropagation()}
+            onPointerUp={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
+            style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
+          </button>
+        </div>
       </div>
     );
   };
@@ -2725,54 +2854,7 @@ export default function App(){
                 {lang==='ru'?'Плейлист пустой — добавь треки через ❤️':'Empty — like tracks to add them ❤️'}
               </div>
             ):sortedTracks.map((tr,i)=>{
-              const swipeRef={x:0,swiped:false};
-              return(
-              <div key={tr.id+String(i)}
-                draggable={curSort==='default'}
-                onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
-                onDragOver={e=>e.preventDefault()}
-                onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-                onPointerDown={e=>{swipeRef.x=e.clientX;swipeRef.swiped=false;}}
-                onPointerUp={e=>{
-                  const dx=e.clientX-swipeRef.x;
-                  if(Math.abs(dx)>55){swipeRef.swiped=true;if(dx>0)smartAddQ(tr);else removeFromPl(pl.id,tr.id);}
-                }}
-                style={{
-                  display:'flex',alignItems:'center',gap:8,
-                  padding:'10px 12px 10px 14px',
-                  background:current?.id===tr.id?ACC_DIM:BG,
-                  borderBottom:'1px solid #111',
-                  touchAction:'pan-y',
-                  userSelect:'none' as const,
-                }}>
-                {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0}}>⠿</div>}
-                {/* Cover + info — clicking plays */}
-                <div
-                  onPointerUp={e=>{if(!swipeRef.swiped&&Math.abs(e.clientX-swipeRef.x)<10){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));e.stopPropagation();}}}
-                  style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0,cursor:'pointer'}}>
-                  <Img src={tr.cover} size={44} radius={7}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,color:current?.id===tr.id?ACC:TEXT_PRIMARY,fontWeight:current?.id===tr.id?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
-                  </div>
-                  <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
-                </div>
-                {/* Queue icon - gold when manually queued */}
-                <button
-                  onPointerDown={e=>e.stopPropagation()}
-                  onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
-                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,transition:'opacity 0.15s ease',...tap}}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                </button>
-                {/* 3-dot */}
-                <button
-                  onPointerDown={e=>e.stopPropagation()}
-                  onPointerUp={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
-                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
-                </button>
-              </div>
-              );
+              return <PlTrackRow key={tr.id+String(i)} tr={tr} i={i} pl={pl} sortedTracks={sortedTracks} curSort={curSort}/>;
             })}
           </div>
         </div>
