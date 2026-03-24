@@ -1537,8 +1537,8 @@ export default function App(){
         </div>
         {mOpen&&(
           <>
-            <div onPointerDown={e=>{e.stopPropagation();setMenuId(null);}} style={{position:'fixed',inset:0,zIndex:149}}/>
-            <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',right:12,bottom:Math.max(70,window.innerHeight*0.18),left:12,background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:14,zIndex:150,boxShadow:'0 16px 48px rgba(0,0,0,0.9)',overflow:'hidden',animation:'scaleIn 0.15s ease both'}}>
+            <div onPointerDown={e=>{e.stopPropagation();setMenuId(null);}} style={{position:'fixed',inset:0,zIndex:149,background:'transparent'}}/>
+            <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',right:12,left:12,top:'50%',transform:'translateY(-50%)',background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:14,zIndex:150,boxShadow:'0 16px 48px rgba(0,0,0,0.9)',overflow:'hidden'}}>
               <div style={{padding:'9px 12px',borderBottom:'1px solid #252525',display:'flex',alignItems:'center',gap:9,background:'#232323'}}>
                 <Img src={track.cover} size={32} radius={5}/>
                 <div style={{minWidth:0,flex:1}}>
@@ -1560,44 +1560,44 @@ export default function App(){
 
   // Playlist track row — Spotify-style full-width swipe
   const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
-    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false});
+    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false,pid:-1});
     const[swipeDx,setSwipeDx]=useState(0);
     const[swiping,setSwiping]=useState(false);
     const rowRef=useRef<HTMLDivElement>(null);
     const isActive=current?.id===tr.id;
     const screenW=typeof window!=='undefined'?window.innerWidth:390;
-    const THRESHOLD=screenW*0.35;
-    const swipeDir=swipeDx>8?'right':swipeDx<-8?'left':'';
+    const THRESHOLD=screenW*0.22;
+    const swipeDir=swipeDx>6?'right':swipeDx<-6?'left':'';
     const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
     const confirmed=Math.abs(ps.current.dx)>=THRESHOLD;
 
     const onDown=(e:React.PointerEvent)=>{
       const fromBtn=!!(e.target as HTMLElement).closest('button');
       const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
-      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn};
-      if(!fromBtn&&rowRef.current){
-        try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
-      }
+      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn,pid:e.pointerId};
     };
     const onMove=(e:React.PointerEvent)=>{
       const s=ps.current;
       if(!s.pressed||!s.isTouch||s.fromBtn)return;
       const dx=e.clientX-s.sx;
       const dy=Math.abs(e.clientY-s.sy);
-      if(!s.captured&&dy>14&&Math.abs(dx)<dy*0.7){
-        // vertical — release capture and let scroll happen
-        try{rowRef.current?.releasePointerCapture(e.pointerId);}catch{}
-        s.pressed=false;setSwiping(false);setSwipeDx(0);
+      // Vertical scroll wins early — abort before capturing
+      if(!s.captured&&dy>10&&Math.abs(dx)<dy*0.8){
+        s.pressed=false;
+        setSwiping(false);setSwipeDx(0);
         return;
       }
-      if(Math.abs(dx)>8&&!s.captured){
+      if(Math.abs(dx)>6&&!s.captured){
         s.captured=true;setSwiping(true);
-        if(rowRef.current)rowRef.current.style.touchAction='none';
+        if(rowRef.current){
+          rowRef.current.style.touchAction='none';
+          try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
+        }
       }
       if(s.captured){
-        let v=dx;const abs=Math.abs(dx);
-        if(abs>THRESHOLD){const o=abs-THRESHOLD;v=Math.sign(dx)*(THRESHOLD+o*0.22);}
-        s.dx=dx;setSwipeDx(v);e.preventDefault();
+        // Clamp at threshold — no rubber band, instant action feel
+        const clamped=Math.max(-THRESHOLD*1.1,Math.min(THRESHOLD*1.1,dx));
+        s.dx=dx;setSwipeDx(clamped);e.preventDefault();
       }
     };
     const onUp=(e:React.PointerEvent)=>{
@@ -1900,13 +1900,13 @@ export default function App(){
   );};
 
   const PlModal=({track}:{track:Track})=>(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={e=>{if(e.target===e.currentTarget)setAddToPl(null);}}>
       <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
-          :playlists.map(pl=><div key={pl.id} onPointerDown={()=>addToPl2(pl.id,track)} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',transition:'background 0.15s ease'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
+          :playlists.map(pl=><div key={pl.id} onPointerDown={e=>{e.stopPropagation();addToPl2(pl.id,track);}} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
         }
-        <button onPointerDown={()=>setAddToPl(null)} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
+        <button onPointerDown={e=>{e.stopPropagation();setAddToPl(null);}} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
       </div>
     </div>
   );
@@ -1953,7 +1953,7 @@ export default function App(){
         .modal-sheet{animation:slideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .settings-sheet{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .mini-player{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
-        .context-menu{animation:scaleIn 0.18s cubic-bezier(0.25,0.46,0.45,0.94) both;transform-origin:top right}
+        .context-menu{animation:fadeIn 0.15s ease both}
         .screen-fade{animation:fadeIn 0.22s ease both}
         .screen-slide-up{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .screen-scale{animation:scaleIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both}
@@ -2100,7 +2100,7 @@ export default function App(){
         .modal-sheet{animation:slideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .settings-sheet{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .mini-player{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
-        .context-menu{animation:scaleIn 0.18s cubic-bezier(0.25,0.46,0.45,0.94) both;transform-origin:top right}
+        .context-menu{animation:fadeIn 0.15s ease both}
         .screen-fade{animation:fadeIn 0.22s ease both}
         .screen-slide-up{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .screen-scale{animation:scaleIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both}
@@ -2893,7 +2893,7 @@ export default function App(){
           {trackMenuPlId===pl.id&&trackMenuTr&&(
             <>
               <div onPointerDown={()=>{setTrackMenuPlId(null);setTrackMenuTr(null);}} style={{position:'fixed',inset:0,zIndex:199}}/>
-              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:Math.max(80,window.innerHeight/2-100),right:12,left:12,background:'#1c1c1c',border:'1px solid #2a2a2a',borderRadius:13,overflow:'hidden',zIndex:200,animation:'scaleIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.85)'}}>
+              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',top:'50%',transform:'translateY(-50%)',right:12,left:12,background:'#1c1c1c',border:'1px solid #2a2a2a',borderRadius:13,overflow:'hidden',zIndex:200,animation:'fadeIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.85)'}}>
                 <div style={{padding:'9px 12px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:9,background:'#222'}}>
                   <Img src={trackMenuTr.cover} size={32} radius={5}/>
                   <div style={{minWidth:0,flex:1}}>
