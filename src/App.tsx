@@ -1340,6 +1340,9 @@ export default function App(){
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
+  const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
+  const volSP=useSlider(volume,v=>setVol(v));
+
   const[coverKey,setCoverKey]=useState(0);
   const prevTrackId=useRef('');
   useEffect(()=>{
