@@ -635,7 +635,31 @@ export default function App(){
         };
         const localLiked=likedRef.current;const merged_liked=merge(localLiked,sv.liked)||localLiked;
         if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
-        const localPl=playlistsRef.current;const merged_pl=merge(localPl,sv.playlists)||localPl;
+        // Smart playlist merge: for each playlist, keep the version with higher updatedAt timestamp
+        // This ensures deletions (which save a newer timestamp) are preserved across devices
+        const localPl=playlistsRef.current;
+        let merged_pl=localPl;
+        if(sv.playlists?.length){
+          const localMap=new Map(localPl.map((p:Playlist&{updatedAt?:number})=>[p.id,p]));
+          const serverMap=new Map((sv.playlists as (Playlist&{updatedAt?:number})[]).map(p=>[p.id,p]));
+          const allIds=new Set([...localMap.keys(),...serverMap.keys()]);
+          const result:(Playlist&{updatedAt?:number})[]=[];
+          allIds.forEach(id=>{
+            const lp=localMap.get(id) as (Playlist&{updatedAt?:number})|undefined;
+            const sp=serverMap.get(id) as (Playlist&{updatedAt?:number})|undefined;
+            if(lp&&sp){
+              // Both have it — pick the one with newer updatedAt, or server if equal
+              result.push((lp.updatedAt||0)>=(sp.updatedAt||0)?lp:sp);
+            } else if(lp){
+              result.push(lp); // only local has it
+            } else if(sp){
+              result.push(sp); // only server has it
+            }
+          });
+          // preserve local order roughly
+          result.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+          merged_pl=result;
+        }
         if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
         const localH=historyRef.current;const merged_h=merge(localH,sv.history)||localH;
         if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
@@ -1295,12 +1319,12 @@ export default function App(){
   const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[],albums:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums,blockedArtists,bgCover);return n;});};
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
-  const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
+  const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist&{updatedAt:number}={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false,updatedAt:Date.now()};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
   const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
-  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
+  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const now=Date.now();const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId),updatedAt:now}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
-  const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
+  const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const now=Date.now();const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track],updatedAt:now}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});setAddToPl(null);};
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
@@ -1543,17 +1567,24 @@ export default function App(){
       const fromBtn=!!(e.target as HTMLElement).closest('button');
       const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
       ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn};
+      if(!fromBtn&&rowRef.current){
+        try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
+      }
     };
     const onMove=(e:React.PointerEvent)=>{
       const s=ps.current;
       if(!s.pressed||!s.isTouch||s.fromBtn)return;
       const dx=e.clientX-s.sx;
       const dy=Math.abs(e.clientY-s.sy);
-      if(!s.captured&&dy>12&&Math.abs(dx)<dy*0.6)return;
+      if(!s.captured&&dy>14&&Math.abs(dx)<dy*0.7){
+        // vertical — release capture and let scroll happen
+        try{rowRef.current?.releasePointerCapture(e.pointerId);}catch{}
+        s.pressed=false;setSwiping(false);setSwipeDx(0);
+        return;
+      }
       if(Math.abs(dx)>8&&!s.captured){
         s.captured=true;setSwiping(true);
         if(rowRef.current)rowRef.current.style.touchAction='none';
-        try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
       }
       if(s.captured){
         let v=dx;const abs=Math.abs(dx);
@@ -1571,7 +1602,7 @@ export default function App(){
       if(s.captured){
         s.captured=false;
         if(dx>THRESHOLD){smartAddQ(tr);s.fired=true;}
-        else if(dx<-THRESHOLD){removeFromPl(pl.id,tr.id);s.fired=true;}
+        else if(dx<-THRESHOLD){removeFromPl(pl.id,tr.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);s.fired=true;}
         return;
       }
       if(!s.fromBtn&&!s.fired){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
@@ -1637,8 +1668,7 @@ export default function App(){
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
           <button
-            onPointerDown={e=>e.stopPropagation()}
-            onPointerUp={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
+            onPointerDown={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
             style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
           </button>
@@ -2864,9 +2894,12 @@ export default function App(){
                   </div>
                 </div>
                 {[
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill={trackMenuTr&&isLk(trackMenuTr.id)?ACC:'none'} stroke={trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:trackMenuTr&&isLk(trackMenuTr.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),color:trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;if(!t)return;toggleLike(t);setTrackMenuPlId(null);setTrackMenuTr(null);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tr=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(tr)setAddToPl(tr);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)shareTrack(t);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);if(t)openArtist('',t.artist,t.cover,0);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),color:'#d06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)blockArtist(t.artist);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t){removeFromPl(pl.id,t.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);}}},
                 ].map((item,ii,arr)=>(
                   <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
                     {item.icon}{item.label}
