@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
+const SPOTIFY_ACCESS_TOKEN_KEY = 'spotify_access_token';
+const SPOTIFY_REFRESH_TOKEN_KEY = 'spotify_refresh_token';
+const SPOTIFY_TOKEN_EXPIRY_KEY = 'spotify_token_expiry';
 const ACC = '#EFBF7F';
 const ACC_DIM = 'rgba(239,191,127,0.13)';
 const BG = '#0e0e0e';
@@ -690,6 +693,37 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
+
+  useEffect(()=>{
+    const isEditable=(el:Element|null)=>{
+      if(!el||!(el instanceof HTMLElement))return false;
+      const tag=el.tagName;
+      return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable;
+    };
+    const getScrollable=(start:EventTarget|null)=>{
+      let el=(start instanceof Element?start:null) as HTMLElement|null;
+      while(el&&el!==document.body){
+        const st=getComputedStyle(el);
+        const canScroll=(st.overflowY==='auto'||st.overflowY==='scroll')&&el.scrollHeight>el.clientHeight+4;
+        if(canScroll)return el;
+        el=el.parentElement;
+      }
+      const fallbacks=Array.from(document.querySelectorAll('[data-wheel-scroll="1"]')) as HTMLElement[];
+      return fallbacks.find(node=>node.scrollHeight>node.clientHeight+4)||null;
+    };
+    const onWheel=(e:WheelEvent)=>{
+      if(Math.abs(e.deltaY)<Math.abs(e.deltaX))return;
+      if(isEditable(e.target as Element))return;
+      const el=getScrollable(e.target);
+      if(!el)return;
+      const before=el.scrollTop;
+      el.scrollTop+=e.deltaY;
+      if(el.scrollTop!==before)e.preventDefault();
+    };
+    window.addEventListener('wheel',onWheel,{passive:false,capture:true});
+    return()=>window.removeEventListener('wheel',onWheel,{capture:true} as EventListenerOptions);
+  },[]);
+
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
       if(e.code==='Space'&&e.target===document.body){
@@ -1177,16 +1211,101 @@ export default function App(){
     }
   },[screen,history.length]);
 
+
+  const getSavedSpotifyAccessToken=()=>{
+    try{
+      const token=localStorage.getItem(SPOTIFY_ACCESS_TOKEN_KEY);
+      const expiry=Number(localStorage.getItem(SPOTIFY_TOKEN_EXPIRY_KEY)||'0');
+      if(token&&expiry&&Date.now()<expiry-15000)return token;
+    }catch{}
+    return null;
+  };
+
+  const refreshSpotifyAccessToken=async()=>{
+    try{
+      const refreshToken=localStorage.getItem(SPOTIFY_REFRESH_TOKEN_KEY);
+      if(!refreshToken)return null;
+      const r=await fetch(`${W}/spotify/refresh`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({refreshToken})
+      });
+      const d=await r.json();
+      if(!r.ok||!d?.accessToken)return null;
+      localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,d.accessToken);
+      localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(d.expiresIn||3600)*1000));
+      return d.accessToken as string;
+    }catch{return null;}
+  };
+
+  const loginWithSpotify=async(pendingPlaylistUrl:string)=>{
+    return new Promise<string>((resolve,reject)=>{
+      let settled=false;
+      const finish=(fn:()=>void)=>{if(settled)return;settled=true;window.removeEventListener('message',onMessage);fn();};
+      const onMessage=async(event:MessageEvent)=>{
+        const data=event.data;
+        if(!data||typeof data!=='object')return;
+        if(data.type==='SPOTIFY_AUTH_SUCCESS'){
+          try{
+            if(data.accessToken)localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,data.accessToken);
+            if(data.refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,data.refreshToken);
+            if(data.expiresIn)localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(data.expiresIn)*1000));
+          }catch{}
+          finish(()=>resolve(String(data.accessToken||'')));
+        }else if(data.type==='SPOTIFY_AUTH_ERROR'){
+          finish(()=>reject(new Error(String(data.error||'Spotify auth failed'))));
+        }
+      };
+      window.addEventListener('message',onMessage);
+      const popup=window.open(
+        `${W}/spotify/login?state=${encodeURIComponent(pendingPlaylistUrl)}`,
+        'spotify_auth',
+        'width=520,height=760,resizable=yes,scrollbars=yes'
+      );
+      if(!popup){
+        window.removeEventListener('message',onMessage);
+        reject(new Error('Spotify popup blocked'));
+      }
+    });
+  };
+
+  const ensureSpotifyAccessToken=async(pendingPlaylistUrl:string)=>{
+    const saved=getSavedSpotifyAccessToken();
+    if(saved)return saved;
+    const refreshed=await refreshSpotifyAccessToken();
+    if(refreshed)return refreshed;
+    return await loginWithSpotify(pendingPlaylistUrl);
+  };
+
   const runImport=async()=>{
-    if(!importUrl.trim())return;
+    const playlistUrl=importUrl.trim();
+    if(!playlistUrl)return;
     setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
     try{
-      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:importUrl.trim()})});
-      const d=await r.json();
+      let spotifyAccessToken:string|null=null;
+      if(playlistUrl.includes('spotify.com')) spotifyAccessToken=getSavedSpotifyAccessToken()||await refreshSpotifyAccessToken();
+
+      let r=await fetch(`${W}/import/preview`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({url:playlistUrl,spotifyAccessToken})
+      });
+      let d=await r.json();
+
+      if((r.status===401||d?.error==='NEED_SPOTIFY_AUTH')&&playlistUrl.includes('spotify.com')){
+        spotifyAccessToken=await ensureSpotifyAccessToken(playlistUrl);
+        r=await fetch(`${W}/import/preview`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({url:playlistUrl,spotifyAccessToken})
+        });
+        d=await r.json();
+      }
+
       if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
       setImportPreview(d);
       setImportStep('preview');
-    }catch(e:any){setImportError(e.message);setImportStep('error');}
+    }catch(e:any){setImportError(e?.message||'Import failed');setImportStep('error');}
   };
 
   const runMatch=async(playlistName:string)=>{
@@ -1777,7 +1896,7 @@ export default function App(){
   const ImportModal=()=>{
     return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+      <div className="modal-sheet" data-wheel-scroll="1" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
 
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
@@ -1910,7 +2029,7 @@ export default function App(){
                 <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{importPreview.totalTracks} {t('importTracksWord')}</div>
               </div>
             </div>
-            <div style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
+            <div data-wheel-scroll="1" style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
               {importPreview.tracks.slice(0,8).map((tr,i)=>(
                 <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
                   <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right',flexShrink:0}}>{i+1}</div>
@@ -1942,7 +2061,7 @@ export default function App(){
               </div>
             </div>
             {importResults.length>0&&(
-              <div style={{maxHeight:320,overflowY:'auto'}}>
+              <div data-wheel-scroll="1" style={{maxHeight:320,overflowY:'auto'}}>
                 {importResults.map((r,i)=>(
                   <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
                     <div style={{fontSize:13,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
@@ -2075,7 +2194,7 @@ export default function App(){
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
-          <div className="modal-sheet" style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+          <div className="modal-sheet" data-wheel-scroll="1" style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
               <button onPointerDown={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC,...tap}}>{lang==='ru'?'Очистить':'Clear'}</button>
@@ -2753,7 +2872,7 @@ export default function App(){
         const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
         const isCollecting=!monthStats.prev;
         return(
-        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
+        <div className="screen-fade" data-wheel-scroll="1" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
@@ -2918,7 +3037,7 @@ export default function App(){
           [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
         ];
         return(
-        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+        <div className="screen-fade" data-wheel-scroll="1" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
           {/* Header */}
           <div style={{position:'relative',overflow:'hidden'}}>
             {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(24px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>}
