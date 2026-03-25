@@ -604,7 +604,11 @@ export default function App(){
   const triggerSync=(..._args:any[])=>doFullSync();
 
   useEffect(()=>{
-    window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
+    const tgApp=window.Telegram?.WebApp;
+    tgApp?.ready();
+    tgApp?.expand();
+    try{ if(typeof tgApp?.disableVerticalSwipes==='function') tgApp.disableVerticalSwipes(); }catch{}
+    try{ document.documentElement.style.overscrollBehavior='none'; document.body.style.overscrollBehavior='none'; }catch{}
     const ll=()=>{try{
       const l=localStorage.getItem('l47');if(l)setLiked(JSON.parse(l));
       const p=localStorage.getItem('p47');if(p)setPlaylists(JSON.parse(p));
@@ -1558,76 +1562,83 @@ export default function App(){
     );
   };
 
-  // Playlist track row — Spotify-style full-width swipe
+  // Playlist track row — smoother mobile swipe with Telegram Mini App protections
   const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
-    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false,pid:-1,dirLocked:false,isHoriz:false});
+    const ps=useRef({sx:0,sy:0,dx:0,dy:0,pressed:false,swiping:false,fromBtn:false,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:-1});
     const[swipeDx,setSwipeDx]=useState(0);
     const[swiping,setSwiping]=useState(false);
     const rowRef=useRef<HTMLDivElement>(null);
     const isActive=current?.id===tr.id;
     const screenW=typeof window!=='undefined'?window.innerWidth:390;
-    const THRESHOLD=Math.max(72,Math.min(110,screenW*0.18));
-    const LOCK_THRESHOLD=10;
+    const THRESHOLD=Math.max(76,Math.min(118,screenW*0.20));
+    const LOCK_THRESHOLD=12;
     const swipeDir=swipeDx>4?'right':swipeDx<-4?'left':'';
     const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
     const confirmed=Math.abs(swipeDx)>=THRESHOLD;
 
-    const resetSwipe=()=>{
-      ps.current.pressed=false;
-      ps.current.captured=false;
-      ps.current.dx=0;
-      ps.current.dirLocked=false;
-      ps.current.isHoriz=false;
-      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+    const releaseSwipe=()=>{
+      const s=ps.current;
+      s.pressed=false;
+      s.swiping=false;
+      s.dirLocked=false;
+      s.isHoriz=false;
+      s.dx=0;
+      s.dy=0;
+      if(rowRef.current){
+        rowRef.current.style.touchAction='pan-y';
+        rowRef.current.style.overscrollBehavior='contain';
+      }
       setSwiping(false);
       setSwipeDx(0);
     };
 
-    const onDown=(e:React.PointerEvent)=>{
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
-      const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
-      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn,pid:e.pointerId,dirLocked:false,isHoriz:false};
+    const beginGesture=(clientX:number,clientY:number,fromBtn:boolean,pointerId:number=-1)=>{
+      ps.current={sx:clientX,sy:clientY,dx:0,dy:0,pressed:true,swiping:false,fromBtn,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:pointerId};
     };
 
-    const onMove=(e:React.PointerEvent)=>{
+    const updateGesture=(clientX:number,clientY:number,prevent?:()=>void)=>{
       const s=ps.current;
-      if(!s.pressed||!s.isTouch||s.fromBtn)return;
-      const dx=e.clientX-s.sx;
-      const dy=e.clientY-s.sy;
+      if(!s.pressed||s.fromBtn)return;
+      const dx=clientX-s.sx;
+      const dy=clientY-s.sy;
       const absDx=Math.abs(dx);
       const absDy=Math.abs(dy);
+      s.dx=dx;
+      s.dy=dy;
 
       if(!s.dirLocked&&absDx<LOCK_THRESHOLD&&absDy<LOCK_THRESHOLD)return;
 
       if(!s.dirLocked){
         s.dirLocked=true;
-        s.isHoriz=absDx>absDy*1.15;
+        s.isHoriz=absDx>absDy*1.18;
         if(!s.isHoriz){
-          resetSwipe();
+          releaseSwipe();
           return;
         }
       }
 
       if(!s.isHoriz)return;
 
-      if(!s.captured&&rowRef.current){
-        s.captured=true;
+      if(!s.swiping){
+        s.swiping=true;
+        s.ignoreClick=true;
         setSwiping(true);
-        rowRef.current.style.touchAction='none';
-        try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
+        if(rowRef.current){
+          rowRef.current.style.touchAction='none';
+          rowRef.current.style.overscrollBehavior='contain';
+        }
       }
 
-      const limited=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.18);
-      s.dx=limited;
+      const limited=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.28);
       setSwipeDx(limited);
-      e.preventDefault();
+      if(prevent)prevent();
     };
 
-    const onUp=()=>{
+    const finishGesture=(allowTap:boolean)=>{
       const s=ps.current;
-      if(!s.pressed&&!s.captured)return;
-      const dx=s.dx;
-      const shouldPlay=!s.fromBtn&&!s.fired&&!s.captured&&!s.dirLocked;
+      if(!s.pressed&&!s.swiping)return;
+      const dx=swipeDx!==0?swipeDx:s.dx;
+      const didSwipe=s.swiping||Math.abs(dx)>8;
       if(dx>=THRESHOLD){
         smartAddQ(tr);
         s.fired=true;
@@ -1635,15 +1646,57 @@ export default function App(){
         removeFromPl(pl.id,tr.id);
         triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);
         s.fired=true;
-      }else if(shouldPlay){
+      }else if(allowTap&&!didSwipe&&!s.fromBtn){
         playTrack(tr);
         setPlayingPlId(pl.id);
         setQueue(sortedTracks.slice(i+1));
       }
-      resetSwipe();
+      releaseSwipe();
+      if(didSwipe){
+        ps.current.ignoreClick=true;
+        window.setTimeout(()=>{ps.current.ignoreClick=false;},180);
+      }
     };
 
-    const onCancel=()=>{ resetSwipe(); };
+    const onPointerDown=(e:React.PointerEvent)=>{
+      if(e.pointerType==='mouse')return;
+      const fromBtn=!!(e.target as HTMLElement).closest('button');
+      beginGesture(e.clientX,e.clientY,fromBtn,e.pointerId);
+    };
+    const onPointerMove=(e:React.PointerEvent)=>{
+      if(e.pointerType==='mouse')return;
+      updateGesture(e.clientX,e.clientY,()=>e.preventDefault());
+    };
+    const onPointerUp=(e:React.PointerEvent)=>{
+      if(e.pointerType==='mouse')return;
+      finishGesture(false);
+    };
+    const onPointerCancel=()=>{
+      if(ps.current.swiping&&Math.abs(ps.current.dx)>=THRESHOLD*0.9){
+        if(ps.current.dx>0)smartAddQ(tr);
+        else removeFromPl(pl.id,tr.id);
+      }
+      releaseSwipe();
+    };
+
+    const onTouchStart=(e:React.TouchEvent)=>{
+      const t=e.touches[0];
+      if(!t)return;
+      const fromBtn=!!(e.target as HTMLElement).closest('button');
+      beginGesture(t.clientX,t.clientY,fromBtn,-1);
+    };
+    const onTouchMove=(e:React.TouchEvent)=>{
+      const t=e.touches[0];
+      if(!t)return;
+      updateGesture(t.clientX,t.clientY,()=>e.preventDefault());
+    };
+    const onTouchEnd=()=>{ finishGesture(false); };
+    const onClick=(e:React.MouseEvent)=>{
+      if(ps.current.ignoreClick){ e.preventDefault(); e.stopPropagation(); return; }
+      playTrack(tr);
+      setPlayingPlId(pl.id);
+      setQueue(sortedTracks.slice(i+1));
+    };
 
     return(
       <div style={{position:'relative',overflow:'hidden'}}>
@@ -1672,19 +1725,26 @@ export default function App(){
           onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
           onDragOver={e=>e.preventDefault()}
           onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-          onPointerDown={onDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={onCancel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onClick={onClick}
           style={{
             display:'flex',alignItems:'center',gap:8,
             padding:'10px 12px 10px 14px',
             background:isActive?ACC_DIM:BG,
             borderBottom:'1px solid #111',
             touchAction:'pan-y',
+            overscrollBehavior:'contain',
             userSelect:'none' as const,
-            transform:swipeDx!==0?`translateX(${swipeDx}px)`:'none',
-            transition:swiping?'none':'transform 0.22s cubic-bezier(0.22,1,0.36,1)',
+            WebkitUserSelect:'none' as const,
+            WebkitTouchCallout:'none' as const,
+            transform:swipeDx!==0?`translate3d(${swipeDx}px,0,0)`:'translate3d(0,0,0)',
+            transition:swiping?'none':'transform 0.26s cubic-bezier(0.22,1,0.36,1)',
             willChange:'transform',
           }}>
           {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0,userSelect:'none'}}>⠿</div>}
@@ -1708,6 +1768,7 @@ export default function App(){
       </div>
     );
   };
+
 
 
   const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
