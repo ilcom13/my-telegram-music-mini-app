@@ -597,9 +597,26 @@ export default function App(){
     return null;
   };
 
+  const spotifyPopupRef=useRef<Window|null>(null);
+
   const loginWithSpotifyRedirect=(pendingPlaylistUrl?:string)=>{
     if(pendingPlaylistUrl)sessionStorage.setItem('spotify_pending_playlist_url',pendingPlaylistUrl);
-    window.location.href=`${W}/spotify/login?state=${encodeURIComponent(pendingPlaylistUrl||'')}`;
+    const authUrl=`${W}/spotify/login?state=${encodeURIComponent(pendingPlaylistUrl||'')}`;
+    // Telegram Mini App: используем window.open (popup) вместо полного редиректа,
+    // чтобы приложение не перезагружалось. Токены вернутся через postMessage.
+    const tgApp=(window as any).Telegram?.WebApp;
+    if(tgApp?.openLink){
+      // В Telegram openLink открывает внешний браузер — не подходит для OAuth,
+      // поэтому пробуем popup сначала
+    }
+    const popup=window.open(authUrl,'spotify_auth','width=480,height=680,left=100,top=100,resizable=yes,scrollbars=yes');
+    if(popup){
+      spotifyPopupRef.current=popup;
+      // Fallback: если popup заблокирован — делаем полный редирект
+    } else {
+      // Popup заблокирован (мобильный браузер) — делаем полный редирект
+      window.location.href=authUrl;
+    }
   };
 
   const runImportWithUrl=async(rawUrl:string)=>{
@@ -708,13 +725,36 @@ export default function App(){
       let el:HTMLElement|null=target;
       while(el&&el!==document.body){
         const style=window.getComputedStyle(el);
-        const canScroll=(style.overflowY==='auto'||style.overflowY==='scroll'||el.hasAttribute('data-wheel-scroll'))&&el.scrollHeight>el.clientHeight+4;
+        const overflowY=style.overflowY;
+        const canScroll=(overflowY==='auto'||overflowY==='scroll'||el.hasAttribute('data-wheel-scroll'))&&el.scrollHeight>el.clientHeight+4;
         if(canScroll){
-          el.scrollTop+=e.deltaY;
-          e.preventDefault();
-          return;
+          const atTop=el.scrollTop<=0&&e.deltaY<0;
+          const atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-2&&e.deltaY>0;
+          if(!atTop&&!atBottom){
+            el.scrollTop+=e.deltaY;
+            e.preventDefault();
+            return;
+          }
         }
         el=el.parentElement;
+      }
+      // Fallback: скроллим document (html/body)
+      const docEl=document.documentElement;
+      const canDocScroll=docEl.scrollHeight>docEl.clientHeight+4;
+      if(canDocScroll){
+        docEl.scrollTop+=e.deltaY;
+        e.preventDefault();
+      } else {
+        // Попробуем body
+        const bodyEl=document.body;
+        if(bodyEl.scrollHeight>bodyEl.clientHeight+4){
+          bodyEl.scrollTop+=e.deltaY;
+          e.preventDefault();
+        } else {
+          // Последний fallback: scrollBy
+          window.scrollBy(0,e.deltaY);
+          e.preventDefault();
+        }
       }
     };
     window.addEventListener('wheel',onWheel,{passive:false});
@@ -2328,6 +2368,7 @@ export default function App(){
         @keyframes trackInfoIn{0%{opacity:0;transform:translateX(18px)}100%{opacity:1;transform:translateX(0)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
+        html,body{overflow-y:auto!important;height:auto!important;overscroll-behavior-y:contain;}
         ::-webkit-scrollbar{display:none}
         .nav-item{transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),opacity 0.15s ease}
         .nav-item:active{transform:scale(0.82)}
