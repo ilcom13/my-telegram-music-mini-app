@@ -5,6 +5,11 @@ const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
 const SPOTIFY_ACCESS_TOKEN_KEY = 'spotify_access_token';
 const SPOTIFY_REFRESH_TOKEN_KEY = 'spotify_refresh_token';
 const SPOTIFY_TOKEN_EXPIRY_KEY = 'spotify_token_expiry';
+
+function isSpotifyUrl(url:string){
+  return /spotify\.com/i.test(url);
+}
+
 const ACC = '#EFBF7F';
 const ACC_DIM = 'rgba(239,191,127,0.13)';
 const BG = '#0e0e0e';
@@ -571,6 +576,38 @@ export default function App(){
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
+  const getStoredSpotifyAccessToken=useCallback(async()=>{
+    try{
+      const savedToken=localStorage.getItem(SPOTIFY_ACCESS_TOKEN_KEY);
+      const savedExpiry=localStorage.getItem(SPOTIFY_TOKEN_EXPIRY_KEY);
+      const refreshToken=localStorage.getItem(SPOTIFY_REFRESH_TOKEN_KEY);
+
+      if(savedToken&&savedExpiry&&Date.now()<parseInt(savedExpiry,10)) return savedToken;
+
+      if(refreshToken){
+        const r=await fetch(`${W}/spotify/refresh`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({refreshToken})
+        });
+        const d=await r.json();
+        if(r.ok&&d.accessToken){
+          localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,d.accessToken);
+          if(d.refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,d.refreshToken);
+          localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+((d.expiresIn||3600)*1000)));
+          return d.accessToken;
+        }
+      }
+    }catch{}
+    return null;
+  },[]);
+
+  const loginWithSpotifyRedirect=useCallback((pendingPlaylistUrl?:string)=>{
+    const pending=pendingPlaylistUrl||importUrl.trim()||'';
+    if(pending) sessionStorage.setItem('spotify_pending_playlist_url',pending);
+    window.location.href=`${W}/spotify/login?state=${encodeURIComponent(pending)}`;
+  },[importUrl]);
+
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -607,11 +644,7 @@ export default function App(){
   const triggerSync=(..._args:any[])=>doFullSync();
 
   useEffect(()=>{
-    const tgApp=window.Telegram?.WebApp;
-    tgApp?.ready();
-    tgApp?.expand();
-    try{ if(typeof tgApp?.disableVerticalSwipes==='function') tgApp.disableVerticalSwipes(); }catch{}
-    try{ document.documentElement.style.overscrollBehavior='none'; document.body.style.overscrollBehavior='none'; }catch{}
+    window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
     const ll=()=>{try{
       const l=localStorage.getItem('l47');if(l)setLiked(JSON.parse(l));
       const p=localStorage.getItem('p47');if(p)setPlaylists(JSON.parse(p));
@@ -693,35 +726,72 @@ export default function App(){
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const accessToken=params.get('access_token');
+    const refreshToken=params.get('refresh_token');
+    const expiresIn=params.get('expires_in');
+    const state=params.get('state');
+    const authError=params.get('spotify_error');
+
+    if(authError){
+      setImportError(authError);
+      setImportStep('error');
+      const clean=new URL(window.location.href);
+      ['spotify_error','state'].forEach(k=>clean.searchParams.delete(k));
+      window.history.replaceState({},document.title,clean.pathname+(clean.search||'')+clean.hash);
+      return;
+    }
+
+    if(accessToken){
+      try{
+        localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,accessToken);
+        if(refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,refreshToken);
+        localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+((parseInt(expiresIn||'3600',10)||3600)*1000)));
+      }catch{}
+
+      const pendingUrl=state||sessionStorage.getItem('spotify_pending_playlist_url')||'';
+      if(pendingUrl){
+        sessionStorage.removeItem('spotify_pending_playlist_url');
+        setShowImport(true);
+        setImportUrl(pendingUrl);
+        setTimeout(()=>{ runImportWithUrl(pendingUrl); },50);
+      }
+
+      const clean=new URL(window.location.href);
+      ['access_token','refresh_token','expires_in','state'].forEach(k=>clean.searchParams.delete(k));
+      window.history.replaceState({},document.title,clean.pathname+(clean.search||'')+clean.hash);
+    }
+  },[]);
 
   useEffect(()=>{
-    const isEditable=(el:Element|null)=>{
-      if(!el||!(el instanceof HTMLElement))return false;
-      const tag=el.tagName;
-      return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable;
-    };
-    const getScrollable=(start:EventTarget|null)=>{
-      let el=(start instanceof Element?start:null) as HTMLElement|null;
+    const handler=(e:WheelEvent)=>{
+      const target=e.target as HTMLElement|null;
+      if(!target) return;
+      if(!(e.target instanceof Node)) return;
+      if((target as HTMLElement).closest('input, textarea, [contenteditable="true"], select')) return;
+
+      let el:HTMLElement|null=target;
       while(el&&el!==document.body){
-        const st=getComputedStyle(el);
-        const canScroll=(st.overflowY==='auto'||st.overflowY==='scroll')&&el.scrollHeight>el.clientHeight+4;
-        if(canScroll)return el;
+        const style=window.getComputedStyle(el);
+        const canScroll=(style.overflowY==='auto'||style.overflowY==='scroll'||el.hasAttribute('data-wheel-scroll'))&&el.scrollHeight>el.clientHeight+4;
+        if(canScroll){
+          el.scrollTop+=e.deltaY;
+          if(e.deltaY!==0)e.preventDefault();
+          return;
+        }
         el=el.parentElement;
       }
-      const fallbacks=Array.from(document.querySelectorAll('[data-wheel-scroll="1"]')) as HTMLElement[];
-      return fallbacks.find(node=>node.scrollHeight>node.clientHeight+4)||null;
+
+      const root=document.scrollingElement as HTMLElement|null;
+      if(root){
+        root.scrollTop+=e.deltaY;
+        if(e.deltaY!==0)e.preventDefault();
+      }
     };
-    const onWheel=(e:WheelEvent)=>{
-      if(Math.abs(e.deltaY)<Math.abs(e.deltaX))return;
-      if(isEditable(e.target as Element))return;
-      const el=getScrollable(e.target);
-      if(!el)return;
-      const before=el.scrollTop;
-      el.scrollTop+=e.deltaY;
-      if(el.scrollTop!==before)e.preventDefault();
-    };
-    window.addEventListener('wheel',onWheel,{passive:false,capture:true});
-    return()=>window.removeEventListener('wheel',onWheel,{capture:true} as EventListenerOptions);
+
+    window.addEventListener('wheel',handler,{passive:false,capture:true});
+    return()=>window.removeEventListener('wheel',handler as EventListener,{capture:true} as any);
   },[]);
 
   useEffect(()=>{
@@ -1211,101 +1281,43 @@ export default function App(){
     }
   },[screen,history.length]);
 
-
-  const getSavedSpotifyAccessToken=()=>{
-    try{
-      const token=localStorage.getItem(SPOTIFY_ACCESS_TOKEN_KEY);
-      const expiry=Number(localStorage.getItem(SPOTIFY_TOKEN_EXPIRY_KEY)||'0');
-      if(token&&expiry&&Date.now()<expiry-15000)return token;
-    }catch{}
-    return null;
-  };
-
-  const refreshSpotifyAccessToken=async()=>{
-    try{
-      const refreshToken=localStorage.getItem(SPOTIFY_REFRESH_TOKEN_KEY);
-      if(!refreshToken)return null;
-      const r=await fetch(`${W}/spotify/refresh`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({refreshToken})
-      });
-      const d=await r.json();
-      if(!r.ok||!d?.accessToken)return null;
-      localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,d.accessToken);
-      localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(d.expiresIn||3600)*1000));
-      return d.accessToken as string;
-    }catch{return null;}
-  };
-
-  const loginWithSpotify=async(pendingPlaylistUrl:string)=>{
-    return new Promise<string>((resolve,reject)=>{
-      let settled=false;
-      const finish=(fn:()=>void)=>{if(settled)return;settled=true;window.removeEventListener('message',onMessage);fn();};
-      const onMessage=async(event:MessageEvent)=>{
-        const data=event.data;
-        if(!data||typeof data!=='object')return;
-        if(data.type==='SPOTIFY_AUTH_SUCCESS'){
-          try{
-            if(data.accessToken)localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,data.accessToken);
-            if(data.refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,data.refreshToken);
-            if(data.expiresIn)localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(data.expiresIn)*1000));
-          }catch{}
-          finish(()=>resolve(String(data.accessToken||'')));
-        }else if(data.type==='SPOTIFY_AUTH_ERROR'){
-          finish(()=>reject(new Error(String(data.error||'Spotify auth failed'))));
-        }
-      };
-      window.addEventListener('message',onMessage);
-      const popup=window.open(
-        `${W}/spotify/login?state=${encodeURIComponent(pendingPlaylistUrl)}`,
-        'spotify_auth',
-        'width=520,height=760,resizable=yes,scrollbars=yes'
-      );
-      if(!popup){
-        window.removeEventListener('message',onMessage);
-        reject(new Error('Spotify popup blocked'));
-      }
-    });
-  };
-
-  const ensureSpotifyAccessToken=async(pendingPlaylistUrl:string)=>{
-    const saved=getSavedSpotifyAccessToken();
-    if(saved)return saved;
-    const refreshed=await refreshSpotifyAccessToken();
-    if(refreshed)return refreshed;
-    return await loginWithSpotify(pendingPlaylistUrl);
-  };
-
-  const runImport=async()=>{
-    const playlistUrl=importUrl.trim();
-    if(!playlistUrl)return;
+  const runImportWithUrl=useCallback(async(rawUrl:string)=>{
+    const cleanUrl=rawUrl.trim();
+    if(!cleanUrl)return;
     setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
     try{
       let spotifyAccessToken:string|null=null;
-      if(playlistUrl.includes('spotify.com')) spotifyAccessToken=getSavedSpotifyAccessToken()||await refreshSpotifyAccessToken();
+      if(isSpotifyUrl(cleanUrl)){
+        spotifyAccessToken=await getStoredSpotifyAccessToken();
+      }
 
-      let r=await fetch(`${W}/import/preview`,{
+      const r=await fetch(`${W}/import/preview`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({url:playlistUrl,spotifyAccessToken})
+        body:JSON.stringify({url:cleanUrl,spotifyAccessToken})
       });
-      let d=await r.json();
+      const d=await r.json();
 
-      if((r.status===401||d?.error==='NEED_SPOTIFY_AUTH')&&playlistUrl.includes('spotify.com')){
-        spotifyAccessToken=await ensureSpotifyAccessToken(playlistUrl);
-        r=await fetch(`${W}/import/preview`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({url:playlistUrl,spotifyAccessToken})
-        });
-        d=await r.json();
+      if((r.status===401&&d?.error==='NEED_SPOTIFY_AUTH')||d?.error==='NEED_SPOTIFY_AUTH'){
+        loginWithSpotifyRedirect(cleanUrl);
+        return;
       }
 
       if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
       setImportPreview(d);
       setImportStep('preview');
-    }catch(e:any){setImportError(e?.message||'Import failed');setImportStep('error');}
+    }catch(e:any){
+      if(String(e?.message||'')==='NEED_SPOTIFY_AUTH'){
+        loginWithSpotifyRedirect(cleanUrl);
+        return;
+      }
+      setImportError(e.message||'Import failed');
+      setImportStep('error');
+    }
+  },[getStoredSpotifyAccessToken,loginWithSpotifyRedirect]);
+
+  const runImport=async()=>{
+    await runImportWithUrl(importUrl);
   };
 
   const runMatch=async(playlistName:string)=>{
@@ -1585,7 +1597,7 @@ export default function App(){
     const confirmed=Math.abs(ps.current.dx)>=THRESHOLD;
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setMenuId(null);requestAnimationFrame(()=>setAddToPl(track));}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
       ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
@@ -1681,140 +1693,89 @@ export default function App(){
     );
   };
 
-  // Playlist track row — smoother mobile swipe with Telegram Mini App protections
+  // Playlist track row — Spotify-style full-width swipe
   const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
-    const ps=useRef({sx:0,sy:0,dx:0,dy:0,pressed:false,swiping:false,fromBtn:false,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:-1});
+    const ps=useRef({sx:0,sy:0,captured:false,isTouch:false,fired:false,pressed:false,dx:0,fromBtn:false,pid:-1,dirLocked:false,isHoriz:false});
     const[swipeDx,setSwipeDx]=useState(0);
     const[swiping,setSwiping]=useState(false);
     const rowRef=useRef<HTMLDivElement>(null);
     const isActive=current?.id===tr.id;
     const screenW=typeof window!=='undefined'?window.innerWidth:390;
-    const THRESHOLD=Math.max(76,Math.min(118,screenW*0.20));
-    const LOCK_THRESHOLD=12;
+    const THRESHOLD=screenW*0.22;
     const swipeDir=swipeDx>4?'right':swipeDx<-4?'left':'';
     const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
-    const confirmed=Math.abs(swipeDx)>=THRESHOLD;
+    const confirmed=Math.abs(ps.current.dx)>=THRESHOLD;
 
-    const releaseSwipe=()=>{
-      const s=ps.current;
-      s.pressed=false;
-      s.swiping=false;
-      s.dirLocked=false;
-      s.isHoriz=false;
-      s.dx=0;
-      s.dy=0;
-      if(rowRef.current){
-        rowRef.current.style.touchAction='pan-y';
-        rowRef.current.style.overscrollBehavior='contain';
+    const onDown=(e:React.PointerEvent)=>{
+      const fromBtn=!!(e.target as HTMLElement).closest('button');
+      const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
+      ps.current={sx:e.clientX,sy:e.clientY,captured:false,isTouch,fired:false,pressed:true,dx:0,fromBtn,pid:e.pointerId,dirLocked:false,isHoriz:false};
+      // Capture pointer immediately so we get all move events even if finger leaves element
+      if(!fromBtn&&rowRef.current){
+        try{rowRef.current.setPointerCapture(e.pointerId);}catch{}
       }
-      setSwiping(false);
-      setSwipeDx(0);
     };
 
-    const beginGesture=(clientX:number,clientY:number,fromBtn:boolean,pointerId:number=-1)=>{
-      ps.current={sx:clientX,sy:clientY,dx:0,dy:0,pressed:true,swiping:false,fromBtn,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:pointerId};
-    };
-
-    const updateGesture=(clientX:number,clientY:number,prevent?:()=>void)=>{
+    const onMove=(e:React.PointerEvent)=>{
       const s=ps.current;
-      if(!s.pressed||s.fromBtn)return;
-      const dx=clientX-s.sx;
-      const dy=clientY-s.sy;
+      if(!s.pressed||!s.isTouch||s.fromBtn)return;
+      const dx=e.clientX-s.sx;
+      const dy=e.clientY-s.sy;
       const absDx=Math.abs(dx);
       const absDy=Math.abs(dy);
-      s.dx=dx;
-      s.dy=dy;
 
-      if(!s.dirLocked&&absDx<LOCK_THRESHOLD&&absDy<LOCK_THRESHOLD)return;
+      // Wait until movement is large enough to determine direction
+      if(!s.dirLocked&&absDx<5&&absDy<5)return;
 
       if(!s.dirLocked){
+        // Lock direction on first significant movement
         s.dirLocked=true;
-        s.isHoriz=absDx>absDy*1.18;
+        s.isHoriz=absDx>=absDy*0.8;
         if(!s.isHoriz){
-          releaseSwipe();
+          // Vertical — release capture so native scroll works
+          try{rowRef.current?.releasePointerCapture(e.pointerId);}catch{}
+          s.pressed=false;
           return;
         }
       }
 
       if(!s.isHoriz)return;
 
-      if(!s.swiping){
-        s.swiping=true;
-        s.ignoreClick=true;
+      if(!s.captured){
+        s.captured=true;
         setSwiping(true);
-        if(rowRef.current){
-          rowRef.current.style.touchAction='none';
-          rowRef.current.style.overscrollBehavior='contain';
-        }
+        if(rowRef.current)rowRef.current.style.touchAction='none';
       }
 
-      const limited=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.28);
-      setSwipeDx(limited);
-      if(prevent)prevent();
+      // Clamp to threshold, no rubber band
+      const clamped=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.05);
+      s.dx=dx;
+      setSwipeDx(clamped);
+      e.preventDefault();
     };
 
-    const finishGesture=(allowTap:boolean)=>{
+    const onUp=(_e:React.PointerEvent)=>{
       const s=ps.current;
-      if(!s.pressed&&!s.swiping)return;
-      const dx=swipeDx!==0?swipeDx:s.dx;
-      const didSwipe=s.swiping||Math.abs(dx)>8;
-      if(dx>=THRESHOLD){
-        smartAddQ(tr);
-        s.fired=true;
-      }else if(dx<=-THRESHOLD){
-        removeFromPl(pl.id,tr.id);
-        triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);
-        s.fired=true;
-      }else if(allowTap&&!didSwipe&&!s.fromBtn){
-        playTrack(tr);
-        setPlayingPlId(pl.id);
-        setQueue(sortedTracks.slice(i+1));
+      if(!s.pressed)return;
+      const dx=s.dx;
+      s.pressed=false;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+      setSwiping(false);setSwipeDx(0);
+      if(s.captured){
+        s.captured=false;
+        if(dx>THRESHOLD){smartAddQ(tr);s.fired=true;}
+        else if(dx<-THRESHOLD){removeFromPl(pl.id,tr.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);s.fired=true;}
+        return;
       }
-      releaseSwipe();
-      if(didSwipe){
-        ps.current.ignoreClick=true;
-        window.setTimeout(()=>{ps.current.ignoreClick=false;},180);
-      }
+      if(!s.fromBtn&&!s.fired&&s.isHoriz===false){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
+      // tap (no direction locked or horiz not triggered) — play
+      if(!s.fromBtn&&!s.fired&&!s.dirLocked){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}
     };
 
-    const onPointerDown=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
-      beginGesture(e.clientX,e.clientY,fromBtn,e.pointerId);
-    };
-    const onPointerMove=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      updateGesture(e.clientX,e.clientY,()=>e.preventDefault());
-    };
-    const onPointerUp=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      finishGesture(false);
-    };
-    const onPointerCancel=()=>{
-      if(ps.current.swiping&&Math.abs(ps.current.dx)>=THRESHOLD*0.9){
-        if(ps.current.dx>0)smartAddQ(tr);
-        else removeFromPl(pl.id,tr.id);
-      }
-      releaseSwipe();
-    };
-
-    const onTouchStart=(e:React.TouchEvent)=>{
-      const t=e.touches[0];
-      if(!t)return;
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
-      beginGesture(t.clientX,t.clientY,fromBtn,-1);
-    };
-    const onTouchMove=(e:React.TouchEvent)=>{
-      const t=e.touches[0];
-      if(!t)return;
-      updateGesture(t.clientX,t.clientY,()=>e.preventDefault());
-    };
-    const onTouchEnd=()=>{ finishGesture(false); };
-    const onClick=(e:React.MouseEvent)=>{
-      if(ps.current.ignoreClick){ e.preventDefault(); e.stopPropagation(); return; }
-      playTrack(tr);
-      setPlayingPlId(pl.id);
-      setQueue(sortedTracks.slice(i+1));
+    const onCancel=()=>{
+      ps.current.pressed=false;ps.current.captured=false;ps.current.dx=0;ps.current.dirLocked=false;ps.current.isHoriz=false;
+      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
+      setSwiping(false);setSwipeDx(0);
     };
 
     return(
@@ -1844,27 +1805,19 @@ export default function App(){
           onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
           onDragOver={e=>e.preventDefault()}
           onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onClick={onClick}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onCancel}
           style={{
             display:'flex',alignItems:'center',gap:8,
             padding:'10px 12px 10px 14px',
             background:isActive?ACC_DIM:BG,
             borderBottom:'1px solid #111',
             touchAction:'pan-y',
-            overscrollBehavior:'contain',
             userSelect:'none' as const,
-            WebkitUserSelect:'none' as const,
-            WebkitTouchCallout:'none' as const,
-            transform:swipeDx!==0?`translate3d(${swipeDx}px,0,0)`:'translate3d(0,0,0)',
-            transition:swiping?'none':'transform 0.26s cubic-bezier(0.22,1,0.36,1)',
-            willChange:'transform',
+            transform:swipeDx!==0?`translateX(${swipeDx}px)`:'none',
+            transition:swiping?'none':'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)',
           }}>
           {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0,userSelect:'none'}}>⠿</div>}
           <Img src={tr.cover} size={44} radius={7}/>
@@ -1874,12 +1827,12 @@ export default function App(){
           </div>
           <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:4}}>{tr.duration}</div>
           <button
-            onClick={e=>{e.stopPropagation();smartAddQ(tr);}}
+            onPointerDown={e=>{e.stopPropagation();smartAddQ(tr);}}
             style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,...tap}}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
           <button
-            onClick={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
+            onPointerDown={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
             style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
           </button>
@@ -1889,14 +1842,13 @@ export default function App(){
   };
 
 
-
   const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
   const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
 
   const ImportModal=()=>{
     return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
-      <div className="modal-sheet" data-wheel-scroll="1" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
 
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
@@ -1943,7 +1895,7 @@ export default function App(){
               style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
             {importError&&importTab==='main'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
+            <button onClick={()=>runImport()} disabled={!importUrl.trim()}
               style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
               {t('importFindBtn')}
             </button>
@@ -1996,7 +1948,7 @@ export default function App(){
               style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
             />
             {importError&&importTab==='other'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
+            <button onClick={()=>runImport()} disabled={!importUrl.trim()}
               style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
               {t('importFindBtn')}
             </button>
@@ -2029,7 +1981,7 @@ export default function App(){
                 <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{importPreview.totalTracks} {t('importTracksWord')}</div>
               </div>
             </div>
-            <div data-wheel-scroll="1" style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
+            <div style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
               {importPreview.tracks.slice(0,8).map((tr,i)=>(
                 <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
                   <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right',flexShrink:0}}>{i+1}</div>
@@ -2061,7 +2013,7 @@ export default function App(){
               </div>
             </div>
             {importResults.length>0&&(
-              <div data-wheel-scroll="1" style={{maxHeight:320,overflowY:'auto'}}>
+              <div style={{maxHeight:320,overflowY:'auto'}}>
                 {importResults.map((r,i)=>(
                   <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
                     <div style={{fontSize:13,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
@@ -2104,30 +2056,13 @@ export default function App(){
   );};
 
   const PlModal=({track}:{track:Track})=>(
-    <div
-      style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}}
-      onClick={e=>{if(e.target===e.currentTarget)setAddToPl(null);}}
-    >
-      <div
-        className="modal-sheet"
-        style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}}
-        onClick={e=>e.stopPropagation()}
-      >
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={e=>{if(e.target===e.currentTarget)setAddToPl(null);}}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
-          :playlists.map(pl=>(
-            <button
-              key={pl.id}
-              type="button"
-              onClick={e=>{e.stopPropagation();addToPl2(pl.id,track);}}
-              style={{width:'100%',padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',border:'none',textAlign:'left'}}
-            >
-              <span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span>
-              <span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span>
-            </button>
-          ))
+          :playlists.map(pl=><div key={pl.id} onPointerDown={e=>{e.stopPropagation();addToPl2(pl.id,track);}} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
         }
-        <button type="button" onClick={e=>{e.stopPropagation();setAddToPl(null);}} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
+        <button onPointerDown={e=>{e.stopPropagation();setAddToPl(null);}} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
       </div>
     </div>
   );
@@ -2194,7 +2129,7 @@ export default function App(){
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
-          <div className="modal-sheet" data-wheel-scroll="1" style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+          <div className="modal-sheet" style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
               <button onPointerDown={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC,...tap}}>{lang==='ru'?'Очистить':'Clear'}</button>
@@ -2249,7 +2184,7 @@ export default function App(){
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:8,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
-          <button type="button" onClick={e=>{e.stopPropagation();setAddToPl(current);}} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+          <button onPointerDown={e=>{e.stopPropagation();setAddToPl(current);}} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
@@ -2872,7 +2807,7 @@ export default function App(){
         const isFirstEver=monthStats.firstEverMonth===null&&monthStats.prev===null;
         const isCollecting=!monthStats.prev;
         return(
-        <div className="screen-fade" data-wheel-scroll="1" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
+        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
@@ -3037,7 +2972,7 @@ export default function App(){
           [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
         ];
         return(
-        <div className="screen-fade" data-wheel-scroll="1" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
           {/* Header */}
           <div style={{position:'relative',overflow:'hidden'}}>
             {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(24px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>}
@@ -3124,7 +3059,7 @@ export default function App(){
                 </div>
                 {[
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill={trackMenuTr&&isLk(trackMenuTr.id)?ACC:'none'} stroke={trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:trackMenuTr&&isLk(trackMenuTr.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),color:trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;if(!t)return;toggleLike(t);setTrackMenuPlId(null);setTrackMenuTr(null);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tr=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(tr)requestAnimationFrame(()=>setAddToPl(tr));}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tr=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(tr)setAddToPl(tr);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)shareTrack(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);if(t)openArtist('',t.artist,t.cover,0);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t){removeFromPl(pl.id,t.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);}}},
