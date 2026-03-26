@@ -2,10 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
-const SPOTIFY_ACCESS_TOKEN_KEY = 'spotify_access_token';
-const SPOTIFY_REFRESH_TOKEN_KEY = 'spotify_refresh_token';
-const SPOTIFY_TOKEN_EXPIRY_KEY = 'spotify_token_expiry';
-
 const ACC = '#EFBF7F';
 const ACC_DIM = 'rgba(239,191,127,0.13)';
 const BG = '#0e0e0e';
@@ -55,7 +51,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Відкрий',importOtherStep2:'і підключи свій акаунт',
     importOtherStep3:'Вибери плейлист і перенеси його в SoundCloud',
     importOtherStep4:'Поверніться сюди і вставте посилання SoundCloud плейлиста',
-    importOtherBtn:'Відкрити Soundiiz',importNotFound:'не знайдено на SoundCloud',
+    importOtherBtn:'Відкрити Soundiiz',importNotFound:'не знайдено на SoundCloud',spotifyConnect:'Підключити Spotify',spotifyConnected:'Spotify підключено',spotifyDisconnect:'Відключити Spotify',
   },
   kk: {
     home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Сен үшін',profile:'Профиль',
@@ -81,7 +77,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Ашу',importOtherStep2:'және аккаунтты қосу',
     importOtherStep3:'Плейлистті таңдап SoundCloud-қа көшір',
     importOtherStep4:'Осында оралып SoundCloud плейлист сілтемесін қой',
-    importOtherBtn:'Soundiiz ашу',importNotFound:'SoundCloud-та табылмады',
+    importOtherBtn:'Soundiiz ашу',importNotFound:'SoundCloud-та табылмады',spotifyConnect:'Spotify қосу',spotifyConnected:'Spotify қосылды',spotifyDisconnect:'Spotify ажырату',
   },
   pl: {
     home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Dla Ciebie',profile:'Profil',
@@ -107,7 +103,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Otwórz',importOtherStep2:'i połącz swoje konto',
     importOtherStep3:'Wybierz playlistę i przenieś ją do SoundCloud',
     importOtherStep4:'Wróć tutaj i wklej link do playlisty SoundCloud',
-    importOtherBtn:'Otwórz Soundiiz',importNotFound:'nie znaleziono na SoundCloud',
+    importOtherBtn:'Otwórz Soundiiz',importNotFound:'nie znaleziono na SoundCloud',spotifyConnect:'Połącz Spotify',spotifyConnected:'Spotify połączono',spotifyDisconnect:'Odłącz Spotify',
   },
   tr: {
     home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Senin İçin',profile:'Profil',
@@ -158,7 +154,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Open',importOtherStep2:'and connect your account',
     importOtherStep3:'Select your playlist and transfer it to SoundCloud',
     importOtherStep4:'Come back here and paste the SoundCloud playlist link',
-    importOtherBtn:'Open Soundiiz',importNotFound:'not found on SoundCloud',
+    importOtherBtn:'Open Soundiiz',importNotFound:'not found on SoundCloud',spotifyConnect:'Connect Spotify',spotifyConnected:'Spotify Connected',spotifyDisconnect:'Disconnect Spotify',
   },
   ru: {
     home:'Главная',search:'Поиск',library:'Библиотека',trending:'Для тебя',profile:'Профиль',
@@ -184,7 +180,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Открой',importOtherStep2:'и подключи свой аккаунт',
     importOtherStep3:'Выбери плейлист и перенеси его в SoundCloud',
     importOtherStep4:'Вернись сюда и вставь ссылку на плейлист SoundCloud',
-    importOtherBtn:'Открыть Soundiiz',importNotFound:'не найден на SoundCloud',
+    importOtherBtn:'Открыть Soundiiz',importNotFound:'не найден на SoundCloud',spotifyConnect:'Подключить Spotify',spotifyConnected:'Spotify подключён',spotifyDisconnect:'Отключить Spotify',
   },
 };
 
@@ -572,155 +568,9 @@ export default function App(){
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
-  const getStoredSpotifyAccessToken=async()=>{
-    const savedToken=localStorage.getItem(SPOTIFY_ACCESS_TOKEN_KEY);
-    const savedExpiry=localStorage.getItem(SPOTIFY_TOKEN_EXPIRY_KEY);
-    const refreshToken=localStorage.getItem(SPOTIFY_REFRESH_TOKEN_KEY);
-
-    if(savedToken&&savedExpiry&&Date.now()<parseInt(savedExpiry,10))return savedToken;
-
-    if(refreshToken){
-      try{
-        const r=await fetch(`${W}/spotify/refresh`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({refreshToken})
-        });
-        const d=await r.json();
-        if(r.ok&&d.accessToken){
-          localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,d.accessToken);
-          localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(d.expiresIn||3600)*1000));
-          return d.accessToken;
-        }
-      }catch{}
-    }
-    return null;
-  };
-
-  const loginWithSpotifyRedirect=(pendingPlaylistUrl?:string)=>{
-    if(pendingPlaylistUrl)sessionStorage.setItem('spotify_pending_playlist_url',pendingPlaylistUrl);
-    window.location.href=`${W}/spotify/login?state=${encodeURIComponent(pendingPlaylistUrl||'')}`;
-  };
-
-  const runImportWithUrl=async(rawUrl:string)=>{
-    const cleanUrl=rawUrl.trim();
-    if(!cleanUrl)return;
-    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
-    try{
-      const spotifyAccessToken=/spotify\.com/i.test(cleanUrl)?await getStoredSpotifyAccessToken():null;
-      const r=await fetch(`${W}/import/preview`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({url:cleanUrl,spotifyAccessToken})
-      });
-      const d=await r.json();
-      if(r.status===401||d?.error==='NEED_SPOTIFY_AUTH'){
-        loginWithSpotifyRedirect(cleanUrl);
-        return;
-      }
-      if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
-      setImportPreview(d);
-      setImportStep('preview');
-    }catch(e:any){
-      setImportError(e?.message||'Import failed');
-      setImportStep('error');
-    }
-  };
-
-  useEffect(()=>{
-    const readParams=(raw:string)=>{
-      const q=raw.startsWith('?')||raw.startsWith('#')?raw.slice(1):raw;
-      return new URLSearchParams(q);
-    };
-
-    const searchParams=readParams(window.location.search||'');
-    const hashParams=readParams(window.location.hash||'');
-    const accessToken=searchParams.get('spotify_access_token')||hashParams.get('spotify_access_token');
-    const refreshToken=searchParams.get('spotify_refresh_token')||hashParams.get('spotify_refresh_token');
-    const expiresIn=searchParams.get('spotify_expires_in')||hashParams.get('spotify_expires_in');
-    const spotifyError=searchParams.get('spotify_error')||hashParams.get('spotify_error');
-    const spotifyState=searchParams.get('spotify_state')||hashParams.get('spotify_state');
-
-    if(spotifyError){
-      setScreen('library');
-      setLibTab('playlists');
-      setShowImport(true);
-      setImportError(spotifyError);
-      setImportStep('error');
-      window.history.replaceState({},document.title,window.location.pathname);
-      return;
-    }
-
-    if(accessToken){
-      localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,accessToken);
-      if(refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,refreshToken);
-      localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(expiresIn||3600)*1000));
-      window.history.replaceState({},document.title,window.location.pathname);
-
-      const pendingUrl=spotifyState||sessionStorage.getItem('spotify_pending_playlist_url')||'';
-      setScreen('library');
-      setLibTab('playlists');
-      setShowImport(true);
-      if(pendingUrl){
-        sessionStorage.removeItem('spotify_pending_playlist_url');
-        setImportUrl(pendingUrl);
-        setTimeout(()=>{runImportWithUrl(pendingUrl);},60);
-      }
-    }
-  },[]);
-
-  useEffect(()=>{
-    const onMessage=(event:MessageEvent)=>{
-      const data:any=event.data;
-      if(!data||typeof data!=='object')return;
-      if(data.type==='SPOTIFY_AUTH_SUCCESS'&&data.accessToken){
-        localStorage.setItem(SPOTIFY_ACCESS_TOKEN_KEY,data.accessToken);
-        if(data.refreshToken)localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY,data.refreshToken);
-        localStorage.setItem(SPOTIFY_TOKEN_EXPIRY_KEY,String(Date.now()+Number(data.expiresIn||3600)*1000));
-        const pendingUrl=data.state||sessionStorage.getItem('spotify_pending_playlist_url')||'';
-        setScreen('library');
-        setLibTab('playlists');
-        setShowImport(true);
-        if(pendingUrl){
-          sessionStorage.removeItem('spotify_pending_playlist_url');
-          setImportUrl(pendingUrl);
-          setTimeout(()=>{runImportWithUrl(pendingUrl);},60);
-        }
-      }else if(data.type==='SPOTIFY_AUTH_ERROR'){
-        setScreen('library');
-        setLibTab('playlists');
-        setShowImport(true);
-        setImportError(data.error||'Spotify auth failed');
-        setImportStep('error');
-      }
-    };
-    window.addEventListener('message',onMessage);
-    return()=>window.removeEventListener('message',onMessage);
-  },[]);
-
-  useEffect(()=>{
-    const onWheel=(e:WheelEvent)=>{
-      const target=e.target as HTMLElement|null;
-      if(!target)return;
-      const tag=target.tagName;
-      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||target.isContentEditable)return;
-
-      let el:HTMLElement|null=target;
-      while(el&&el!==document.body){
-        const style=window.getComputedStyle(el);
-        const canScroll=(style.overflowY==='auto'||style.overflowY==='scroll'||el.hasAttribute('data-wheel-scroll'))&&el.scrollHeight>el.clientHeight+4;
-        if(canScroll){
-          el.scrollTop+=e.deltaY;
-          e.preventDefault();
-          return;
-        }
-        el=el.parentElement;
-      }
-    };
-    window.addEventListener('wheel',onWheel,{passive:false});
-    return()=>window.removeEventListener('wheel',onWheel as EventListener);
-  },[]);
-
+  const[spotifyToken,setSpotifyToken]=useState<string|null>(null);
+  const[spotifyTokenExpiry,setSpotifyTokenExpiry]=useState<number|null>(null);
+  const[spotifyConnected,setSpotifyConnected]=useState(false);
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -757,11 +607,7 @@ export default function App(){
   const triggerSync=(..._args:any[])=>doFullSync();
 
   useEffect(()=>{
-    const tgApp=window.Telegram?.WebApp;
-    tgApp?.ready();
-    tgApp?.expand();
-    try{ if(typeof tgApp?.disableVerticalSwipes==='function') tgApp.disableVerticalSwipes(); }catch{}
-    try{ document.documentElement.style.overscrollBehavior='none'; document.body.style.overscrollBehavior='none'; }catch{}
+    window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
     const ll=()=>{try{
       const l=localStorage.getItem('l47');if(l)setLiked(JSON.parse(l));
       const p=localStorage.getItem('p47');if(p)setPlaylists(JSON.parse(p));
@@ -792,31 +638,7 @@ export default function App(){
         };
         const localLiked=likedRef.current;const merged_liked=merge(localLiked,sv.liked)||localLiked;
         if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
-        // Smart playlist merge: for each playlist, keep the version with higher updatedAt timestamp
-        // This ensures deletions (which save a newer timestamp) are preserved across devices
-        const localPl=playlistsRef.current;
-        let merged_pl=localPl;
-        if(sv.playlists?.length){
-          const localMap=new Map(localPl.map((p:Playlist&{updatedAt?:number})=>[p.id,p]));
-          const serverMap=new Map((sv.playlists as (Playlist&{updatedAt?:number})[]).map(p=>[p.id,p]));
-          const allIds=new Set([...localMap.keys(),...serverMap.keys()]);
-          const result:(Playlist&{updatedAt?:number})[]=[];
-          allIds.forEach(id=>{
-            const lp=localMap.get(id) as (Playlist&{updatedAt?:number})|undefined;
-            const sp=serverMap.get(id) as (Playlist&{updatedAt?:number})|undefined;
-            if(lp&&sp){
-              // Both have it — pick the one with newer updatedAt, or server if equal
-              result.push((lp.updatedAt||0)>=(sp.updatedAt||0)?lp:sp);
-            } else if(lp){
-              result.push(lp); // only local has it
-            } else if(sp){
-              result.push(sp); // only server has it
-            }
-          });
-          // preserve local order roughly
-          result.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-          merged_pl=result;
-        }
+        const localPl=playlistsRef.current;const merged_pl=merge(localPl,sv.playlists)||localPl;
         if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
         const localH=historyRef.current;const merged_h=merge(localH,sv.history)||localH;
         if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
@@ -855,6 +677,52 @@ export default function App(){
     };
     document.addEventListener('keydown',onKey);
     return()=>document.removeEventListener('keydown',onKey);
+  },[]);
+
+  useEffect(()=>{
+    const loadSpotifyToken=()=>{
+      try{
+        const tokenData=localStorage.getItem('spotify_token_data');
+        if(tokenData){
+          const parsed=JSON.parse(tokenData);
+          const now=Date.now();
+          if(parsed.timestamp&&parsed.expiresIn){
+            const expiryTime=parsed.timestamp+(parsed.expiresIn*1000);
+            if(now<expiryTime){
+              setSpotifyToken(parsed.accessToken);
+              setSpotifyTokenExpiry(expiryTime);
+              setSpotifyConnected(true);
+              return;
+            }
+          }
+        }
+      }catch(err){
+        console.error('Failed to load Spotify token:',err);
+      }
+      setSpotifyToken(null);
+      setSpotifyTokenExpiry(null);
+      setSpotifyConnected(false);
+    };
+
+    loadSpotifyToken();
+
+    const handleMessage=(event:MessageEvent)=>{
+      if(event.data&&event.data.type==='spotify_auth'){
+        const {accessToken,refreshToken,expiresIn,timestamp}=event.data;
+        if(accessToken){
+          const safeTimestamp=timestamp||Date.now();
+          localStorage.setItem('spotify_token_data',JSON.stringify({
+            accessToken,refreshToken,expiresIn,timestamp:safeTimestamp
+          }));
+          setSpotifyToken(accessToken);
+          setSpotifyTokenExpiry(safeTimestamp+(expiresIn*1000));
+          setSpotifyConnected(true);
+        }
+      }
+    };
+
+    window.addEventListener('message',handleMessage);
+    return()=>window.removeEventListener('message',handleMessage);
   },[]);
 
   const[recsLoading,setRecsLoading]=useState(false);
@@ -1330,8 +1198,172 @@ export default function App(){
     }
   },[screen,history.length]);
 
+  const extractPlaylistId=(url:string)=>{
+    try{
+      const parsed=new URL(url);
+      const list=parsed.searchParams.get('list');
+      if(list)return list;
+    }catch{}
+    const match=url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+    return match?match[1]:null;
+  };
+
+  const connectSpotify=()=>{
+    const authUrl=`${W}/spotify/auth`;
+    const popup=window.open(authUrl,'Spotify Login','width=500,height=600');
+    if(!popup){
+      alert(lang==='ru'
+        ? 'Пожалуйста, разрешите всплывающие окна для Spotify авторизации'
+        : lang==='uk'
+        ? 'Будь ласка, дозвольте спливаючі вікна для Spotify авторизації'
+        : 'Please allow popups for Spotify authorization');
+    }
+  };
+
+  const disconnectSpotify=()=>{
+    localStorage.removeItem('spotify_token_data');
+    setSpotifyToken(null);
+    setSpotifyTokenExpiry(null);
+    setSpotifyConnected(false);
+  };
+
+  const fetchSpotifyPlaylist=async(playlistUrl:string):Promise<{name:string;tracks:any[]}|null>=>{
+    if(!spotifyToken){
+      connectSpotify();
+      return null;
+    }
+    try{
+      const match=playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
+      if(!match)throw new Error('Invalid Spotify playlist URL');
+      const playlistId=match[1];
+      const res=await fetch(`${W}/spotify/playlist?id=${playlistId}`,{
+        headers:{Authorization:`Bearer ${spotifyToken}`}
+      });
+      if(!res.ok){
+        if(res.status===401){
+          disconnectSpotify();
+          connectSpotify();
+          return null;
+        }
+        throw new Error(`Failed to fetch playlist: ${res.status}`);
+      }
+      const data=await res.json();
+      if(data.error)throw new Error(data.error);
+      return {name:data.name,tracks:data.tracks};
+    }catch(err){
+      console.error('Spotify fetch error:',err);
+      throw err;
+    }
+  };
+
+  const importSpotifyPlaylist=async(url:string)=>{
+    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
+    try{
+      const spotifyData=await fetchSpotifyPlaylist(url);
+      if(!spotifyData){
+        setImportStep('idle');
+        return;
+      }
+      setImportStep('matching');
+      const matchRes=await fetch(`${W}/import`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tracks:spotifyData.tracks})
+      });
+      if(!matchRes.ok)throw new Error('Failed to match tracks');
+      const matchData=await matchRes.json();
+      const tracks:Track[]=(matchData.tracks||[]);
+      const total=matchData.total||spotifyData.tracks.length||0;
+      const found=matchData.found||tracks.length||0;
+      const fallbackResults=(spotifyData.tracks||[]).map((tr:any,index:number)=>({
+        imported:{sourceTitle:tr.sourceTitle||tr.title||`Track ${index+1}`,sourceArtist:tr.sourceArtist||tr.artist||''},
+        matched:tracks[index]||null,
+        status:index<found&&tracks[index]?'found':'not_found'
+      }));
+      setImportProgress(100);
+      setImportResults(Array.isArray(matchData.results)&&matchData.results.length?matchData.results:fallbackResults.slice(0,Math.max(total,fallbackResults.length)));
+      if(tracks.length>0){
+        const newPl:Playlist={id:Date.now().toString(),name:spotifyData.name,tracks,repeat:false,sort:'default'};
+        setPlaylists(prev=>{const n=[newPl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
+      }
+      setImportStep('done');
+    }catch(err:any){
+      setImportError(err.message||'Import failed');
+      setImportStep('error');
+    }
+  };
+
   const runImport=async()=>{
-    await runImportWithUrl(importUrl.trim());
+    const trimmedUrl=importUrl.trim();
+    if(!trimmedUrl)return;
+
+    if(importTab==='main'){
+      if(trimmedUrl.includes('spotify.com')){
+        await importSpotifyPlaylist(trimmedUrl);
+        return;
+      }
+
+      if(trimmedUrl.includes('youtube.com')||trimmedUrl.includes('youtu.be')){
+        setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
+        try{
+          const plId=extractPlaylistId(trimmedUrl);
+          if(!plId){
+            setImportError(t('importNotFound'));
+            setImportStep('error');
+            return;
+          }
+          const ytRes=await fetch(`${W}/youtube-playlist?id=${plId}`);
+          if(!ytRes.ok){
+            setImportError('YouTube API error');
+            setImportStep('error');
+            return;
+          }
+          const ytData=await ytRes.json();
+          if(!ytData.tracks||ytData.tracks.length===0){
+            setImportError(t('notFound'));
+            setImportStep('error');
+            return;
+          }
+          setImportStep('matching');
+          const matchRes=await fetch(`${W}/import`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({tracks:ytData.tracks})
+          });
+          if(!matchRes.ok)throw new Error('Failed to match tracks');
+          const matchData=await matchRes.json();
+          const tracks:Track[]=(matchData.tracks||[]);
+          const total=matchData.total||ytData.tracks.length||0;
+          const found=matchData.found||tracks.length||0;
+          const fallbackResults=(ytData.tracks||[]).map((tr:any,index:number)=>({
+            imported:{sourceTitle:tr.sourceTitle||tr.title||`Track ${index+1}`,sourceArtist:tr.sourceArtist||tr.artist||''},
+            matched:tracks[index]||null,
+            status:index<found&&tracks[index]?'found':'not_found'
+          }));
+          setImportProgress(100);
+          setImportResults(Array.isArray(matchData.results)&&matchData.results.length?matchData.results:fallbackResults.slice(0,Math.max(total,fallbackResults.length)));
+          if(tracks.length>0){
+            const newPl:Playlist={id:Date.now().toString(),name:ytData.name||'Imported Playlist',tracks,repeat:false,sort:'default'};
+            setPlaylists(prev=>{const n=[newPl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
+          }
+          setImportStep('done');
+          return;
+        }catch(err:any){
+          setImportError(err.message||'Failed to import');
+          setImportStep('error');
+          return;
+        }
+      }
+    }
+
+    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
+    try{
+      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:trimmedUrl})});
+      const d=await r.json();
+      if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
+      setImportPreview(d);
+      setImportStep('preview');
+    }catch(e:any){setImportError(e.message);setImportStep('error');}
   };
 
   const runMatch=async(playlistName:string)=>{
@@ -1468,12 +1500,12 @@ export default function App(){
   const toggleFavA=(a:ArtistInfo)=>{setFavArtists(prev=>{const has=prev.some(x=>x.id===a.id||x.name===a.name);const n=has?prev.filter(x=>x.id!==a.id&&x.name!==a.name):[{...a,latestRelease:null,tracks:[],albums:[]},...prev];try{localStorage.setItem('fa47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,n,favAlbums,blockedArtists,bgCover);return n;});};
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
-  const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist&{updatedAt:number}={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false,updatedAt:Date.now()};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
+  const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
   const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
-  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const now=Date.now();const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId),updatedAt:now}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
+  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
-  const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const now=Date.now();const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track],updatedAt:now}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});setAddToPl(null);};
+  const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
   const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
@@ -1516,15 +1548,6 @@ export default function App(){
   const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
   const volSP=useSlider(volume,v=>setVol(v));
 
-  const[coverKey,setCoverKey]=useState(0);
-  const prevTrackId=useRef('');
-  useEffect(()=>{
-    if(current?.id&&current.id!==prevTrackId.current){
-      prevTrackId.current=current.id;
-      setCoverKey(k=>k+1);
-    }
-  },[current?.id]);
-
   const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
@@ -1553,89 +1576,60 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
-    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,pressed:false,isTouch:false,fromBtn:false});
+    const ps=useRef({sx:0,sy:0,st:0,dx:0,captured:false,fired:false,menuWasOpen:false,pressed:false,isTouchDown:false});
     const[swipeDx,setSwipeDx]=useState(0);
-    const[swiping,setSwiping]=useState(false);
     const rowRef=useRef<HTMLDivElement>(null);
-    const screenW=typeof window!=='undefined'?window.innerWidth:390;
-    const THRESHOLD=screenW*0.35;
 
     const onRowDown=(e:React.PointerEvent)=>{
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
       const isTouch=e.pointerType==='touch'||e.pointerType==='pen';
-      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,pressed:true,isTouch,fromBtn};
-      if(mOpen&&!fromBtn)setMenuId(null);
+      ps.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,fired:false,menuWasOpen:mOpen,pressed:true,isTouchDown:isTouch};
+      if(mOpen)setMenuId(null);
     };
     const onRowMove=(e:React.PointerEvent)=>{
       const s=ps.current;
-      if(!s.pressed||!s.isTouch||s.fromBtn)return;
+      if(!s.pressed||!s.isTouchDown)return;
       const dx=e.clientX-s.sx;
       const dy=Math.abs(e.clientY-s.sy);
-      // vertical scroll wins — abort swipe
-      if(!s.captured&&dy>12&&Math.abs(dx)<dy*0.6)return;
+      if(dy>18&&Math.abs(dx)<18){setSwipeDx(0);return;}
       if(Math.abs(dx)>8&&!s.captured){
-        s.captured=true;setSwiping(true);
-        if(rowRef.current)rowRef.current.style.touchAction='none';
         try{rowRef.current?.setPointerCapture(e.pointerId);}catch{}
+        s.captured=true;e.preventDefault();
       }
-      if(s.captured){
-        // rubber-band past threshold
-        let v=dx;const abs=Math.abs(dx);
-        if(abs>THRESHOLD){const o=abs-THRESHOLD;v=Math.sign(dx)*(THRESHOLD+o*0.22);}
-        s.dx=dx;setSwipeDx(v);e.preventDefault();
-      }
+      if(s.captured){s.dx=dx;setSwipeDx(dx);e.preventDefault();}
     };
     const onRowUp=(e:React.PointerEvent)=>{
       const s=ps.current;
-      if(!s.pressed)return;
       const dx=s.dx;const dt=Date.now()-s.st;
-      s.pressed=false;
-      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
-      setSwiping(false);setSwipeDx(0);
+      ps.current.pressed=false;ps.current.isTouchDown=false;
+      setSwipeDx(0);
       if(s.captured){
-        s.captured=false;
-        if(dx>THRESHOLD&&!track.isArtist&&!track.isAlbum){toggleQ(track);s.fired=true;}
-        else if(dx<-THRESHOLD&&onSwipeLeft){onSwipeLeft();s.fired=true;}
+        if(dx>55&&!track.isArtist&&!track.isAlbum){toggleQ(track);s.fired=true;}
+        else if(dx<-55&&onSwipeLeft){onSwipeLeft();s.fired=true;}
         return;
       }
-      if(!s.fromBtn&&!s.menuWasOpen&&!s.fired&&dt<350)playTrack(track);
+      if(!s.menuWasOpen&&!s.fired&&dt<400){playTrack(track);}
     };
-    const onRowCancel=()=>{
-      ps.current.pressed=false;ps.current.captured=false;
-      if(rowRef.current)rowRef.current.style.touchAction='pan-y';
-      setSwiping(false);setSwipeDx(0);
-    };
+    const onRowCancel=()=>{ps.current.pressed=false;ps.current.isTouchDown=false;setSwipeDx(0);};
 
     const swipeDir=swipeDx>8?'right':swipeDx<-8?'left':'';
-    const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
-    const confirmed=Math.abs(ps.current.dx)>=THRESHOLD;
     const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setMenuId(null);requestAnimationFrame(()=>setAddToPl(track));}},
+      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
       ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
     ];
     return(
-      <div style={{position:'relative',borderRadius:12}}>
+      <div style={{position:'relative'}}>
         {swipeDir==='right'&&!track.isArtist&&!track.isAlbum&&(
-          <div style={{position:'absolute',left:0,top:0,bottom:0,width:'100%',borderRadius:12,display:'flex',alignItems:'center',paddingLeft:18,pointerEvents:'none',
-            background:confirmed?(inQ(track.id)?`rgba(239,191,127,0.30)`:`rgba(239,191,127,0.24)`):`rgba(239,191,127,${0.04+swipeProgress*0.2})`}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"
-              style={{opacity:Math.min(swipeProgress*1.4,1),transform:`scale(${0.6+swipeProgress*0.5})`,transition:swiping?'none':'transform 0.15s ease'}}>
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-              <circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/>
-            </svg>
+          <div style={{position:'absolute',left:0,top:0,bottom:0,width:Math.min(Math.abs(swipeDx),80),background:inQ(track.id)?'rgba(239,191,127,0.22)':'rgba(239,191,127,0.13)',borderRadius:'12px 0 0 12px',display:'flex',alignItems:'center',paddingLeft:12,pointerEvents:'none'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
           </div>
         )}
         {swipeDir==='left'&&onSwipeLeft&&(
-          <div style={{position:'absolute',right:0,top:0,bottom:0,width:'100%',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:18,pointerEvents:'none',
-            background:confirmed?`rgba(200,60,60,0.26)`:`rgba(200,60,60,${0.04+swipeProgress*0.2})`}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"
-              style={{opacity:Math.min(swipeProgress*1.4,1),transform:`scale(${0.6+swipeProgress*0.5})`,transition:swiping?'none':'transform 0.15s ease'}}>
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
-            </svg>
+          <div style={{position:'absolute',right:0,top:0,bottom:0,width:Math.min(Math.abs(swipeDx),80),background:'rgba(200,60,60,0.15)',borderRadius:'0 12px 12px 0',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:12,pointerEvents:'none'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </div>
         )}
         <div
@@ -1645,11 +1639,7 @@ export default function App(){
           onPointerMove={onRowMove}
           onPointerUp={onRowUp}
           onPointerCancel={onRowCancel}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,
-            background:active?ACC_DIM:'transparent',
-            transform:swipeDx!==0?`translateX(${swipeDx}px)`:'none',
-            transition:swiping?'none':'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94),background 0.15s ease',
-            touchAction:'pan-y',userSelect:'none'}}>
+          style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:swipeDx!==0?`translateX(${Math.max(-70,Math.min(70,swipeDx))}px)`:'none',transition:swipeDx===0?'transform 0.18s ease,background 0.15s ease':'none',touchAction:'pan-y',userSelect:'none'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right',transition:'color 0.2s ease'}}>{num}</div>}
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,...tap}}>
             <div style={{position:'relative',flexShrink:0}}>
@@ -1668,15 +1658,11 @@ export default function App(){
             </div>
           </div>
           {!track.isArtist&&!track.isAlbum&&(
-            <div style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
-              <button
-                onPointerDown={e=>{e.stopPropagation();toggleQ(track);}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 5px',transition:'transform 0.15s ease',...tap}}>
+            <div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
+              <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button
-                onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 5px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -1685,236 +1671,17 @@ export default function App(){
           {(track.isArtist||track.isAlbum)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
         </div>
         {mOpen&&(
-          <>
-            <div onPointerDown={e=>{e.stopPropagation();setMenuId(null);}} style={{position:'fixed',inset:0,zIndex:149,background:'transparent'}}/>
-            <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',right:12,left:12,top:'50%',transform:'translateY(-50%)',background:'#1e1e1e',border:'1px solid #2a2a2a',borderRadius:14,zIndex:150,boxShadow:'0 16px 48px rgba(0,0,0,0.9)',overflow:'hidden'}}>
-              <div style={{padding:'9px 12px',borderBottom:'1px solid #252525',display:'flex',alignItems:'center',gap:9,background:'#232323'}}>
-                <Img src={track.cover} size={32} radius={5}/>
-                <div style={{minWidth:0,flex:1}}>
-                  <div style={{fontSize:11,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{track.title}</div>
-                  <div style={{fontSize:10,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{track.artist}</div>
-                </div>
-              </div>
-              {menuItems.map((item,i)=>(
-                <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:item.label===t('blockArtist')?'#d06060':'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #252525':'none',textAlign:'left' as const,...tap}}>
-                  {item.icon}{item.label}
-                </button>
-              ))}
-            </div>
-          </>
+          <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'absolute',right:8,top:'calc(100% + 2px)',background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:50,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.8)',overflow:'hidden'}}>
+            {menuItems.map((item,i)=>(
+              <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:i===menuItems.length-1&&showBlockBtn?'#d06060':'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const,transition:'background 0.15s ease',...tap}}>
+                {item.icon}{item.label}
+              </button>
+            ))}
+          </div>
         )}
       </div>
     );
   };
-
-  // Playlist track row — smoother mobile swipe with Telegram Mini App protections
-  const PlTrackRow=({tr,i,pl,sortedTracks,curSort}:{tr:Track;i:number;pl:Playlist;sortedTracks:Track[];curSort:string})=>{
-    const ps=useRef({sx:0,sy:0,dx:0,dy:0,pressed:false,swiping:false,fromBtn:false,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:-1});
-    const[swipeDx,setSwipeDx]=useState(0);
-    const[swiping,setSwiping]=useState(false);
-    const rowRef=useRef<HTMLDivElement>(null);
-    const isActive=current?.id===tr.id;
-    const screenW=typeof window!=='undefined'?window.innerWidth:390;
-    const THRESHOLD=Math.max(76,Math.min(118,screenW*0.20));
-    const LOCK_THRESHOLD=12;
-    const swipeDir=swipeDx>4?'right':swipeDx<-4?'left':'';
-    const swipeProgress=Math.min(Math.abs(swipeDx)/THRESHOLD,1);
-    const confirmed=Math.abs(swipeDx)>=THRESHOLD;
-
-    const releaseSwipe=()=>{
-      const s=ps.current;
-      s.pressed=false;
-      s.swiping=false;
-      s.dirLocked=false;
-      s.isHoriz=false;
-      s.dx=0;
-      s.dy=0;
-      if(rowRef.current){
-        rowRef.current.style.touchAction='pan-y';
-        rowRef.current.style.overscrollBehavior='contain';
-      }
-      setSwiping(false);
-      setSwipeDx(0);
-    };
-
-    const beginGesture=(clientX:number,clientY:number,fromBtn:boolean,pointerId:number=-1)=>{
-      ps.current={sx:clientX,sy:clientY,dx:0,dy:0,pressed:true,swiping:false,fromBtn,dirLocked:false,isHoriz:false,fired:false,ignoreClick:false,pid:pointerId};
-    };
-
-    const updateGesture=(clientX:number,clientY:number,prevent?:()=>void)=>{
-      const s=ps.current;
-      if(!s.pressed||s.fromBtn)return;
-      const dx=clientX-s.sx;
-      const dy=clientY-s.sy;
-      const absDx=Math.abs(dx);
-      const absDy=Math.abs(dy);
-      s.dx=dx;
-      s.dy=dy;
-
-      if(!s.dirLocked&&absDx<LOCK_THRESHOLD&&absDy<LOCK_THRESHOLD)return;
-
-      if(!s.dirLocked){
-        s.dirLocked=true;
-        s.isHoriz=absDx>absDy*1.18;
-        if(!s.isHoriz){
-          releaseSwipe();
-          return;
-        }
-      }
-
-      if(!s.isHoriz)return;
-
-      if(!s.swiping){
-        s.swiping=true;
-        s.ignoreClick=true;
-        setSwiping(true);
-        if(rowRef.current){
-          rowRef.current.style.touchAction='none';
-          rowRef.current.style.overscrollBehavior='contain';
-        }
-      }
-
-      const limited=Math.sign(dx)*Math.min(Math.abs(dx),THRESHOLD*1.28);
-      setSwipeDx(limited);
-      if(prevent)prevent();
-    };
-
-    const finishGesture=(allowTap:boolean)=>{
-      const s=ps.current;
-      if(!s.pressed&&!s.swiping)return;
-      const dx=swipeDx!==0?swipeDx:s.dx;
-      const didSwipe=s.swiping||Math.abs(dx)>8;
-      if(dx>=THRESHOLD){
-        smartAddQ(tr);
-        s.fired=true;
-      }else if(dx<=-THRESHOLD){
-        removeFromPl(pl.id,tr.id);
-        triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);
-        s.fired=true;
-      }else if(allowTap&&!didSwipe&&!s.fromBtn){
-        playTrack(tr);
-        setPlayingPlId(pl.id);
-        setQueue(sortedTracks.slice(i+1));
-      }
-      releaseSwipe();
-      if(didSwipe){
-        ps.current.ignoreClick=true;
-        window.setTimeout(()=>{ps.current.ignoreClick=false;},180);
-      }
-    };
-
-    const onPointerDown=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
-      beginGesture(e.clientX,e.clientY,fromBtn,e.pointerId);
-    };
-    const onPointerMove=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      updateGesture(e.clientX,e.clientY,()=>e.preventDefault());
-    };
-    const onPointerUp=(e:React.PointerEvent)=>{
-      if(e.pointerType==='mouse')return;
-      finishGesture(false);
-    };
-    const onPointerCancel=()=>{
-      if(ps.current.swiping&&Math.abs(ps.current.dx)>=THRESHOLD*0.9){
-        if(ps.current.dx>0)smartAddQ(tr);
-        else removeFromPl(pl.id,tr.id);
-      }
-      releaseSwipe();
-    };
-
-    const onTouchStart=(e:React.TouchEvent)=>{
-      const t=e.touches[0];
-      if(!t)return;
-      const fromBtn=!!(e.target as HTMLElement).closest('button');
-      beginGesture(t.clientX,t.clientY,fromBtn,-1);
-    };
-    const onTouchMove=(e:React.TouchEvent)=>{
-      const t=e.touches[0];
-      if(!t)return;
-      updateGesture(t.clientX,t.clientY,()=>e.preventDefault());
-    };
-    const onTouchEnd=()=>{ finishGesture(false); };
-    const onClick=(e:React.MouseEvent)=>{
-      if(ps.current.ignoreClick){ e.preventDefault(); e.stopPropagation(); return; }
-      playTrack(tr);
-      setPlayingPlId(pl.id);
-      setQueue(sortedTracks.slice(i+1));
-    };
-
-    return(
-      <div style={{position:'relative',overflow:'hidden'}}>
-        {swipeDir==='right'&&(
-          <div style={{position:'absolute',left:0,top:0,bottom:0,width:'100%',display:'flex',alignItems:'center',paddingLeft:18,pointerEvents:'none',
-            background:confirmed?`rgba(239,191,127,0.26)`:`rgba(239,191,127,${0.04+swipeProgress*0.2})`}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"
-              style={{opacity:Math.min(swipeProgress*1.4,1),transform:`scale(${0.6+swipeProgress*0.5})`,transition:swiping?'none':'transform 0.15s ease'}}>
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-              <circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/>
-            </svg>
-          </div>
-        )}
-        {swipeDir==='left'&&(
-          <div style={{position:'absolute',right:0,top:0,bottom:0,width:'100%',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:18,pointerEvents:'none',
-            background:confirmed?`rgba(200,60,60,0.24)`:`rgba(200,60,60,${0.04+swipeProgress*0.2})`}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"
-              style={{opacity:Math.min(swipeProgress*1.4,1),transform:`scale(${0.6+swipeProgress*0.5})`,transition:swiping?'none':'transform 0.15s ease'}}>
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
-            </svg>
-          </div>
-        )}
-        <div
-          ref={rowRef}
-          draggable={curSort==='default'}
-          onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
-          onDragOver={e=>e.preventDefault()}
-          onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onClick={onClick}
-          style={{
-            display:'flex',alignItems:'center',gap:8,
-            padding:'10px 12px 10px 14px',
-            background:isActive?ACC_DIM:BG,
-            borderBottom:'1px solid #111',
-            touchAction:'pan-y',
-            overscrollBehavior:'contain',
-            userSelect:'none' as const,
-            WebkitUserSelect:'none' as const,
-            WebkitTouchCallout:'none' as const,
-            transform:swipeDx!==0?`translate3d(${swipeDx}px,0,0)`:'translate3d(0,0,0)',
-            transition:swiping?'none':'transform 0.26s cubic-bezier(0.22,1,0.36,1)',
-            willChange:'transform',
-          }}>
-          {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0,userSelect:'none'}}>⠿</div>}
-          <Img src={tr.cover} size={44} radius={7}/>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13,color:isActive?ACC:TEXT_PRIMARY,fontWeight:isActive?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-            <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
-          </div>
-          <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:4}}>{tr.duration}</div>
-          <button
-            onClick={e=>{e.stopPropagation();smartAddQ(tr);}}
-            style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,...tap}}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          </button>
-          <button
-            onClick={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
-            style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-
 
   const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
   const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
@@ -1960,6 +1727,51 @@ export default function App(){
                 </div>
               ))}
             </div>
+            {importTab==='main'&&(
+              <div style={{
+                marginBottom:12,
+                padding:12,
+                background:spotifyConnected?'rgba(29, 185, 84, 0.15)':'rgba(255,255,255,0.05)',
+                borderRadius:12,
+                border:`1px solid ${spotifyConnected?'#1DB954':'rgba(255,255,255,0.1)'}`
+              }}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{fontSize:24}}>🎵</span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY}}>Spotify</div>
+                      <div style={{fontSize:11,color:TEXT_SEC}}>
+                        {spotifyConnected
+                          ? (lang==='ru'?'Подключено':lang==='uk'?'Підключено':'Connected')
+                          : (lang==='ru'?'Не подключено':lang==='uk'?'Не підключено':'Not connected')}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onPointerDown={(e)=>{
+                      e.stopPropagation();
+                      if(spotifyConnected)disconnectSpotify();
+                      else connectSpotify();
+                    }}
+                    style={{
+                      padding:'8px 16px',
+                      background:spotifyConnected?'rgba(255,255,255,0.1)':'#1DB954',
+                      color:spotifyConnected?TEXT_SEC:'#fff',
+                      border:'none',
+                      borderRadius:8,
+                      fontSize:12,
+                      fontWeight:600,
+                      cursor:'pointer',
+                      ...tap
+                    }}
+                  >
+                    {spotifyConnected
+                      ? (lang==='ru'?'Отключить':lang==='uk'?'Відключити':'Disconnect')
+                      : (lang==='ru'?'Подключить':lang==='uk'?'Підключити':'Connect')}
+                  </button>
+                </div>
+              </div>
+            )}
             <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
             <input
               autoFocus={importTab==='main'}
@@ -2130,30 +1942,13 @@ export default function App(){
   );};
 
   const PlModal=({track}:{track:Track})=>(
-    <div
-      style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}}
-      onClick={e=>{if(e.target===e.currentTarget)setAddToPl(null);}}
-    >
-      <div
-        className="modal-sheet"
-        style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}}
-        onClick={e=>e.stopPropagation()}
-      >
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
-          :playlists.map(pl=>(
-            <button
-              key={pl.id}
-              type="button"
-              onClick={e=>{e.stopPropagation();addToPl2(pl.id,track);}}
-              style={{width:'100%',padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',border:'none',textAlign:'left'}}
-            >
-              <span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span>
-              <span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span>
-            </button>
-          ))
+          :playlists.map(pl=><div key={pl.id} onPointerDown={()=>addToPl2(pl.id,track)} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',transition:'background 0.15s ease'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
         }
-        <button type="button" onClick={e=>{e.stopPropagation();setAddToPl(null);}} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
+        <button onPointerDown={()=>setAddToPl(null)} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
       </div>
     </div>
   );
@@ -2177,8 +1972,6 @@ export default function App(){
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
-        @keyframes trackCoverIn{0%{opacity:0;transform:scale(0.88) translateY(8px)}60%{opacity:1;transform:scale(1.02) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes trackInfoIn{0%{opacity:0;transform:translateX(18px)}100%{opacity:1;transform:translateX(0)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
@@ -2200,7 +1993,7 @@ export default function App(){
         .modal-sheet{animation:slideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .settings-sheet{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .mini-player{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
-        .context-menu{animation:fadeIn 0.15s ease both}
+        .context-menu{animation:scaleIn 0.18s cubic-bezier(0.25,0.46,0.45,0.94) both;transform-origin:top right}
         .screen-fade{animation:fadeIn 0.22s ease both}
         .screen-slide-up{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .screen-scale{animation:scaleIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both}
@@ -2257,15 +2050,14 @@ export default function App(){
       </div>
       <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:14}}>
         <div
-          key={coverKey}
           className="full-player-cover"
-          style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',animation:'trackCoverIn 0.45s cubic-bezier(0.25,0.46,0.45,0.94) both'}}
+          style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
           onPointerDown={()=>setFullPlayer(false)}
         >
           <Img src={current.cover} size={Math.min(window.innerWidth-64,230)} radius={0}/>
         </div>
       </div>
-      <div key={coverKey+'info'} style={{width:'100%',flexShrink:0,marginBottom:10,animation:'trackInfoIn 0.38s cubic-bezier(0.25,0.46,0.45,0.94) 0.06s both'}}>
+      <div style={{width:'100%',flexShrink:0,marginBottom:10,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
         <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{current.title}</div>
         <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,...tap}}>
           <span style={{fontSize:13,color:ACC}}>{current.artist}</span>
@@ -2275,7 +2067,7 @@ export default function App(){
       <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:8,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <HBtn track={current} sz={22}/>
-          <button type="button" onClick={e=>{e.stopPropagation();setAddToPl(current);}} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+          <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
         </div>
@@ -2324,8 +2116,6 @@ export default function App(){
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
         @keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.65)}}
-        @keyframes trackCoverIn{0%{opacity:0;transform:scale(0.88) translateY(8px)}60%{opacity:1;transform:scale(1.02) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes trackInfoIn{0%{opacity:0;transform:translateX(18px)}100%{opacity:1;transform:translateX(0)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
@@ -2347,7 +2137,7 @@ export default function App(){
         .modal-sheet{animation:slideUp 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .settings-sheet{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .mini-player{animation:slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
-        .context-menu{animation:fadeIn 0.15s ease both}
+        .context-menu{animation:scaleIn 0.18s cubic-bezier(0.25,0.46,0.45,0.94) both;transform-origin:top right}
         .screen-fade{animation:fadeIn 0.22s ease both}
         .screen-slide-up{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
         .screen-scale{animation:scaleIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both}
@@ -2599,10 +2389,9 @@ export default function App(){
                     <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pp.name}</div>
                     <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-                    <span style={{fontSize:11,color:ACC,opacity:0.7}}>{lang==='ru'?'Открыть':lang==='uk'?'Відкрити':lang==='kk'?'Ашу':lang==='pl'?'Otwórz':lang==='tr'?'Aç':'Open'}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" style={{opacity:0.6}}><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
+                  <button onPointerDown={e=>{e.stopPropagation();setPlayingPlId(pp.id);playPl(pp);}} style={{width:52,height:52,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 16px ${ACC}55`,...tap}}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  </button>
                 </div>
               </div>
               );
@@ -3140,7 +2929,7 @@ export default function App(){
           {trackMenuPlId===pl.id&&trackMenuTr&&(
             <>
               <div onPointerDown={()=>{setTrackMenuPlId(null);setTrackMenuTr(null);}} style={{position:'fixed',inset:0,zIndex:199}}/>
-              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',top:'50%',transform:'translateY(-50%)',right:12,left:12,background:'#1c1c1c',border:'1px solid #2a2a2a',borderRadius:13,overflow:'hidden',zIndex:200,animation:'fadeIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.85)'}}>
+              <div onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',bottom:Math.max(80,window.innerHeight/2-100),right:12,left:12,background:'#1c1c1c',border:'1px solid #2a2a2a',borderRadius:13,overflow:'hidden',zIndex:200,animation:'scaleIn 0.15s ease both',boxShadow:'0 8px 32px rgba(0,0,0,0.85)'}}>
                 <div style={{padding:'9px 12px',borderBottom:'1px solid #222',display:'flex',alignItems:'center',gap:9,background:'#222'}}>
                   <Img src={trackMenuTr.cover} size={32} radius={5}/>
                   <div style={{minWidth:0,flex:1}}>
@@ -3149,11 +2938,9 @@ export default function App(){
                   </div>
                 </div>
                 {[
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill={trackMenuTr&&isLk(trackMenuTr.id)?ACC:'none'} stroke={trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:trackMenuTr&&isLk(trackMenuTr.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),color:trackMenuTr&&isLk(trackMenuTr.id)?ACC:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;if(!t)return;toggleLike(t);setTrackMenuPlId(null);setTrackMenuTr(null);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tr=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(tr)requestAnimationFrame(()=>setAddToPl(tr));}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t)shareTrack(t);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);if(t)openArtist('',t.artist,t.cover,0);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(t){removeFromPl(pl.id,t.id);triggerSync(liked,playlistsRef.current,history,volume,favArtists,favAlbums,blockedArtists,bgCover);}}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}},
                 ].map((item,ii,arr)=>(
                   <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
                     {item.icon}{item.label}
@@ -3169,7 +2956,54 @@ export default function App(){
                 {lang==='ru'?'Плейлист пустой — добавь треки через ❤️':'Empty — like tracks to add them ❤️'}
               </div>
             ):sortedTracks.map((tr,i)=>{
-              return <PlTrackRow key={tr.id+String(i)} tr={tr} i={i} pl={pl} sortedTracks={sortedTracks} curSort={curSort}/>;
+              const swipeRef={x:0,swiped:false};
+              return(
+              <div key={tr.id+String(i)}
+                draggable={curSort==='default'}
+                onDragStart={e=>{e.dataTransfer.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));e.dataTransfer.setData('plId',pl.id);}}
+                onDragOver={e=>e.preventDefault()}
+                onDrop={e=>{e.preventDefault();const from=parseInt(e.dataTransfer.getData('plTrackIdx'));const pid=e.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
+                onPointerDown={e=>{swipeRef.x=e.clientX;swipeRef.swiped=false;}}
+                onPointerUp={e=>{
+                  const dx=e.clientX-swipeRef.x;
+                  if(Math.abs(dx)>55){swipeRef.swiped=true;if(dx>0)smartAddQ(tr);else removeFromPl(pl.id,tr.id);}
+                }}
+                style={{
+                  display:'flex',alignItems:'center',gap:8,
+                  padding:'10px 12px 10px 14px',
+                  background:current?.id===tr.id?ACC_DIM:BG,
+                  borderBottom:'1px solid #111',
+                  touchAction:'pan-y',
+                  userSelect:'none' as const,
+                }}>
+                {curSort==='default'&&<div style={{color:'#2a2a2a',fontSize:14,flexShrink:0}}>⠿</div>}
+                {/* Cover + info — clicking plays */}
+                <div
+                  onPointerUp={e=>{if(!swipeRef.swiped&&Math.abs(e.clientX-swipeRef.x)<10){playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));e.stopPropagation();}}}
+                  style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0,cursor:'pointer'}}>
+                  <Img src={tr.cover} size={44} radius={7}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,color:current?.id===tr.id?ACC:TEXT_PRIMARY,fontWeight:current?.id===tr.id?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
+                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
+                  </div>
+                  <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
+                </div>
+                {/* Queue icon - gold when manually queued */}
+                <button
+                  onPointerDown={e=>e.stopPropagation()}
+                  onPointerUp={e=>{e.stopPropagation();smartAddQ(tr);}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,transition:'opacity 0.15s ease',...tap}}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={manualQIds.has(tr.id)?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </button>
+                {/* 3-dot */}
+                <button
+                  onPointerDown={e=>e.stopPropagation()}
+                  onPointerUp={e=>{e.stopPropagation();setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
+                </button>
+              </div>
+              );
             })}
           </div>
         </div>
