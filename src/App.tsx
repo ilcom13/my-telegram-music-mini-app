@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React,{ useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
@@ -594,6 +594,253 @@ function makeTapHandlers(fn: ()=>void, threshold=10, maxMs=500){
   };
 }
 
+
+// ══════════════════════════════════════════════════════════
+// СТАБИЛЬНЫЕ МОДАЛКИ — вне App, не пересоздаются при ре-рендере
+// ══════════════════════════════════════════════════════════
+
+interface PlModalProps {
+  track: Track;
+  playlists: Playlist[];
+  onClose: () => void;
+  onAdd: (plId: string, track: Track) => void;
+  lang: string;
+  t: (k: string) => string;
+}
+
+const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={onClose}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
+        {playlists.length===0
+          ? <div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
+          : playlists.map(pl=>(
+              <div key={pl.id} onPointerDown={()=>onAdd(pl.id,track)}
+                style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span>
+                <span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span>
+              </div>
+            ))
+        }
+        <button onPointerDown={onClose} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
+      </div>
+    </div>
+  );
+});
+
+
+type ImportStep = 'idle'|'fetching'|'preview'|'matching'|'done'|'error';
+type ImportPreview = {source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null;
+type ImportResult = {imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string};
+
+interface ImportModalProps {
+  importStep: ImportStep;
+  setImportStep: (s: ImportStep) => void;
+  importTab: 'main'|'other';
+  setImportTab: (t: 'main'|'other') => void;
+  importUrl: string;
+  setImportUrl: (u: string) => void;
+  importError: string;
+  setImportError: (e: string) => void;
+  importPreview: ImportPreview;
+  setImportPreview: (p: ImportPreview) => void;
+  importResults: ImportResult[];
+  importProgress: number;
+  onClose: () => void;
+  onImport: () => void;
+  onMatch: (title: string) => void;
+  lang: string;
+  t: (k: string) => string;
+}
+
+const ImportModalExt = React.memo(({
+  importStep, setImportStep, importTab, setImportTab,
+  importUrl, setImportUrl, importError, importPreview,
+  importResults, importProgress, onClose, onImport, onMatch, lang, t
+}: ImportModalProps) => {
+  const tap: React.CSSProperties = {outline:'none',WebkitTapHighlightColor:'transparent' as any};
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end'}}
+      onPointerDown={()=>{if(importStep!=='matching')onClose();}}>
+      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}}
+        onPointerDown={e=>e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>{t('importPlaylist')}</div>
+          {importStep!=='matching'&&<button onPointerDown={onClose} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:20,padding:4,lineHeight:1,...tap}}>×</button>}
+        </div>
+
+        {/* Tabs */}
+        {(importStep==='idle'||importStep==='error')&&(
+          <div style={{display:'flex',gap:6,marginBottom:16,background:BG,borderRadius:12,padding:4}}>
+            {(['main','other'] as const).map(tab=>(
+              <button key={tab} onPointerDown={()=>{setImportTab(tab);setImportUrl('');}}
+                style={{flex:1,padding:'8px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
+                  background:importTab===tab?'#2a2a2a':'transparent',
+                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,...tap}}>
+                {tab==='main'?t('importTabMain'):t('importTabOther')}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Main tab */}
+        {(importStep==='idle'||importStep==='error')&&importTab==='main'&&(<>
+          <div style={{display:'flex',gap:6,marginBottom:12}}>
+            {[{icon:'🟢',label:'Spotify'},{icon:'🔴',label:'YouTube'},{icon:'🟠',label:'SoundCloud'}].map(s=>(
+              <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
+                <span>{s.icon}</span><span>{s.label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
+          <input
+            autoFocus
+            placeholder="https://open.spotify.com/playlist/..."
+            value={importUrl}
+            onChange={e=>setImportUrl(e.target.value)}
+            style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
+          />
+          {importStep==='error'&&importError&&(
+            <div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>
+          )}
+          <button onPointerDown={onImport} disabled={!importUrl.trim()}
+            style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+            {t('importFindBtn')}
+          </button>
+        </>)}
+
+        {/* Other tab */}
+        {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(<>
+          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
+          {[
+            {num:'1',text:<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>},
+            {num:'2',text:t('importOtherStep3')},
+            {num:'3',text:t('importOtherStep4')},
+          ].map(step=>(
+            <div key={step.num} style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-start'}}>
+              <div style={{width:24,height:24,borderRadius:'50%',background:'rgba(239,191,127,0.13)',border:`1px solid ${ACC}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:11,fontWeight:700,color:ACC}}>{step.num}</div>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.55,paddingTop:2}}>{step.text}</div>
+            </div>
+          ))}
+          <a href="https://soundiiz.com/" target="_blank" rel="noreferrer"
+            style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'13px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:13,fontWeight:700,cursor:'pointer',textDecoration:'none',marginBottom:14,boxSizing:'border-box' as const}}
+            onClick={e=>{e.preventDefault();const tgObj=(window as any).Telegram?.WebApp;if(tgObj?.openLink)tgObj.openLink('https://soundiiz.com/');else window.open('https://soundiiz.com/','_blank');}}>
+            🔗 {t('importOtherBtn')}
+          </a>
+          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')} (SoundCloud)</div>
+          <input placeholder="https://soundcloud.com/user/sets/..."
+            value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+            style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+          <button onPointerDown={onImport} disabled={!importUrl.trim()}
+            style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+            {t('importFindBtn')}
+          </button>
+        </>)}
+
+        {/* Fetching */}
+        {importStep==='fetching'&&(
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'36px 0',gap:14}}>
+            <div style={{width:36,height:36,borderRadius:'50%',border:`3px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+            <div style={{fontSize:13,color:TEXT_SEC}}>{t('importLoading')}</div>
+          </div>
+        )}
+
+        {/* Preview */}
+        {importStep==='preview'&&importPreview&&(
+          <div>
+            <div style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0 16px',borderBottom:'1px solid #252525',marginBottom:14}}>
+              {importPreview.cover
+                ?<img src={importPreview.cover} style={{width:58,height:58,borderRadius:9,objectFit:'cover' as const,flexShrink:0}}/>
+                :<div style={{width:58,height:58,borderRadius:9,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,flexShrink:0}}>
+                  {importPreview.source==='spotify'?'🟢':importPreview.source==='youtube'?'🔴':'🟠'}
+                </div>
+              }
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'0.5px'}}>
+                  {importPreview.source==='spotify'?'Spotify':importPreview.source==='youtube'?'YouTube':'SoundCloud'}
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{importPreview.title}</div>
+                <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{importPreview.totalTracks} {t('importTracksWord')}</div>
+              </div>
+            </div>
+            <div style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
+              {importPreview.tracks.slice(0,8).map((tr,i)=>(
+                <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
+                  <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.sourceTitle}</div>
+                    <div style={{fontSize:10,color:TEXT_SEC}}>{tr.sourceArtist}</div>
+                  </div>
+                </div>
+              ))}
+              {importPreview.totalTracks>8&&<div style={{textAlign:'center' as const,padding:'8px',fontSize:11,color:TEXT_MUTED}}>+{importPreview.totalTracks-8} {t('importTracksWord')}</div>}
+            </div>
+            <button onPointerDown={()=>onMatch(importPreview.title)}
+              style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              {t('importPlaylist')}
+            </button>
+          </div>
+        )}
+
+        {/* Matching */}
+        {importStep==='matching'&&(
+          <div>
+            <div style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:TEXT_SEC,marginBottom:6}}>
+                <span>{t('importMatching')}</span>
+                <span style={{color:ACC,fontWeight:600}}>{importProgress}%</span>
+              </div>
+              <div style={{width:'100%',height:4,background:BG3,borderRadius:4}}>
+                <div style={{width:`${importProgress}%`,height:'100%',background:ACC,borderRadius:4,transition:'width 0.3s ease'}}/>
+              </div>
+            </div>
+            {importResults.length>0&&(
+              <div style={{maxHeight:320,overflowY:'auto'}}>
+                {importResults.map((r,i)=>(
+                  <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
+                    <div style={{fontSize:13,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:11,color:r.status==='found'?TEXT_PRIMARY:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.imported.sourceTitle}</div>
+                      {r.matched&&<div style={{fontSize:10,color:TEXT_SEC}}>{r.matched.artist}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Done */}
+        {importStep==='done'&&(()=>{
+          const found=importResults.filter(r=>r.status==='found').length;
+          const total=importResults.length;
+          return(
+            <div style={{textAlign:'center' as const,padding:'8px 0'}}>
+              <div style={{fontSize:40,marginBottom:12}}>🎵</div>
+              <div style={{fontSize:17,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>{t('importDone')}</div>
+              <div style={{fontSize:13,color:TEXT_SEC,marginBottom:4}}>
+                {t('importFound')} {found} {t('importOf')} {total} {t('importTracksWord')}
+              </div>
+              {found<total&&(
+                <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:16}}>{total-found} {t('importNotFound')}</div>
+              )}
+              <button onPointerDown={onClose}
+                style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:8,...tap}}>
+                {t('importOpen')}
+              </button>
+            </div>
+          );
+        })()}
+
+      </div>
+    </div>
+  );
+});
+
 export default function App(){
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
@@ -734,8 +981,10 @@ export default function App(){
   const doFullSync=()=>{
     if(uid==='anon')return;
     if(syncTimer.current)clearTimeout(syncTimer.current);
+    const now_ts=Date.now();
+    try{localStorage.setItem('p47_ts',String(now_ts));}catch{}
     syncTimer.current=setTimeout(()=>syncSave({
-      liked:likedRef.current,playlists:playlistsRef.current,
+      liked:likedRef.current,playlists:playlistsRef.current,playlists_ts:now_ts,
       history:historyRef.current,volume:volumeRef.current,
       favArtists:favArtistsRef.current,favAlbums:favAlbumsRef.current,
       blockedArtists:blockedRef.current,bgCover:bgCoverRef.current,
@@ -780,7 +1029,11 @@ export default function App(){
         };
         const localLiked=likedRef.current;const merged_liked=merge(localLiked,sv.liked)||localLiked;
         if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
-        const localPl=playlistsRef.current;const merged_pl=merge(localPl,sv.playlists)||localPl;
+        const localPl=playlistsRef.current;
+        // Синхронизация плейлистов по timestamp — берём данные с последним изменением
+        const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
+        const serverPlTs=sv.playlists_ts||0;
+        const merged_pl=(serverPlTs>localPlTs&&sv.playlists)?sv.playlists:localPl;
         if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
         const localH=historyRef.current;const merged_h=merge(localH,sv.history)||localH;
         if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
@@ -1568,7 +1821,7 @@ export default function App(){
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setNewPlName('');setShowNewPl(false);};
-  const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}triggerSync(liked,n,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
+  const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
   const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
   const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
@@ -1716,279 +1969,9 @@ export default function App(){
   const sourceIcon=(s:string)=>s==='spotify'?'🟢':s==='youtube'?'🔴':s==='yandex'?'🟡':'📋';
   const sourceName=(s:string)=>s==='spotify'?'Spotify':s==='youtube'?'YouTube':s==='yandex'?'Яндекс Музыка':'Playlist';
 
-  const ImportModal=()=>{
-    return(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>{if(importStep!=='matching'){setShowImport(false);}}}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 40px',maxHeight:'88vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+  // ImportModal перенесён за пределы App (см. ниже) — здесь пустышка
 
-        {/* Header */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-          <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>{t('importPlaylist')}</div>
-          {importStep!=='matching'&&<button onPointerDown={()=>setShowImport(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:20,padding:4,lineHeight:1,...tap}}>×</button>}
-        </div>
-
-        {/* Tabs — only show on idle/error */}
-        {(importStep==='idle'||importStep==='error')&&(
-          <div style={{display:'flex',gap:6,marginBottom:16,background:BG,borderRadius:12,padding:4}}>
-            {(['main','other'] as const).map(tab=>(
-              <button key={tab} onPointerDown={()=>{setImportTab(tab);setImportError('');setImportUrl('');}}
-                style={{flex:1,padding:'8px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
-                  background:importTab===tab?'#2a2a2a':'transparent',
-                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,transition:'all 0.22s ease',...tap}}>
-                {tab==='main'?t('importTabMain'):t('importTabOther')}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ── TAB MAIN: Spotify / YouTube / SoundCloud ── */}
-        {(importStep==='idle'||importStep==='error')&&(
-          <div style={{
-            overflow:'hidden',
-            maxHeight: importTab==='main' ? '400px' : '0px',
-            opacity: importTab==='main' ? 1 : 0,
-            transition:'max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
-            pointerEvents: importTab==='main' ? 'auto' : 'none',
-          }}>
-            <div style={{display:'flex',gap:6,marginBottom:12}}>
-              {[{icon:'🟢',label:'Spotify'},{icon:'🔴',label:'YouTube'},{icon:'🟠',label:'SoundCloud'}].map(s=>(
-                <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
-                  <span>{s.icon}</span><span>{s.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
-            <input
-              autoFocus={importTab==='main'}
-              placeholder="https://open.spotify.com/playlist/..."
-              value={importUrl}
-              onChange={e=>setImportUrl(e.target.value)}
-              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
-            />
-            {importError&&importTab==='main'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
-              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
-              {t('importFindBtn')}
-            </button>
-          </div>
-        )}
-
-        {/* ── TAB OTHER: Яндекс / Apple via Soundiiz ── */}
-        {(importStep==='idle'||importStep==='error')&&(
-          <div style={{
-            overflow:'hidden',
-            maxHeight: importTab==='other' ? '600px' : '0px',
-            opacity: importTab==='other' ? 1 : 0,
-            transition:'max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
-            pointerEvents: importTab==='other' ? 'auto' : 'none',
-          }}>
-            <div style={{display:'flex',gap:6,marginBottom:14}}>
-              {[{icon:'🟡',label:'Яндекс'},{icon:'🍎',label:'Apple Music'}].map(s=>(
-                <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
-                  <span>{s.icon}</span><span>{s.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
-
-            {[
-              {num:'1',text:<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>},
-              {num:'2',text:t('importOtherStep3')},
-              {num:'3',text:t('importOtherStep4')},
-            ].map(step=>(
-              <div key={step.num} style={{display:'flex',gap:10,marginBottom:12,alignItems:'flex-start'}}>
-                <div style={{width:24,height:24,borderRadius:'50%',background:ACC_DIM,border:`1px solid ${ACC}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:11,fontWeight:700,color:ACC}}>{step.num}</div>
-                <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.55,paddingTop:2}}>{step.text}</div>
-              </div>
-            ))}
-
-            <a href="https://soundiiz.com/" target="_blank" rel="noreferrer"
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'13px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:13,fontWeight:700,cursor:'pointer',textDecoration:'none',marginBottom:14,boxSizing:'border-box' as const,...tap}}
-              onClick={e=>{e.preventDefault();const tgObj=(window as any).Telegram?.WebApp;if(tgObj?.openLink)tgObj.openLink('https://soundiiz.com/');else window.open('https://soundiiz.com/','_blank');}}>
-              🔗 {t('importOtherBtn')}
-            </a>
-
-            <div style={{height:1,background:'#252525',marginBottom:14}}/>
-
-            <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')} (SoundCloud)</div>
-            <input
-              placeholder="https://soundcloud.com/user/sets/playlist-name"
-              value={importUrl}
-              onChange={e=>setImportUrl(e.target.value)}
-              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
-            />
-            {importError&&importTab==='other'&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={()=>runImport()} disabled={!importUrl.trim()}
-              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',transition:'background 0.2s',...tap}}>
-              {t('importFindBtn')}
-            </button>
-          </div>
-        )}
-
-        {/* Fetching */}
-        {importStep==='fetching'&&(
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'36px 0',gap:14}}>
-            <div style={{width:36,height:36,borderRadius:'50%',border:`3px solid ${ACC}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
-            <div style={{fontSize:13,color:TEXT_SEC}}>{t('importLoading')}</div>
-          </div>
-        )}
-
-        {/* Preview */}
-        {importStep==='preview'&&importPreview&&(
-          <div>
-            <div style={{display:'flex',gap:12,alignItems:'center',padding:'10px 0 16px',borderBottom:'1px solid #252525',marginBottom:14}}>
-              {importPreview.cover
-                ?<img src={importPreview.cover} style={{width:58,height:58,borderRadius:9,objectFit:'cover',flexShrink:0}}/>
-                :<div style={{width:58,height:58,borderRadius:9,background:BG3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,flexShrink:0}}>
-                  {importPreview.source==='spotify'?'🟢':importPreview.source==='youtube'?'🔴':'🟠'}
-                </div>
-              }
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:3,textTransform:'uppercase',letterSpacing:'0.5px'}}>
-                  {importPreview.source==='spotify'?'Spotify':importPreview.source==='youtube'?'YouTube':'SoundCloud'}
-                </div>
-                <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{importPreview.title}</div>
-                <div style={{fontSize:11,color:TEXT_SEC,marginTop:3}}>{importPreview.totalTracks} {t('importTracksWord')}</div>
-              </div>
-            </div>
-            <div style={{maxHeight:200,overflowY:'auto',marginBottom:14}}>
-              {importPreview.tracks.slice(0,8).map((tr,i)=>(
-                <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e1e'}}>
-                  <div style={{fontSize:10,color:TEXT_MUTED,width:16,textAlign:'right',flexShrink:0}}>{i+1}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.sourceTitle}</div>
-                    <div style={{fontSize:10,color:TEXT_SEC}}>{tr.sourceArtist}</div>
-                  </div>
-                </div>
-              ))}
-              {importPreview.totalTracks>8&&<div style={{textAlign:'center',padding:'8px',fontSize:11,color:TEXT_MUTED}}>+{importPreview.totalTracks-8} {t('importTracksWord')}</div>}
-            </div>
-            <button onPointerDown={()=>runMatch(importPreview.title)}
-              style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
-              {t('importPlaylist')}
-            </button>
-          </div>
-        )}
-
-        {/* Matching */}
-        {importStep==='matching'&&(
-          <div>
-            <div style={{marginBottom:14}}>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:TEXT_SEC,marginBottom:6}}>
-                <span>{t('importMatching')}</span>
-                <span style={{color:ACC,fontWeight:600}}>{importProgress}%</span>
-              </div>
-              <div style={{width:'100%',height:4,background:BG3,borderRadius:4}}>
-                <div style={{width:`${importProgress}%`,height:'100%',background:ACC,borderRadius:4,transition:'width 0.3s ease'}}/>
-              </div>
-            </div>
-            {importResults.length>0&&(
-              <div style={{maxHeight:320,overflowY:'auto'}}>
-                {importResults.map((r,i)=>(
-                  <div key={i} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1a1a1a'}}>
-                    <div style={{fontSize:13,flexShrink:0}}>{r.status==='found'?'✅':'⬜'}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,color:r.status==='found'?TEXT_PRIMARY:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.imported.sourceTitle}</div>
-                      {r.matched&&<div style={{fontSize:10,color:TEXT_SEC}}>{r.matched.artist}</div>}
-                      {r.status==='not_found'&&<div style={{fontSize:10,color:TEXT_MUTED}}>{t('importNotFound')}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Done */}
-        {importStep==='done'&&(()=>{
-          const found=importResults.filter(r=>r.status==='found').length;
-          const total=importResults.length;
-          return(
-            <div style={{textAlign:'center',padding:'8px 0'}}>
-              <div style={{fontSize:40,marginBottom:12}}>🎵</div>
-              <div style={{fontSize:17,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>{t('importDone')}</div>
-              <div style={{fontSize:13,color:TEXT_SEC,marginBottom:4}}>
-                {t('importFound')} {found} {t('importOf')} {total} {t('importTracksWord')}
-              </div>
-              {found<total&&(
-                <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:16}}>{total-found} {t('importNotFound')}</div>
-              )}
-              <button onPointerDown={()=>{setShowImport(false);setLibTab('playlists');}}
-                style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:8,...tap}}>
-                {t('importOpen')}
-              </button>
-            </div>
-          );
-        })()}
-
-      </div>
-    </div>
-  );};
-
-  // ── Компонент строки трека в плейлисте с нормальным свайпом ──
-  const PlTrackRow=({tr,i,isActive,playing:isPlaying,isManualQ,curSort,pl,sortedTracks,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:{
-    tr:Track;i:number;isActive:boolean;playing:boolean;isManualQ:boolean;
-    curSort:string;pl:Playlist;sortedTracks:Track[];
-    onPlay:()=>void;onQueue:()=>void;onRemove:()=>void;onMenu:()=>void;
-    onDragStart:()=>void;onDrop:()=>void;
-  })=>{
-    const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
-      onRight:onQueue,
-      onLeft:onRemove,
-      onTap:onPlay,
-    });
-    return(
-      <div
-        ref={wrapRef}
-        draggable={curSort==='default'}
-        onDragStart={onDragStart}
-        onDragOver={e=>e.preventDefault()}
-        onDrop={onDrop}
-        style={{position:'relative',touchAction:'pan-y',userSelect:'none' as const,borderBottom:'1px solid #111',overflow:'hidden',background:isActive?ACC_DIM:'transparent'}}
-      >
-        <div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
-        </div>
-        <div ref={bgLRef} style={{position:'absolute',inset:0,background:'rgba(200,60,60,0.12)',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:14,pointerEvents:'none',opacity:0}}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        </div>
-        <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
-          {curSort==='default'&&<div style={{color:'#333',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>}
-          <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
-            <div style={{position:'relative',flexShrink:0}}>
-              <Img src={tr.cover} size={44} radius={7}/>
-              {isActive&&<div style={{position:'absolute',inset:0,borderRadius:7,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{isPlaying?'⏸':'▶'}</div>}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,color:isActive?ACC:TEXT_PRIMARY,fontWeight:isActive?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-              <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
-            </div>
-            <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
-          </div>
-          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          </button>
-          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const PlModal=({track}:{track:Track})=>(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setAddToPl(null)}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
-        <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
-        {playlists.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
-          :playlists.map(pl=><div key={pl.id} onPointerDown={()=>addToPl2(pl.id,track)} style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',transition:'background 0.15s ease'}}><span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span><span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span></div>)
-        }
-        <button onPointerDown={()=>setAddToPl(null)} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4,...tap}}>{t('cancel')}</button>
-      </div>
-    </div>
-  );
+  // PlModal перенесён за пределы App (см. ниже) — здесь пустышка
 
   const NAV=[
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
@@ -2173,7 +2156,7 @@ export default function App(){
         <SliderTrack sp={volSP} h={3}/>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
       </div>
-      {addToPl&&<PlModal track={addToPl}/>}
+      {addToPl&&<PlModalExt track={addToPl} playlists={playlists} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
     </div>
   );
 
@@ -2741,7 +2724,19 @@ export default function App(){
       </div>
  
       {addToPl&&!fullPlayer&&<PlModal track={addToPl}/>}
-      {showImport&&<ImportModal/>}
+      {showImport&&<ImportModalExt
+        importStep={importStep} setImportStep={setImportStep}
+        importTab={importTab} setImportTab={setImportTab}
+        importUrl={importUrl} setImportUrl={setImportUrl}
+        importError={importError} setImportError={setImportError}
+        importPreview={importPreview} setImportPreview={setImportPreview}
+        importResults={importResults}
+        importProgress={importProgress}
+        onClose={()=>setShowImport(false)}
+        onImport={runImport}
+        onMatch={runMatch}
+        lang={lang} t={t}
+      />}
  
       {/* ── MONTH STATS SCREEN ── */}
       {screen==='monthstats'&&(()=>{
