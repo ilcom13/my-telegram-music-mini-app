@@ -568,9 +568,7 @@ export default function App(){
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
-  const[spotifyToken,setSpotifyToken]=useState<string|null>(null);
-  const[spotifyTokenExpiry,setSpotifyTokenExpiry]=useState<number|null>(null);
-  const[spotifyConnected,setSpotifyConnected]=useState(false);
+
   const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
@@ -679,51 +677,7 @@ export default function App(){
     return()=>document.removeEventListener('keydown',onKey);
   },[]);
 
-  useEffect(()=>{
-    const loadSpotifyToken=()=>{
-      try{
-        const tokenData=localStorage.getItem('spotify_token_data');
-        if(tokenData){
-          const parsed=JSON.parse(tokenData);
-          const now=Date.now();
-          if(parsed.timestamp&&parsed.expiresIn){
-            const expiryTime=parsed.timestamp+(parsed.expiresIn*1000);
-            if(now<expiryTime){
-              setSpotifyToken(parsed.accessToken);
-              setSpotifyTokenExpiry(expiryTime);
-              setSpotifyConnected(true);
-              return;
-            }
-          }
-        }
-      }catch(err){
-        console.error('Failed to load Spotify token:',err);
-      }
-      setSpotifyToken(null);
-      setSpotifyTokenExpiry(null);
-      setSpotifyConnected(false);
-    };
 
-    loadSpotifyToken();
-
-    const handleMessage=(event:MessageEvent)=>{
-      if(event.data&&event.data.type==='spotify_auth'){
-        const {accessToken,refreshToken,expiresIn,timestamp}=event.data;
-        if(accessToken){
-          const safeTimestamp=timestamp||Date.now();
-          localStorage.setItem('spotify_token_data',JSON.stringify({
-            accessToken,refreshToken,expiresIn,timestamp:safeTimestamp
-          }));
-          setSpotifyToken(accessToken);
-          setSpotifyTokenExpiry(safeTimestamp+(expiresIn*1000));
-          setSpotifyConnected(true);
-        }
-      }
-    };
-
-    window.addEventListener('message',handleMessage);
-    return()=>window.removeEventListener('message',handleMessage);
-  },[]);
 
   const[recsLoading,setRecsLoading]=useState(false);
   const historyRef=useRef<Track[]>([]);
@@ -1208,162 +1162,88 @@ export default function App(){
     return match?match[1]:null;
   };
 
-  const connectSpotify=()=>{
-    const authUrl=`${W}/spotify/auth`;
-    const popup=window.open(authUrl,'Spotify Login','width=500,height=600');
-    if(!popup){
-      alert(lang==='ru'
-        ? 'Пожалуйста, разрешите всплывающие окна для Spotify авторизации'
-        : lang==='uk'
-        ? 'Будь ласка, дозвольте спливаючі вікна для Spotify авторизації'
-        : 'Please allow popups for Spotify authorization');
-    }
-  };
-
-  const disconnectSpotify=()=>{
-    localStorage.removeItem('spotify_token_data');
-    setSpotifyToken(null);
-    setSpotifyTokenExpiry(null);
-    setSpotifyConnected(false);
-  };
-
-  const fetchSpotifyPlaylist=async(playlistUrl:string):Promise<{name:string;tracks:any[]}|null>=>{
-    if(!spotifyToken){
-      connectSpotify();
-      return null;
-    }
-    try{
-      const match=playlistUrl.match(/playlist\/([a-zA-Z0-9]+)/);
-      if(!match)throw new Error('Invalid Spotify playlist URL');
-      const playlistId=match[1];
-      const res=await fetch(`${W}/spotify/playlist?id=${playlistId}`,{
-        headers:{Authorization:`Bearer ${spotifyToken}`}
-      });
-      if(!res.ok){
-        if(res.status===401){
-          disconnectSpotify();
-          connectSpotify();
-          return null;
-        }
-        throw new Error(`Failed to fetch playlist: ${res.status}`);
-      }
-      const data=await res.json();
-      if(data.error)throw new Error(data.error);
-      return {name:data.name,tracks:data.tracks};
-    }catch(err){
-      console.error('Spotify fetch error:',err);
-      throw err;
-    }
-  };
-
-  const importSpotifyPlaylist=async(url:string)=>{
-    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
-    try{
-      const spotifyData=await fetchSpotifyPlaylist(url);
-      if(!spotifyData){
-        setImportStep('idle');
-        return;
-      }
-      setImportStep('matching');
-      const matchRes=await fetch(`${W}/import`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({tracks:spotifyData.tracks})
-      });
-      if(!matchRes.ok)throw new Error('Failed to match tracks');
-      const matchData=await matchRes.json();
-      const tracks:Track[]=(matchData.tracks||[]);
-      const total=matchData.total||spotifyData.tracks.length||0;
-      const found=matchData.found||tracks.length||0;
-      const fallbackResults=(spotifyData.tracks||[]).map((tr:any,index:number)=>({
-        imported:{sourceTitle:tr.sourceTitle||tr.title||`Track ${index+1}`,sourceArtist:tr.sourceArtist||tr.artist||''},
-        matched:tracks[index]||null,
-        status:index<found&&tracks[index]?'found':'not_found'
-      }));
-      setImportProgress(100);
-      setImportResults(Array.isArray(matchData.results)&&matchData.results.length?matchData.results:fallbackResults.slice(0,Math.max(total,fallbackResults.length)));
-      if(tracks.length>0){
-        const newPl:Playlist={id:Date.now().toString(),name:spotifyData.name,tracks,repeat:false,sort:'default'};
-        setPlaylists(prev=>{const n=[newPl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
-      }
-      setImportStep('done');
-    }catch(err:any){
-      setImportError(err.message||'Import failed');
-      setImportStep('error');
-    }
-  };
-
+  // ── IMPORT: Spotify через Client Credentials (без OAuth) ──
   const runImport=async()=>{
     const trimmedUrl=importUrl.trim();
     if(!trimmedUrl)return;
+    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
 
-    if(importTab==='main'){
-      if(trimmedUrl.includes('spotify.com')){
-        await importSpotifyPlaylist(trimmedUrl);
-        return;
-      }
-
-      if(trimmedUrl.includes('youtube.com')||trimmedUrl.includes('youtu.be')){
-        setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
-        try{
-          const plId=extractPlaylistId(trimmedUrl);
-          if(!plId){
-            setImportError(t('importNotFound'));
-            setImportStep('error');
-            return;
+    try{
+      // ── SPOTIFY ──
+      if(trimmedUrl.includes('spotify.com/playlist')||trimmedUrl.startsWith('spotify:playlist')){
+        const res=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
+        const data=await res.json();
+        if(!res.ok||data.error){
+          if(data.code==='PRIVATE_PLAYLIST'){
+            setImportError(
+              lang==='ru'?'Плейлист приватный. Открой его в Spotify → три точки → Сделать публичным, затем попробуй снова.':
+              lang==='uk'?'Плейлист приватний. Відкрий у Spotify → три крапки → Зробити публічним, потім спробуй знову.':
+              'Playlist is private. Open it in Spotify → three dots → Make public, then try again.'
+            );
+          }else{
+            setImportError(data.error||'Failed to fetch Spotify playlist');
           }
-          const ytRes=await fetch(`${W}/youtube-playlist?id=${plId}`);
-          if(!ytRes.ok){
-            setImportError('YouTube API error');
-            setImportStep('error');
-            return;
-          }
-          const ytData=await ytRes.json();
-          if(!ytData.tracks||ytData.tracks.length===0){
-            setImportError(t('notFound'));
-            setImportStep('error');
-            return;
-          }
-          setImportStep('matching');
-          const matchRes=await fetch(`${W}/import`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({tracks:ytData.tracks})
-          });
-          if(!matchRes.ok)throw new Error('Failed to match tracks');
-          const matchData=await matchRes.json();
-          const tracks:Track[]=(matchData.tracks||[]);
-          const total=matchData.total||ytData.tracks.length||0;
-          const found=matchData.found||tracks.length||0;
-          const fallbackResults=(ytData.tracks||[]).map((tr:any,index:number)=>({
-            imported:{sourceTitle:tr.sourceTitle||tr.title||`Track ${index+1}`,sourceArtist:tr.sourceArtist||tr.artist||''},
-            matched:tracks[index]||null,
-            status:index<found&&tracks[index]?'found':'not_found'
-          }));
-          setImportProgress(100);
-          setImportResults(Array.isArray(matchData.results)&&matchData.results.length?matchData.results:fallbackResults.slice(0,Math.max(total,fallbackResults.length)));
-          if(tracks.length>0){
-            const newPl:Playlist={id:Date.now().toString(),name:ytData.name||'Imported Playlist',tracks,repeat:false,sort:'default'};
-            setPlaylists(prev=>{const n=[newPl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
-          }
-          setImportStep('done');
-          return;
-        }catch(err:any){
-          setImportError(err.message||'Failed to import');
           setImportStep('error');
           return;
         }
+        setImportPreview({
+          source:'spotify',
+          title:data.title||'Spotify Playlist',
+          cover:data.cover||'',
+          totalTracks:data.totalTracks||0,
+          tracks:data.tracks||[],
+        });
+        setImportStep('preview');
+        return;
       }
-    }
 
-    setImportStep('fetching');setImportError('');setImportPreview(null);setImportResults([]);setImportProgress(0);
-    try{
-      const r=await fetch(`${W}/import/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:trimmedUrl})});
-      const d=await r.json();
-      if(!r.ok||d.error)throw new Error(d.error||'Failed to fetch playlist');
-      setImportPreview(d);
-      setImportStep('preview');
-    }catch(e:any){setImportError(e.message);setImportStep('error');}
+      // ── YOUTUBE ──
+      if(trimmedUrl.includes('youtube.com')||trimmedUrl.includes('youtu.be')){
+        const plId=extractPlaylistId(trimmedUrl);
+        if(!plId){setImportError(t('importNotFound'));setImportStep('error');return;}
+        const ytRes=await fetch(`${W}/youtube-playlist?id=${plId}`);
+        if(!ytRes.ok){setImportError('YouTube API error');setImportStep('error');return;}
+        const ytData=await ytRes.json();
+        if(!ytData.tracks?.length){setImportError(t('notFound'));setImportStep('error');return;}
+        setImportPreview({
+          source:'youtube',
+          title:ytData.name||'YouTube Playlist',
+          cover:ytData.cover||'',
+          totalTracks:ytData.tracks.length,
+          tracks:ytData.tracks,
+        });
+        setImportStep('preview');
+        return;
+      }
+
+      // ── SOUNDCLOUD (прямой через /album) ──
+      if(trimmedUrl.includes('soundcloud.com')){
+        const scRes=await fetch(`${W}/album?id=${encodeURIComponent(trimmedUrl)}`);
+        const scData=await scRes.json();
+        if(scData.tracks?.length){
+          const newPl:Playlist={id:Date.now().toString(),name:scData.title||'SoundCloud Playlist',tracks:scData.tracks,repeat:false};
+          setPlaylists(prev=>{const n=[newPl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}doFullSync();return n;});
+          setImportResults(scData.tracks.map((tr:Track)=>({imported:{sourceTitle:tr.title,sourceArtist:tr.artist},matched:tr,status:'found'})));
+          setImportProgress(scData.tracks.length);
+          setImportStep('done');
+          setTimeout(()=>{setShowImport(false);setLibTab('playlists');setScreen('library');},1400);
+        }else{
+          setImportError(lang==='ru'?'Не удалось загрузить плейлист SoundCloud':'Failed to load SoundCloud playlist');
+          setImportStep('error');
+        }
+        return;
+      }
+
+      setImportError(
+        lang==='ru'?'Поддерживается: Spotify (публичные плейлисты) и SoundCloud.':
+        lang==='uk'?'Підтримується: Spotify (публічні плейлисти) та SoundCloud.':
+        'Supported: Spotify (public playlists) and SoundCloud.'
+      );
+      setImportStep('error');
+    }catch(e:any){
+      setImportError(e?.message||String(e));
+      setImportStep('error');
+    }
   };
 
   const runMatch=async(playlistName:string)=>{
@@ -1371,24 +1251,37 @@ export default function App(){
     setImportStep('matching');setImportResults([]);setImportProgress(0);
     const tracks=importPreview.tracks;
     const allResults:{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]=[];
-    const batchSize=10;
-    for(let i=0;i<tracks.length;i+=batchSize){
-      const batch=tracks.slice(i,i+batchSize);
+
+    for(let i=0;i<tracks.length;i++){
+      const item=tracks[i];
       try{
-        const r=await fetch(`${W}/import/match`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tracks:batch})});
+        const q=`${item.sourceArtist} ${item.sourceTitle}`.trim();
+        const r=await fetch(`${W}/search?q=${encodeURIComponent(q)}&limit=3&mode=sound`);
         const d=await r.json();
-        if(d.results)allResults.push(...d.results);
-      }catch{}
-      setImportProgress(Math.round(((i+batchSize)/tracks.length)*100));
+        const found:Track|null=d.tracks?.[0]||null;
+        allResults.push({
+          imported:{sourceTitle:item.sourceTitle,sourceArtist:item.sourceArtist},
+          matched:found,
+          status:found?'found':'not_found',
+        });
+      }catch{
+        allResults.push({imported:{sourceTitle:item.sourceTitle,sourceArtist:item.sourceArtist},matched:null,status:'not_found'});
+      }
+      setImportProgress(Math.round(((i+1)/tracks.length)*100));
       setImportResults([...allResults]);
+      if(i%5===4)await new Promise(r=>setTimeout(r,200));
     }
-    // Create playlist with matched tracks
+
     const matched=allResults.filter(r=>r.status==='found'&&r.matched).map(r=>r.matched as Track);
     if(matched.length>0){
       const pl:Playlist={id:Date.now().toString(),name:playlistName,tracks:matched,repeat:false};
-      setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
+      setPlaylists(prev=>{const n=[pl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}doFullSync();return n;});
+      setImportStep('done');
+      setTimeout(()=>{setShowImport(false);setLibTab('playlists');setScreen('library');},1400);
+    }else{
+      setImportError(lang==='ru'?'Ни один трек не найден на SoundCloud':lang==='uk'?'Жоден трек не знайдено':'No tracks found on SoundCloud');
+      setImportStep('error');
     }
-    setImportStep('done');
   };
 
   const doSearch=async(mode=searchMode)=>{
@@ -1727,51 +1620,7 @@ export default function App(){
                 </div>
               ))}
             </div>
-            {importTab==='main'&&(
-              <div style={{
-                marginBottom:12,
-                padding:12,
-                background:spotifyConnected?'rgba(29, 185, 84, 0.15)':'rgba(255,255,255,0.05)',
-                borderRadius:12,
-                border:`1px solid ${spotifyConnected?'#1DB954':'rgba(255,255,255,0.1)'}`
-              }}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{fontSize:24}}>🎵</span>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY}}>Spotify</div>
-                      <div style={{fontSize:11,color:TEXT_SEC}}>
-                        {spotifyConnected
-                          ? (lang==='ru'?'Подключено':lang==='uk'?'Підключено':'Connected')
-                          : (lang==='ru'?'Не подключено':lang==='uk'?'Не підключено':'Not connected')}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onPointerDown={(e)=>{
-                      e.stopPropagation();
-                      if(spotifyConnected)disconnectSpotify();
-                      else connectSpotify();
-                    }}
-                    style={{
-                      padding:'8px 16px',
-                      background:spotifyConnected?'rgba(255,255,255,0.1)':'#1DB954',
-                      color:spotifyConnected?TEXT_SEC:'#fff',
-                      border:'none',
-                      borderRadius:8,
-                      fontSize:12,
-                      fontWeight:600,
-                      cursor:'pointer',
-                      ...tap
-                    }}
-                  >
-                    {spotifyConnected
-                      ? (lang==='ru'?'Отключить':lang==='uk'?'Відключити':'Disconnect')
-                      : (lang==='ru'?'Подключить':lang==='uk'?'Підключити':'Connect')}
-                  </button>
-                </div>
-              </div>
-            )}
+
             <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
             <input
               autoFocus={importTab==='main'}
