@@ -1202,14 +1202,14 @@ export default function App(){
         const plId=extractPlaylistId(trimmedUrl);
         if(!plId){setImportError(t('importNotFound'));setImportStep('error');return;}
         const ytRes=await fetch(`${W}/youtube-playlist?id=${plId}`);
-        if(!ytRes.ok){setImportError('YouTube API error');setImportStep('error');return;}
         const ytData=await ytRes.json();
+        if(!ytRes.ok||ytData.error){setImportError(ytData.error||'YouTube API error');setImportStep('error');return;}
         if(!ytData.tracks?.length){setImportError(t('notFound'));setImportStep('error');return;}
         setImportPreview({
           source:'youtube',
-          title:ytData.name||'YouTube Playlist',
+          title:ytData.title||ytData.name||'YouTube Playlist',
           cover:ytData.cover||'',
-          totalTracks:ytData.tracks.length,
+          totalTracks:ytData.totalTracks||ytData.tracks.length,
           tracks:ytData.tracks,
         });
         setImportStep('preview');
@@ -1218,7 +1218,7 @@ export default function App(){
 
       // ── SOUNDCLOUD (прямой через /album) ──
       if(trimmedUrl.includes('soundcloud.com')){
-        const scRes=await fetch(`${W}/album?id=${encodeURIComponent(trimmedUrl)}`);
+        const scRes=await fetch(`${W}/sc/playlist?url=${encodeURIComponent(trimmedUrl)}`);
         const scData=await scRes.json();
         if(scData.tracks?.length){
           const newPl:Playlist={id:Date.now().toString(),name:scData.title||'SoundCloud Playlist',tracks:scData.tracks,repeat:false};
