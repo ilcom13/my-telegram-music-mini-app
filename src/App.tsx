@@ -1537,13 +1537,6 @@ export default function App(){
           </div>
         )}
         <div
-          ref={rowRef}
-          className="track-row"
-          onPointerDown={onRowDown}
-          onPointerMove={onRowMove}
-          onPointerUp={onRowUp}
-          onPointerCancel={onRowCancel}
-        <div
           className="track-row"
           style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:12,cursor:'pointer',marginBottom:1,background:active?ACC_DIM:'transparent',transform:clampDx!==0?`translateX(${clampDx}px)`:'translateX(0)',transition:swipeDx===0?'transform 0.15s ease,background 0.15s ease':'none',touchAction:'pan-y',userSelect:'none',willChange:'transform'}}>
           {num!==undefined&&<div style={{fontSize:11,color:active?ACC:TEXT_MUTED,width:18,flexShrink:0,textAlign:'right',transition:'color 0.2s ease'}}>{num}</div>}
