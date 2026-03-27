@@ -12,6 +12,140 @@ const TEXT_SEC = '#9a9a9a';
 const TEXT_MUTED = '#5a5a5a';
 const NAV_H = 60;
 
+// ── ГЛОБАЛЬНЫЙ СВАЙП-МЕНЕДЖЕР ──
+// Работает на уровне window, полностью вне React.
+// React ре-рендеры не влияют на него никак.
+const SwipeManager = (() => {
+  type SwipeItem = {
+    el: HTMLElement;           // wrapper элемент
+    inner: HTMLElement;        // элемент который двигается
+    bgR?: HTMLElement | null;  // фон вправо
+    bgL?: HTMLElement | null;  // фон влево
+    onRight: () => void;
+    onLeft?: () => void;
+    onTap: () => void;
+    threshold: number;
+  };
+
+  const items = new Map<number, SwipeItem>(); // pointerId → item
+  let registeredItems: Array<{el: HTMLElement} & SwipeItem> = [];
+
+  type State = {
+    item: SwipeItem;
+    sx: number; sy: number; st: number;
+    dx: number;
+    captured: boolean;
+    pid: number;
+  };
+  let active: State | null = null;
+
+  const applyDx = (item: SwipeItem, dx: number, animated = false) => {
+    const c = Math.max(-80, Math.min(80, dx));
+    item.inner.style.transition = animated ? 'transform 0.2s ease' : 'none';
+    item.inner.style.transform = c !== 0 ? `translateX(${c}px)` : '';
+    if (item.bgR) item.bgR.style.opacity = dx > 6 ? String(Math.min(1, dx / 55)) : '0';
+    if (item.bgL) item.bgL.style.opacity = dx < -6 ? String(Math.min(1, -dx / 55)) : '0';
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.pointerType === 'mouse') return;
+    const target = e.target as HTMLElement;
+    const item = registeredItems.find(r => r.el === target || r.el.contains(target));
+    if (!item) return;
+    active = { item, sx: e.clientX, sy: e.clientY, st: Date.now(), dx: 0, captured: false, pid: e.pointerId };
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!active || active.pid !== e.pointerId) return;
+    const dx = e.clientX - active.sx;
+    const dy = Math.abs(e.clientY - active.sy);
+    if (!active.captured) {
+      if (dy > Math.abs(dx) * 1.3 && dy > 5) { active = null; return; }
+      if (Math.abs(dx) < 6) return;
+      active.captured = true;
+      // Захватываем pointer на wrapper элементе
+      try { active.item.el.setPointerCapture(e.pointerId); } catch {}
+    }
+    active.dx = dx;
+    applyDx(active.item, dx);
+    e.preventDefault();
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!active || active.pid !== e.pointerId) return;
+    const { item, dx, sx, sy, st, captured } = active;
+    active = null;
+    applyDx(item, 0, true);
+    if (captured) {
+      if (dx > 45) item.onRight();
+      else if (dx < -45 && item.onLeft) item.onLeft();
+      return;
+    }
+    const elapsed = Date.now() - st;
+    const moved = Math.abs(e.clientX - sx) < 10 && Math.abs(e.clientY - sy) < 10;
+    if (elapsed < 400 && moved) item.onTap();
+  };
+
+  const onPointerCancel = (e: PointerEvent) => {
+    if (!active || active.pid !== e.pointerId) return;
+    applyDx(active.item, 0, true);
+    active = null;
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+    window.addEventListener('pointercancel', onPointerCancel, { passive: true });
+  }
+
+  return {
+    register(item: SwipeItem) {
+      registeredItems.push({ ...item });
+    },
+    unregister(el: HTMLElement) {
+      registeredItems = registeredItems.filter(r => r.el !== el);
+      if (active?.item.el === el) active = null;
+    },
+  };
+})();
+
+// Хук для регистрации свайп-строки
+function useSwipeRow(opts: {
+  onRight: () => void;
+  onLeft?: () => void;
+  onTap: () => void;
+  threshold?: number;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const bgRRef = useRef<HTMLDivElement>(null);
+  const bgLRef = useRef<HTMLDivElement>(null);
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    const inner = innerRef.current;
+    if (!el || !inner) return;
+    const item = {
+      el, inner,
+      get bgR() { return bgRRef.current; },
+      get bgL() { return bgLRef.current; },
+      get onRight() { return optsRef.current.onRight; },
+      get onLeft() { return optsRef.current.onLeft; },
+      get onTap() { return optsRef.current.onTap; },
+      threshold: opts.threshold ?? 45,
+    };
+    SwipeManager.register(item);
+    return () => SwipeManager.unregister(el);
+  }, []); // [] — только mount/unmount, не зависит от пропсов
+
+  return { wrapRef, innerRef, bgRRef, bgLRef };
+}
+
+
+
 interface Track {
   id: string; title: string; artist: string; cover: string;
   duration: string; plays: number; mp3: string | null;
@@ -1473,59 +1607,13 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
-    // useRef только — никакого useState, чтобы ре-рендер App не ломал свайп
-    const sw=useRef({sx:0,sy:0,st:0,dx:0,captured:false,menuWasOpen:false,down:false});
-    const wrapRef=useRef<HTMLDivElement>(null);
-    const innerRef=useRef<HTMLDivElement>(null);
-    const bgRRef=useRef<HTMLDivElement>(null);
-    const bgLRef=useRef<HTMLDivElement>(null);
+    const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
+      onRight:()=>{if(!track.isArtist&&!track.isAlbum)toggleQ(track);},
+      onLeft:onSwipeLeft,
+      onTap:()=>{if(mOpen){setMenuId(null);return;}playTrack(track);},
+    });
 
-    const applyDx=useCallback((dx:number,animated=false)=>{
-      const inner=innerRef.current;if(!inner)return;
-      const c=Math.max(-72,Math.min(72,dx));
-      inner.style.transition=animated?'transform 0.18s ease':'none';
-      inner.style.transform=c!==0?`translateX(${c}px)`:'';
-      if(bgRRef.current)bgRRef.current.style.opacity=dx>8?String(Math.min(0.9,dx/52)):'0';
-      if(bgLRef.current)bgLRef.current.style.opacity=dx<-8?String(Math.min(0.9,-dx/52)):'0';
-    },[]);
-
-    const onDown=useCallback((e:React.PointerEvent)=>{
-      sw.current={sx:e.clientX,sy:e.clientY,st:Date.now(),dx:0,captured:false,menuWasOpen:mOpen,down:true};
-      if(mOpen)setMenuId(null);
-    },[mOpen]);
-
-    const onMove=useCallback((e:React.PointerEvent)=>{
-      const s=sw.current;if(!s.down)return;
-      const dx=e.clientX-s.sx;
-      const dy=Math.abs(e.clientY-s.sy);
-      if(!s.captured){
-        // Вертикальное движение — скролл, не свайп
-        if(dy>Math.abs(dx)*1.2&&dy>6){s.down=false;return;}
-        if(Math.abs(dx)<8)return;
-        s.captured=true;
-        // setPointerCapture — держит pointer даже когда audio вызывает ре-рендер
-        try{wrapRef.current?.setPointerCapture(e.pointerId);}catch{}
-      }
-      s.dx=dx;
-      applyDx(dx);
-    },[applyDx]);
-
-    const onUp=useCallback((e:React.PointerEvent)=>{
-      const s=sw.current;
-      const dx=s.dx;const dt=Date.now()-s.st;
-      s.down=false;
-      applyDx(0,true);
-      if(s.captured){
-        if(dx>52&&!track.isArtist&&!track.isAlbum)toggleQ(track);
-        else if(dx<-52&&onSwipeLeft)onSwipeLeft();
-        return;
-      }
-      if(!s.menuWasOpen&&dt<400)playTrack(track);
-    },[applyDx,track,onSwipeLeft]);
-
-    const onCancel=useCallback(()=>{sw.current.down=false;applyDx(0,true);},[applyDx]);
-
-    const menuItems=[
+        const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
@@ -1534,8 +1622,7 @@ export default function App(){
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
     ];
     return(
-      <div ref={wrapRef} style={{position:'relative',overflow:'hidden',touchAction:'pan-y'}}
-        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}>
+      <div ref={wrapRef} style={{position:'relative',overflow:'hidden',touchAction:'pan-y'}}>
         {/* Фон свайпа вправо — всегда в DOM, opacity управляется через ref */}
         {!track.isArtist&&!track.isAlbum&&<div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
@@ -1811,48 +1898,11 @@ export default function App(){
     onPlay:()=>void;onQueue:()=>void;onRemove:()=>void;onMenu:()=>void;
     onDragStart:()=>void;onDrop:()=>void;
   })=>{
-    const wrapRef=useRef<HTMLDivElement>(null);
-    const innerRef=useRef<HTMLDivElement>(null);
-    const bgRRef=useRef<HTMLDivElement>(null);
-    const bgLRef=useRef<HTMLDivElement>(null);
-    const sw=useRef({sx:0,sy:0,dx:0,captured:false,down:false});
-
-    const applyDx=useCallback((dx:number,animated=false)=>{
-      const inner=innerRef.current;if(!inner)return;
-      const c=Math.max(-72,Math.min(72,dx));
-      inner.style.transition=animated?'transform 0.18s ease':'none';
-      inner.style.transform=c!==0?`translateX(${c}px)`:'';
-      if(bgRRef.current)bgRRef.current.style.opacity=dx>8?String(Math.min(0.9,dx/55)):'0';
-      if(bgLRef.current)bgLRef.current.style.opacity=dx<-8?String(Math.min(0.9,-dx/55)):'0';
-    },[]);
-
-    const onDown=useCallback((e:React.PointerEvent)=>{
-      sw.current={sx:e.clientX,sy:e.clientY,dx:0,captured:false,down:true};
-    },[]);
-    const onMove=useCallback((e:React.PointerEvent)=>{
-      const s=sw.current;if(!s.down)return;
-      const dx=e.clientX-s.sx;
-      const dy=Math.abs(e.clientY-s.sy);
-      if(!s.captured){
-        if(dy>Math.abs(dx)*1.2&&dy>6){s.down=false;return;}
-        if(Math.abs(dx)<8)return;
-        s.captured=true;
-        try{wrapRef.current?.setPointerCapture(e.pointerId);}catch{}
-      }
-      s.dx=dx;applyDx(dx);
-    },[applyDx]);
-    const onUp=useCallback((e:React.PointerEvent)=>{
-      const s=sw.current;const dx=s.dx;s.down=false;
-      applyDx(0,true);
-      if(s.captured){
-        if(dx>55)onQueue();
-        else if(dx<-55)onRemove();
-        return;
-      }
-      if(Math.abs(e.clientX-s.sx)<12&&Math.abs(e.clientY-s.sy)<12)onPlay();
-    },[applyDx,onPlay,onQueue,onRemove]);
-    const onCancel=useCallback(()=>{sw.current.down=false;applyDx(0,true);},[applyDx]);
-
+    const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
+      onRight:onQueue,
+      onLeft:onRemove,
+      onTap:onPlay,
+    });
     return(
       <div
         ref={wrapRef}
@@ -1860,10 +1910,6 @@ export default function App(){
         onDragStart={onDragStart}
         onDragOver={e=>e.preventDefault()}
         onDrop={onDrop}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onCancel}
         style={{position:'relative',touchAction:'pan-y',userSelect:'none' as const,borderBottom:'1px solid #111',overflow:'hidden',background:isActive?ACC_DIM:'transparent'}}
       >
         <div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
@@ -1872,10 +1918,9 @@ export default function App(){
         <div ref={bgLRef} style={{position:'absolute',inset:0,background:'rgba(200,60,60,0.12)',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:14,pointerEvents:'none',opacity:0}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         </div>
-        {/* Основная строка — двигается через ref, не через setState */}
         <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
           {curSort==='default'&&<div style={{color:'#333',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>}
-          <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0,cursor:'pointer'}}>
+          <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
             <div style={{position:'relative',flexShrink:0}}>
               <Img src={tr.cover} size={44} radius={7}/>
               {isActive&&<div style={{position:'absolute',inset:0,borderRadius:7,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{isPlaying?'⏸':'▶'}</div>}
@@ -1886,10 +1931,10 @@ export default function App(){
             </div>
             <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
           </div>
-          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0,...tap}}>
+          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </button>
-          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0,...tap}}>
+          <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
           </button>
         </div>
