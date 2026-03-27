@@ -659,8 +659,16 @@ export default function App(){
   const[bgCover,setBgCover]=useState('');
   const[fpColors,setFpColors]=useState({dark:'#1a1208',mid:'#2a1f10',accent:'#3a2d18'});
   const[playing,setPlaying]=useState(false);
-  const[progress,setProgress]=useState(0);
-  const[curTime,setCurTime]=useState('0:00');
+  // progress и curTime — refs, не state. Ре-рендера от аудио нет.
+  const progressRef=useRef(0);
+  const curTimeRef=useRef('0:00');
+  // DOM refs для прямого обновления без React
+  const seekBarFillRef=useRef<HTMLDivElement>(null);
+  const seekBarThumbRef=useRef<HTMLDivElement>(null);
+  const curTimeDisplayRef=useRef<HTMLSpanElement>(null);
+  const miniBarFillRef=useRef<HTMLDivElement>(null);
+  const miniBarThumbRef=useRef<HTMLDivElement>(null);
+  const miniTimeRef=useRef<HTMLSpanElement>(null);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
   const[fullPlayer,setFullPlayer]=useState(false);
@@ -880,7 +888,12 @@ export default function App(){
     navigator.mediaSession.setActionHandler('seekto',(details)=>{
       if(audio.current&&details.seekTime!=null){
         audio.current.currentTime=details.seekTime;
-        setProgress(audio.current.currentTime/(audio.current.duration||1)*100);
+        const pct2=audio.current.currentTime/(audio.current.duration||1)*100;
+        progressRef.current=pct2;
+        if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct2}%`;
+        if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct2}%`;
+        if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct2}%`;
+        if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct2}%`;
       }
     });
     try{
@@ -943,9 +956,18 @@ export default function App(){
     const a=audio.current;if(!a)return;
     const onT=()=>{
       if(a.duration){
-        setProgress(a.currentTime/a.duration*100);
+        const pct=a.currentTime/a.duration*100;
         const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);
-        setCurTime(`${m}:${s.toString().padStart(2,'0')}`);
+        const timeStr=`${m}:${s.toString().padStart(2,'0')}`;
+        progressRef.current=pct;
+        curTimeRef.current=timeStr;
+        // Обновляем DOM напрямую — без setProgress, без ре-рендера
+        if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;
+        if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;
+        if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent=timeStr;
+        if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct}%`;
+        if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct}%`;
+        if(miniTimeRef.current)miniTimeRef.current.textContent=timeStr;
         try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
             navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
@@ -1008,7 +1030,14 @@ export default function App(){
       });
     }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
-    setCurrent({...track,mp3:freshMp3});setProgress(0);setCurTime('0:00');
+    setCurrent({...track,mp3:freshMp3});
+    progressRef.current=0;curTimeRef.current='0:00';
+    if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
+    if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
+    if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
+    if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
+    if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
+    if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
@@ -1097,7 +1126,14 @@ export default function App(){
         audio.current.load();
         audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       }
-      setCurrent(prev);setProgress(0);setCurTime('0:00');
+      setCurrent(prev);
+      progressRef.current=0;curTimeRef.current='0:00';
+      if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
+      if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
+      if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
+      if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
+      if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
+      if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     } else if(current&&audio.current){
       audio.current.currentTime=0;
     }
@@ -1576,7 +1612,7 @@ export default function App(){
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
 
-  const seekSP=useSlider(progress/100,v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;});
+  // seekSP removed — slider теперь управляется через DOM refs напрямую
   const volSP=useSlider(volume,v=>setVol(v));
 
   const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
@@ -2105,8 +2141,23 @@ export default function App(){
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
-        <SliderTrack sp={seekSP} h={3}/>
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}><span>{curTime}</span><span>{current.duration}</span></div>
+        {/* Прогресс-бар полного плеера — управляется через DOM refs */}
+        <div style={{width:'100%',position:'relative'}}
+          onPointerDown={e=>{
+            e.stopPropagation();
+            const rect=e.currentTarget.getBoundingClientRect();
+            const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+            const a=audio.current;if(a?.duration){a.currentTime=v*a.duration;progressRef.current=v*100;}
+          }}>
+          <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative',cursor:'pointer'}}>
+            <div ref={seekBarFillRef} style={{height:'100%',background:ACC,borderRadius:3,width:'0%',pointerEvents:'none'}}/>
+            <div ref={seekBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:13,height:13,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+          </div>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}>
+          <span ref={curTimeDisplayRef}>0:00</span>
+          <span>{current.duration}</span>
+        </div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:28,flexShrink:0,marginBottom:12,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
         <button className="prev-next-btn" onPointerDown={playPrev} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
@@ -3093,9 +3144,18 @@ export default function App(){
             onPointerDown={e=>e.stopPropagation()}
             onClick={e=>e.stopPropagation()}
           >
-            <span style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0,pointerEvents:'none' as const}}>{curTime}</span>
-            <div style={{flex:1,minWidth:0}}>
-              <MiniSlider val={progress/100} onChange={v=>{const a=audio.current;if(a?.duration)a.currentTime=v*a.duration;}}/>
+            <span ref={miniTimeRef} style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0,pointerEvents:'none' as const}}>0:00</span>
+            <div style={{flex:1,minWidth:0,height:18,display:'flex',alignItems:'center',cursor:'pointer'}}
+              onPointerDown={e=>{
+                e.stopPropagation();
+                const rect=e.currentTarget.getBoundingClientRect();
+                const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+                const a=audio.current;if(a?.duration){a.currentTime=v*a.duration;progressRef.current=v*100;}
+              }}>
+              <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.08)',borderRadius:999,position:'relative'}}>
+                <div ref={miniBarFillRef} style={{height:'100%',background:ACC,borderRadius:999,width:'0%',pointerEvents:'none'}}/>
+                <div ref={miniBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:11,height:11,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+              </div>
             </div>
             <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0,pointerEvents:'none' as const}}>{current.duration}</span>
           </div>
