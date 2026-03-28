@@ -856,7 +856,7 @@ export default function App(){
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
-  const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number}|null>(null);
+  const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
 
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
   const[artistLoading,setArtistLoading]=useState(false);
@@ -1063,25 +1063,22 @@ export default function App(){
           if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
         }
 
-        // ИСТОРИЯ — merge: объединяем уникальные треки, новые сверху, макс 50
+        // ИСТОРИЯ — объединяем всегда: сервер + локальная, без дублей, макс 50
         const localH=historyRef.current;
         if(sv.history?.length){
           const serverH:Track[]=sv.history;
-          // Если сервер новее — берём серверную историю, иначе объединяем
-          let mergedH:Track[];
-          if(serverIsNewer&&serverH.length>0){
-            // Объединяем: серверная + локальная уникальные, без дублей
-            const seen=new Set(serverH.map((t:Track)=>t.id));
-            const extra=localH.filter((t:Track)=>!seen.has(t.id));
-            mergedH=[...serverH,...extra].slice(0,50);
-          } else {
-            const seen=new Set(localH.map((t:Track)=>t.id));
-            const extra=serverH.filter((t:Track)=>!seen.has(t.id));
-            mergedH=[...localH,...extra].slice(0,50);
-          }
-          if(JSON.stringify(mergedH)!==JSON.stringify(localH)){
+          // Объединяем: если сервер новее — его треки сверху, иначе локальные сверху
+          const primary=serverIsNewer?serverH:localH;
+          const secondary=serverIsNewer?localH:serverH;
+          const seen=new Set(primary.map((t:Track)=>t.id));
+          const extra=secondary.filter((t:Track)=>!seen.has(t.id));
+          const mergedH=[...primary,...extra].slice(0,50);
+          if(mergedH.length>localH.length||JSON.stringify(mergedH[0])!==JSON.stringify(localH[0])){
             setHistory(mergedH);try{localStorage.setItem('h47',JSON.stringify(mergedH));}catch{}
+            historyRef.current=mergedH;
           }
+        } else if(!localH.length&&!sv.history?.length){
+          // Ничего не делаем
         }
 
         // АРТИСТЫ В ИЗБРАННОМ — timestamp merge
@@ -1326,11 +1323,13 @@ export default function App(){
             // История
             if(sv.history?.length){
               const localH=historyRef.current;
-              const seen=new Set(sv.history.map((t:Track)=>t.id));
+              const serverH:Track[]=sv.history;
+              const seen=new Set(serverH.map((t:Track)=>t.id));
               const extra=localH.filter((t:Track)=>!seen.has(t.id));
-              const merged=[...sv.history,...extra].slice(0,50);
+              const merged=[...serverH,...extra].slice(0,50);
               if(merged.length!==localH.length||merged[0]?.id!==localH[0]?.id){
-                setHistory(merged);try{localStorage.setItem('h47',JSON.stringify(merged));}catch{}
+                setHistory(merged);historyRef.current=merged;
+                try{localStorage.setItem('h47',JSON.stringify(merged));}catch{}
               }
             }
             // Лайки
@@ -1495,7 +1494,10 @@ export default function App(){
 
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
-      try{localStorage.setItem('h47',JSON.stringify(n));}catch{}
+      try{
+        localStorage.setItem('h47',JSON.stringify(n));
+        localStorage.setItem('sync_ts',String(Date.now())); // помечаем что локальные данные обновились
+      }catch{}
       playCountRef.current+=1;
       setRecsVersion(v=>v+1);
       triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
@@ -2109,7 +2111,7 @@ export default function App(){
               <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);setMenuAnchor(null);}else{const r=e.currentTarget.getBoundingClientRect();setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2});setMenuId(track.id);}}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);setMenuAnchor(null);}else{const r=e.currentTarget.getBoundingClientRect();setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:!!showBlockBtn});setMenuId(track.id);}}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -2951,9 +2953,10 @@ export default function App(){
                 {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(tr);setMenuId(null);setMenuAnchor(null);}},
                 {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',tr.artist,'',0);setMenuId(null);setMenuAnchor(null);}},
                 ...(tr.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(tr.albumId!,tr.albumTitle||'',tr.artist,tr.cover);setMenuId(null);setMenuAnchor(null);}}]:[]),
+                ...(menuAnchor?.showBlock?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(tr.artist);setMenuId(null);setMenuAnchor(null);}}]:[]),
               ].map((item,i,arr)=>(
                 <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}}
-                  style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<arr.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const}}>
+                  style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:item.label===t('blockArtist')?'#d06060':'#ddd',fontSize:12,borderBottom:i<arr.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const}}>
                   {item.icon}{item.label}
                 </button>
               ))}
