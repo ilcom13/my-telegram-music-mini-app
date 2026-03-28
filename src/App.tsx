@@ -83,7 +83,7 @@ const SwipeManager = (() => {
     }
     const elapsed = Date.now() - st;
     const moved = Math.abs(e.clientX - sx) < 10 && Math.abs(e.clientY - sy) < 10;
-    if (elapsed < 400 && moved) {
+    if (elapsed < 600 && moved) {
       item.onTap();
       // Помечаем элемент чтобы onClick не сработал двойно
       (item.el as any).__swipeTapped = true;
@@ -1918,6 +1918,13 @@ export default function App(){
       artistUserId.current=userId;
       const popularTracks:Track[]=d.tracks||[];
       setArtistPage({id:userId,name:art.name||name,username:username,avatar:art.avatar||avatar||'',banner:art.banner||'',followers:art.followers||followers,permalink:art.permalink||permalink,tracks:popularTracks,albums:[],latestRelease:null});
+      // Если banner пустой — подгружаем отдельно через resolve
+      if(!art.banner&&userId){
+        fetch(`${W}/artist?permalink=${encodeURIComponent(art.permalink||permalink||username)}`)
+          .then(r=>r.json())
+          .then(d2=>{if(d2.artist?.banner||d2.banner){setArtistPage(prev=>prev?{...prev,banner:d2.artist?.banner||d2.banner}:null);}})
+          .catch(()=>{});
+      }
       if(userId){
         const [albumsR,latestR,tracksR]=await Promise.allSettled([
           fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
@@ -1936,6 +1943,11 @@ export default function App(){
           setArtistTracks(allTracks);
           setArtistTracksHasMore(td.hasMore||false);
           artistTracksCursor.current=td.nextCursor||null;
+        } else {
+          // Треки не загрузились при открытии — пользователь сможет загрузить через вкладку
+          setArtistTracks([]);
+          setArtistTracksHasMore(false);
+          artistTracksCursor.current=null;
         }
         setArtistPage(prev=>prev?{...prev,latestRelease}:null);
       } else {
@@ -1950,7 +1962,8 @@ export default function App(){
   };
 
   const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
-    if(!userId||artistTracksLoading)return;
+    if(!userId)return;
+    if(artistTracksLoading&&!reset)return; // при reset всегда загружаем заново
     setArtistTracksLoading(true);
     try{
       const cursor=reset?null:artistTracksCursor.current;
@@ -1969,7 +1982,7 @@ export default function App(){
 
   const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     setAlbumLoading(true);
-    if(screen!=='artist'&&screen!=='album')prevScreen.current=screen as typeof prevScreen.current;
+    if(screen!=='album')prevScreen.current=screen as typeof prevScreen.current;
     setScreen('album');setAlbumPage(null);
     try{
       const r=await fetch(`${W}/album?id=${id}`);const d=await r.json();
@@ -2508,7 +2521,7 @@ export default function App(){
                     <SL text={t('discography')}/>
                     <div style={{display:'flex',gap:6,marginBottom:12}}>
                       {(['albums','tracks'] as const).map(tab=>(
-                        <button key={tab} className={`tab-btn${artistTab===tab?' tab-active':''}`} onPointerDown={()=>{setArtistTab(tab);if(tab==='tracks'&&artistTracks.length===0&&artistUserId.current)loadArtistTracks(artistUserId.current,0,true);}}
+                        <button key={tab} className={`tab-btn${artistTab===tab?' tab-active':''}`} onPointerDown={()=>{setArtistTab(tab);if(tab==='tracks'&&artistUserId.current)loadArtistTracks(artistUserId.current,0,true);}}
                           style={{padding:'5px 16px',borderRadius:16,border:'none',background:artistTab===tab?ACC:ACC_DIM,color:artistTab===tab?BG:ACC,fontSize:12,fontWeight:artistTab===tab?600:400,cursor:'pointer',...tap}}>
                           {tab==='albums'?t('albumsTab'):t('tracks')}
                         </button>
@@ -3280,7 +3293,7 @@ export default function App(){
                 curSort={curSort}
                 pl={pl}
                 sortedTracks={sortedTracks}
-                onPlay={()=>{playTrack(tr);setPlayingPlId(pl.id);setQueue(sortedTracks.slice(i+1));}}
+                onPlay={()=>{playTrack(tr);setPlayingPlId(pl.id);}}
                 onQueue={()=>smartAddQ(tr)}
                 onRemove={()=>removeFromPl(pl.id,tr.id)}
                 onMenu={()=>{setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
