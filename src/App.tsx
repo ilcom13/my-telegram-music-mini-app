@@ -1908,7 +1908,7 @@ export default function App(){
     prevScreen.current=screen as typeof prevScreen.current;
     setScreen('artist');setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
     setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');
-    artistUserId.current='';artistTracksCursor.current=null;
+    artistUserId.current='';artistTracksCursor.current=null;setArtistTracksLoading(true);
     try{
       const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
@@ -1917,6 +1917,7 @@ export default function App(){
       const username=art.username||name;
       artistUserId.current=userId;
       const popularTracks:Track[]=d.tracks||[];
+      // Сразу начинаем загрузку треков в фоне
       setArtistPage({id:userId,name:art.name||name,username:username,avatar:art.avatar||avatar||'',banner:art.banner||'',followers:art.followers||followers,permalink:art.permalink||permalink,tracks:popularTracks,albums:[],latestRelease:null});
       // Если banner пустой — подгружаем отдельно через resolve
       if(!art.banner&&userId){
@@ -1926,10 +1927,10 @@ export default function App(){
           .catch(()=>{});
       }
       if(userId){
-        const [albumsR,latestR,tracksR]=await Promise.allSettled([
+        // Альбомы и last release грузим параллельно
+        const [albumsR,latestR]=await Promise.allSettled([
           fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
           fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
-          fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
         ]);
         if(albumsR.status==='fulfilled'&&albumsR.value.ok){
           const ad=await albumsR.value.json();
@@ -1937,19 +1938,15 @@ export default function App(){
         }
         let latestRelease:Track|null=null;
         if(latestR.status==='fulfilled'&&latestR.value.ok){const ld=await latestR.value.json();latestRelease=ld.latest||null;}
-        if(tracksR.status==='fulfilled'&&tracksR.value.ok){
-          const td=await tracksR.value.json();
-          const allTracks:Track[]=td.tracks||[];
-          setArtistTracks(allTracks);
-          setArtistTracksHasMore(td.hasMore||false);
-          artistTracksCursor.current=td.nextCursor||null;
-        } else {
-          // Треки не загрузились при открытии — пользователь сможет загрузить через вкладку
-          setArtistTracks([]);
-          setArtistTracksHasMore(false);
-          artistTracksCursor.current=null;
-        }
         setArtistPage(prev=>prev?{...prev,latestRelease}:null);
+        // Треки грузим отдельно — не блокируем отображение альбомов
+        fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`)
+          .then(r=>r.json()).then(td=>{
+            setArtistTracks(td.tracks||[]);
+            setArtistTracksHasMore(td.hasMore||false);
+            artistTracksCursor.current=td.nextCursor||null;
+          }).catch(()=>{setArtistTracks([]);})
+          .finally(()=>setArtistTracksLoading(false));
       } else {
         fetch(`${W}/albums?q=${encodeURIComponent(name)}`).then(r=>r.json()).then(d=>{
           setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0})));
@@ -1957,6 +1954,7 @@ export default function App(){
       }
     }catch{
       setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
+      setArtistTracksLoading(false);
     }
     setArtistLoading(false);
   };
@@ -2521,7 +2519,7 @@ export default function App(){
                     <SL text={t('discography')}/>
                     <div style={{display:'flex',gap:6,marginBottom:12}}>
                       {(['albums','tracks'] as const).map(tab=>(
-                        <button key={tab} className={`tab-btn${artistTab===tab?' tab-active':''}`} onPointerDown={()=>{setArtistTab(tab);if(tab==='tracks'&&artistUserId.current)loadArtistTracks(artistUserId.current,0,true);}}
+                        <button key={tab} className={`tab-btn${artistTab===tab?' tab-active':''}`} onPointerDown={()=>setArtistTab(tab)}
                           style={{padding:'5px 16px',borderRadius:16,border:'none',background:artistTab===tab?ACC:ACC_DIM,color:artistTab===tab?BG:ACC,fontSize:12,fontWeight:artistTab===tab?600:400,cursor:'pointer',...tap}}>
                           {tab==='albums'?t('albumsTab'):t('tracks')}
                         </button>
