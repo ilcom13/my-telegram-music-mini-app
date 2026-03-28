@@ -1929,7 +1929,7 @@ export default function App(){
         const [albumsR,latestR,tracksR]=await Promise.allSettled([
           fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
           fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
-          fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}`),
+          fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
         ]);
         if(albumsR.status==='fulfilled'&&albumsR.value.ok){
           const ad=await albumsR.value.json();
@@ -1967,7 +1967,7 @@ export default function App(){
     setArtistTracksLoading(true);
     try{
       const cursor=reset?null:artistTracksCursor.current;
-      const params=new URLSearchParams({userId});
+      const params=new URLSearchParams({userId,username:artistPage?.username||''});
       if(cursor)params.set('cursor',cursor);
       const r=await fetch(`${W}/artist/tracks?${params}`);
       const d=await r.json();
