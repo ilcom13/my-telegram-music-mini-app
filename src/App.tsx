@@ -2056,6 +2056,8 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
+    const menuBtnRef=useRef<HTMLButtonElement>(null);
+    const [menuPos,setMenuPos]=useState({top:0,right:8});
     const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
       onRight:()=>{if(!track.isArtist&&!track.isAlbum)toggleQ(track);},
       onLeft:onSwipeLeft,
@@ -2082,7 +2084,7 @@ export default function App(){
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
     ];
     return(
-      <div ref={wrapRef} style={{position:'relative',overflow:'hidden',touchAction:'pan-y'}} onClick={handleClick}>
+      <div ref={wrapRef} style={{position:'relative',touchAction:'pan-y'}} onClick={handleClick}>
         {/* Фон свайпа вправо — всегда в DOM, opacity управляется через ref */}
         {!track.isArtist&&!track.isAlbum&&<div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
@@ -2116,7 +2118,7 @@ export default function App(){
               <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button onPointerDown={e=>{e.stopPropagation();setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
+              <button ref={menuBtnRef} onPointerDown={e=>{e.stopPropagation();if(!mOpen){const r=e.currentTarget.getBoundingClientRect();setMenuPos({top:r.bottom+4,right:window.innerWidth-r.right});}setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -2125,7 +2127,7 @@ export default function App(){
           {(track.isArtist||track.isAlbum)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
         </div>
         {mOpen&&(
-          <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'absolute',right:8,top:'calc(100% + 2px)',background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:50,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.8)',overflow:'hidden'}}>
+          <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',right:menuPos.right,top:menuPos.top,background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:500,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.9)',overflow:'hidden'}}>
             {menuItems.map((item,i)=>(
               <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:i===menuItems.length-1&&showBlockBtn?'#d06060':'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const,transition:'background 0.15s ease',...tap}}>
                 {item.icon}{item.label}
