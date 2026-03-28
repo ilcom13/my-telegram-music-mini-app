@@ -1906,62 +1906,69 @@ export default function App(){
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
     prevScreen.current=screen as typeof prevScreen.current;
-    setScreen('artist');setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
-    setArtistTracksOffset(0);setArtistTracksHasMore(false);setArtistTab('albums');
-    artistUserId.current='';artistTracksCursor.current=null;setArtistTracksLoading(true);
+    setScreen('artist');
+    setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
+    setArtistTracksHasMore(false);setArtistTab('albums');
+    setArtistTracksLoading(true);
+    artistUserId.current='';artistTracksCursor.current=null;
     try{
       const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
       const d=await r.json();
-      const art=d.artist||{};
-      const userId=art.id||'';
+      const art=d.artist||d; // поддержка обоих форматов
+      const userId=String(art.id||'');
       const username=art.username||name;
       artistUserId.current=userId;
-      const popularTracks:Track[]=d.tracks||[];
-      // Сразу начинаем загрузку треков в фоне
-      setArtistPage({id:userId,name:art.name||name,username:username,avatar:art.avatar||avatar||'',banner:art.banner||'',followers:art.followers||followers,permalink:art.permalink||permalink,tracks:popularTracks,albums:[],latestRelease:null});
-      // Если banner пустой — подгружаем отдельно через resolve
-      if(!art.banner&&userId){
-        fetch(`${W}/artist?permalink=${encodeURIComponent(art.permalink||permalink||username)}`)
-          .then(r=>r.json())
-          .then(d2=>{if(d2.artist?.banner||d2.banner){setArtistPage(prev=>prev?{...prev,banner:d2.artist?.banner||d2.banner}:null);}})
-          .catch(()=>{});
-      }
+      setArtistPage({
+        id:userId,name:art.name||name,username,
+        avatar:art.avatar||avatar||'',
+        banner:art.banner||'',
+        followers:art.followers||followers,
+        permalink:art.permalink||permalink,
+        tracks:d.tracks||[],albums:[],latestRelease:null
+      });
       if(userId){
-        // Альбомы и last release грузим параллельно
-        const [albumsR,latestR]=await Promise.allSettled([
+        // Загружаем альбомы и latest параллельно
+        Promise.allSettled([
           fetch(`${W}/artist/albums?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
           fetch(`${W}/artist/latest?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`),
-        ]);
-        if(albumsR.status==='fulfilled'&&albumsR.value.ok){
-          const ad=await albumsR.value.json();
-          setArtistAlbums((ad.albums||[]).map((al:any)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0})));
-        }
-        let latestRelease:Track|null=null;
-        if(latestR.status==='fulfilled'&&latestR.value.ok){const ld=await latestR.value.json();latestRelease=ld.latest||null;}
-        setArtistPage(prev=>prev?{...prev,latestRelease}:null);
-        // Треки грузим отдельно — не блокируем отображение альбомов
+        ]).then(([albumsR,latestR])=>{
+          if(albumsR.status==='fulfilled'&&albumsR.value.ok){
+            albumsR.value.json().then(ad=>{
+              setArtistAlbums((ad.albums||[]).map((al:any)=>({
+                id:al.id,title:al.title,artist:al.artist,cover:al.cover,
+                tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0
+              })));
+            }).catch(()=>{});
+          }
+          if(latestR.status==='fulfilled'&&latestR.value.ok){
+            latestR.value.json().then(ld=>{
+              const lr=ld.latest||null;
+              setArtistPage(prev=>prev?{...prev,latestRelease:lr}:null);
+            }).catch(()=>{});
+          }
+        });
+        // Загружаем треки отдельно — без resolveStream, быстро
         fetch(`${W}/artist/tracks?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}`)
-          .then(r=>r.json()).then(td=>{
+          .then(r=>r.json())
+          .then(td=>{
             setArtistTracks(td.tracks||[]);
-            setArtistTracksHasMore(td.hasMore||false);
+            setArtistTracksHasMore(!!td.hasMore);
             artistTracksCursor.current=td.nextCursor||null;
-          }).catch(()=>{setArtistTracks([]);})
-          .finally(()=>setArtistTracksLoading(false));
+          })
+          .catch(()=>{ setArtistTracks([]); })
+          .finally(()=>{ setArtistTracksLoading(false); });
       } else {
-        fetch(`${W}/albums?q=${encodeURIComponent(name)}`).then(r=>r.json()).then(d=>{
-          setArtistAlbums((d.tracks||[]).filter((al:Track)=>al.isAlbum).map((al:Track)=>({id:al.id,title:al.title,artist:al.artist,cover:al.cover,tracks:[],permalink:al.permalink||'',trackCount:al.trackCount||0,plays:al.plays||0})));
-        }).catch(()=>{});
+        setArtistTracksLoading(false);
       }
-    }catch{
+    }catch(err){
       setArtistPage({id:'',name,username:'',avatar,banner:'',followers,permalink,tracks:[],albums:[],latestRelease:null});
       setArtistTracksLoading(false);
     }
     setArtistLoading(false);
-  };
-
+  }
   const loadArtistTracks=async(userId:string,_offset:number,reset=false)=>{
     if(!userId)return;
-    if(artistTracksLoading&&!reset)return; // при reset всегда загружаем заново
+    if(artistTracksLoading&&!reset)return;
     setArtistTracksLoading(true);
     try{
       const cursor=reset?null:artistTracksCursor.current;
@@ -1972,12 +1979,11 @@ export default function App(){
       const newT:Track[]=d.tracks||[];
       artistTracksCursor.current=d.nextCursor||null;
       if(reset){setArtistTracks(newT);}
-      else{setArtistTracks(prev=>{const existing=new Set(prev.map(t=>t.id));return[...prev,...newT.filter(t=>!existing.has(t.id))];});}
-      setArtistTracksHasMore(d.hasMore||false);
+      else{setArtistTracks(prev=>{const ex=new Set(prev.map(t=>t.id));return[...prev,...newT.filter(t=>!ex.has(t.id))];});}
+      setArtistTracksHasMore(!!d.hasMore);
     }catch{}
     setArtistTracksLoading(false);
-  };
-
+  }
   const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     setAlbumLoading(true);
     if(screen!=='album')prevScreen.current=screen as typeof prevScreen.current;
