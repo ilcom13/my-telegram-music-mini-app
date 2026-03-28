@@ -83,7 +83,12 @@ const SwipeManager = (() => {
     }
     const elapsed = Date.now() - st;
     const moved = Math.abs(e.clientX - sx) < 10 && Math.abs(e.clientY - sy) < 10;
-    if (elapsed < 400 && moved) item.onTap();
+    if (elapsed < 400 && moved) {
+      item.onTap();
+      // Помечаем элемент чтобы onClick не сработал двойно
+      (item.el as any).__swipeTapped = true;
+      setTimeout(() => { (item.el as any).__swipeTapped = false; }, 300);
+    }
   };
 
   const onPointerCancel = (e: PointerEvent) => {
@@ -982,14 +987,25 @@ export default function App(){
     if(uid==='anon')return;
     if(syncTimer.current)clearTimeout(syncTimer.current);
     const now_ts=Date.now();
-    try{localStorage.setItem('p47_ts',String(now_ts));}catch{}
+    // Сохраняем timestamp каждого типа данных локально
+    try{localStorage.setItem('sync_ts',String(now_ts));}catch{}
     syncTimer.current=setTimeout(()=>syncSave({
-      liked:likedRef.current,playlists:playlistsRef.current,playlists_ts:now_ts,
-      history:historyRef.current,volume:volumeRef.current,
-      favArtists:favArtistsRef.current,favAlbums:favAlbumsRef.current,
-      blockedArtists:blockedRef.current,bgCover:bgCoverRef.current,
+      liked:likedRef.current,
+      liked_ts:now_ts,
+      playlists:playlistsRef.current,
+      playlists_ts:parseInt(localStorage.getItem('p47_ts')||String(now_ts)),
+      history:historyRef.current,
+      history_ts:now_ts,
+      favArtists:favArtistsRef.current,
+      favArtists_ts:now_ts,
+      favAlbums:favAlbumsRef.current,
+      favAlbums_ts:now_ts,
+      blockedArtists:blockedRef.current,
+      bgCover:bgCoverRef.current,
+      // volume НЕ синхронизируем — на каждом устройстве своя
       recs:recsRef.current.slice(0,20),
       pinnedPlId:pinnedPlId,
+      monthStats:monthStatsRef.current,
       stats:{totalSec:totalSecRef.current,exploredIds:exploredIdsRef.current,
         listenedIds:listenedIdsRef.current,trackPlays:trackPlaysRef.current,
         streakDays:streakDaysRef.current,maxStreak:maxStreakRef.current}
@@ -1023,37 +1039,131 @@ export default function App(){
       fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
         if(!d.data)return;
         const sv=d.data;
-        const merge=<T,>(local:T[]|null,server:T[]|null):T[]|null=>{
-          if(!server?.length)return local;if(!local?.length)return server;
-          return server.length>=local.length?server:local;
-        };
-        const localLiked=likedRef.current;const merged_liked=merge(localLiked,sv.liked)||localLiked;
-        if(merged_liked!==localLiked){setLiked(merged_liked);try{localStorage.setItem('l47',JSON.stringify(merged_liked));}catch{}}
+        // Timestamp-based merge: берём данные с новейшим timestamp
+        const localSyncTs=parseInt(localStorage.getItem('sync_ts')||'0');
+        const serverSyncTs=sv.history_ts||sv.liked_ts||0;
+        const serverIsNewer=serverSyncTs>localSyncTs;
+
+        // ЛАЙКИ — timestamp merge
+        const localLiked=likedRef.current;
+        const likedFromServer=serverIsNewer&&sv.liked!=null?sv.liked:
+          (!sv.liked?.length?localLiked:sv.liked.length>=localLiked.length?sv.liked:localLiked);
+        if(JSON.stringify(likedFromServer)!==JSON.stringify(localLiked)){
+          setLiked(likedFromServer);try{localStorage.setItem('l47',JSON.stringify(likedFromServer));}catch{}
+        }
+
+        // ПЛЕЙЛИСТЫ — timestamp merge
         const localPl=playlistsRef.current;
-        // Синхронизация плейлистов по timestamp — берём данные с последним изменением
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
         const serverPlTs=sv.playlists_ts||0;
-        const merged_pl=(serverPlTs>localPlTs&&sv.playlists)?sv.playlists:localPl;
-        if(merged_pl!==localPl){setPlaylists(merged_pl);try{localStorage.setItem('p47',JSON.stringify(merged_pl));}catch{}}
-        const localH=historyRef.current;const merged_h=merge(localH,sv.history)||localH;
-        if(merged_h!==localH){setHistory(merged_h);try{localStorage.setItem('h47',JSON.stringify(merged_h));}catch{}}
-        const localFA=favArtistsRef.current;const merged_fa=merge(localFA,sv.favArtists)||localFA;
-        if(merged_fa!==localFA){setFavArtists(merged_fa);try{localStorage.setItem('fa47',JSON.stringify(merged_fa));}catch{}}
-        const localFAl=favAlbumsRef.current;const merged_fal=merge(localFAl,sv.favAlbums)||localFAl;
-        if(merged_fal!==localFAl){setFavAlbums(merged_fal);try{localStorage.setItem('fal47',JSON.stringify(merged_fal));}catch{}}
-        if(sv.volume!==undefined&&volumeRef.current===1&&sv.volume!==1){setVolume(sv.volume);volumeRef.current=sv.volume;try{localStorage.setItem('v47',String(sv.volume));}catch{}}
-        if(sv.blockedArtists?.length){const merged_ba=[...new Set([...blockedRef.current,...sv.blockedArtists])];setBlockedArtists(merged_ba);try{localStorage.setItem('ba47',JSON.stringify(merged_ba));}catch{}}
+        const plFromServer=serverPlTs>localPlTs&&sv.playlists!=null?sv.playlists:localPl;
+        if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
+          setPlaylists(plFromServer);try{localStorage.setItem('p47',JSON.stringify(plFromServer));}catch{}
+          if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
+        }
+
+        // ИСТОРИЯ — merge: объединяем уникальные треки, новые сверху, макс 50
+        const localH=historyRef.current;
+        if(sv.history?.length){
+          const serverH:Track[]=sv.history;
+          // Если сервер новее — берём серверную историю, иначе объединяем
+          let mergedH:Track[];
+          if(serverIsNewer&&serverH.length>0){
+            // Объединяем: серверная + локальная уникальные, без дублей
+            const seen=new Set(serverH.map((t:Track)=>t.id));
+            const extra=localH.filter((t:Track)=>!seen.has(t.id));
+            mergedH=[...serverH,...extra].slice(0,50);
+          } else {
+            const seen=new Set(localH.map((t:Track)=>t.id));
+            const extra=serverH.filter((t:Track)=>!seen.has(t.id));
+            mergedH=[...localH,...extra].slice(0,50);
+          }
+          if(JSON.stringify(mergedH)!==JSON.stringify(localH)){
+            setHistory(mergedH);try{localStorage.setItem('h47',JSON.stringify(mergedH));}catch{}
+          }
+        }
+
+        // АРТИСТЫ В ИЗБРАННОМ — timestamp merge
+        const localFA=favArtistsRef.current;
+        const faFromServer=serverIsNewer&&sv.favArtists!=null?sv.favArtists:
+          (!sv.favArtists?.length?localFA:sv.favArtists.length>=localFA.length?sv.favArtists:localFA);
+        if(JSON.stringify(faFromServer)!==JSON.stringify(localFA)){
+          setFavArtists(faFromServer);try{localStorage.setItem('fa47',JSON.stringify(faFromServer));}catch{}
+        }
+
+        // АЛЬБОМЫ В ИЗБРАННОМ — timestamp merge
+        const localFAl=favAlbumsRef.current;
+        const falFromServer=serverIsNewer&&sv.favAlbums!=null?sv.favAlbums:
+          (!sv.favAlbums?.length?localFAl:sv.favAlbums.length>=localFAl.length?sv.favAlbums:localFAl);
+        if(JSON.stringify(falFromServer)!==JSON.stringify(localFAl)){
+          setFavAlbums(falFromServer);try{localStorage.setItem('fal47',JSON.stringify(falFromServer));}catch{}
+        }
+
+        // ЗАБЛОКИРОВАННЫЕ АРТИСТЫ — объединяем множества
+        if(sv.blockedArtists?.length){
+          const merged_ba=[...new Set([...blockedRef.current,...sv.blockedArtists])];
+          setBlockedArtists(merged_ba);try{localStorage.setItem('ba47',JSON.stringify(merged_ba));}catch{}
+        }
+
+        // ОБЛОЖКА ФОНА
         if(sv.bgCover&&!bgCoverRef.current){setBgCover(sv.bgCover);try{localStorage.setItem('bgc47',sv.bgCover);}catch{}}
-        if(sv.pinnedPlId!==undefined&&sv.pinnedPlId!==null){setPinnedPlId(sv.pinnedPlId);try{if(sv.pinnedPlId)localStorage.setItem('pin47',sv.pinnedPlId);else localStorage.removeItem('pin47');}catch{}}
-        if(sv.recs?.length){const blocked=sv.blockedArtists||blockedRef.current||[];const freshRecs=sv.recs.filter((tr:Track)=>!blocked.includes(tr.artist));if(freshRecs.length>recsRef.current.length){setRecs(freshRecs);try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}}}
+
+        // ЗАКРЕП ПЛЕЙЛИСТА
+        if(sv.pinnedPlId!==undefined&&sv.pinnedPlId!==null){
+          setPinnedPlId(sv.pinnedPlId);
+          try{if(sv.pinnedPlId)localStorage.setItem('pin47',sv.pinnedPlId);else localStorage.removeItem('pin47');}catch{}
+        }
+
+        // РЕКОМЕНДАЦИИ (только если сервер новее)
+        if(sv.recs?.length&&serverIsNewer){
+          const blocked=sv.blockedArtists||blockedRef.current||[];
+          const freshRecs=sv.recs.filter((tr:Track)=>!blocked.includes(tr.artist));
+          if(freshRecs.length>0){setRecs(freshRecs);try{localStorage.setItem('recs47',JSON.stringify(freshRecs));}catch{}}
+        }
+
+        // СТАТИСТИКА — merge максимумов (аддитивная, берём больший)
         if(sv.stats){
           const s=sv.stats;
-          if((s.totalSec||0)>totalSecRef.current){setTotalSec(s.totalSec);totalSecRef.current=s.totalSec;try{localStorage.setItem('tsec47',String(s.totalSec));}catch{}}
-          if((s.exploredIds?.length||0)>exploredIdsRef.current.length){setExploredIds(s.exploredIds);exploredIdsRef.current=s.exploredIds;try{localStorage.setItem('exp47',JSON.stringify(s.exploredIds));}catch{}}
-          if((s.listenedIds?.length||0)>listenedIdsRef.current.length){setListenedIds(s.listenedIds);listenedIdsRef.current=s.listenedIds;try{localStorage.setItem('lst47',JSON.stringify(s.listenedIds));}catch{}}
-          if(s.trackPlays&&Object.keys(s.trackPlays).length>Object.keys(trackPlaysRef.current).length){setTrackPlays(s.trackPlays);trackPlaysRef.current=s.trackPlays;try{localStorage.setItem('tpl47',JSON.stringify(s.trackPlays));}catch{}}
-          if((s.streakDays?.length||0)>streakDaysRef.current.length){setStreakDays(s.streakDays);streakDaysRef.current=s.streakDays;const mx=calcMaxStreak(s.streakDays);setMaxStreak(mx);maxStreakRef.current=mx;try{localStorage.setItem('sdays47',JSON.stringify(s.streakDays));}catch{}}
+          const newTotalSec=Math.max(s.totalSec||0,totalSecRef.current);
+          if(newTotalSec>totalSecRef.current){setTotalSec(newTotalSec);totalSecRef.current=newTotalSec;try{localStorage.setItem('tsec47',String(newTotalSec));}catch{}}
+          // exploredIds и listenedIds — объединяем множества
+          if(s.exploredIds?.length){
+            const merged=[...new Set([...exploredIdsRef.current,...s.exploredIds])];
+            if(merged.length>exploredIdsRef.current.length){setExploredIds(merged);exploredIdsRef.current=merged;try{localStorage.setItem('exp47',JSON.stringify(merged));}catch{}}
+          }
+          if(s.listenedIds?.length){
+            const merged=[...new Set([...listenedIdsRef.current,...s.listenedIds])];
+            if(merged.length>listenedIdsRef.current.length){setListenedIds(merged);listenedIdsRef.current=merged;try{localStorage.setItem('lst47',JSON.stringify(merged));}catch{}}
+          }
+          // trackPlays — объединяем, суммируя count
+          if(s.trackPlays&&Object.keys(s.trackPlays).length){
+            const merged:{[k:string]:any}={...trackPlaysRef.current};
+            for(const[id,v] of Object.entries(s.trackPlays) as any){
+              if(!merged[id])merged[id]=v;
+              else merged[id]={...merged[id],count:Math.max(merged[id].count||0,(v as any).count||0)};
+            }
+            if(JSON.stringify(merged)!==JSON.stringify(trackPlaysRef.current)){
+              setTrackPlays(merged);trackPlaysRef.current=merged;try{localStorage.setItem('tpl47',JSON.stringify(merged));}catch{}
+            }
+          }
+          if(s.streakDays?.length){
+            const merged=[...new Set([...streakDaysRef.current,...s.streakDays])].sort();
+            if(merged.length>streakDaysRef.current.length){
+              setStreakDays(merged);streakDaysRef.current=merged;
+              const mx=calcMaxStreak(merged);setMaxStreak(mx);maxStreakRef.current=mx;
+              try{localStorage.setItem('sdays47',JSON.stringify(merged));}catch{}
+            }
+          }
         }
+
+        // MONTHLY STATS — берём с большим totalSec
+        if(sv.monthStats?.current&&(sv.monthStats.current.totalSec||0)>monthStatsRef.current.current.totalSec){
+          setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
+        }
+
+        // Сохраняем серверный timestamp локально
+        if(serverSyncTs>localSyncTs)try{localStorage.setItem('sync_ts',String(serverSyncTs));}catch{}
+
         setTimeout(()=>doFullSync(),3000);
       }).catch(()=>{});
     }
@@ -1200,7 +1310,49 @@ export default function App(){
   },[recsVersion,history.length,blockedArtists.join(',')]);
 
   useEffect(()=>{
-    const onVisible=()=>{if(document.visibilityState==='visible')loadRecommendations();};
+    const onVisible=()=>{
+      if(document.visibilityState==='visible'){
+        loadRecommendations();
+        // Подгружаем свежие данные с сервера при возврате в приложение
+        if(uid!=='anon'){
+          fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
+            if(!d.data)return;
+            const sv=d.data;
+            const localSyncTs=parseInt(localStorage.getItem('sync_ts')||'0');
+            const serverSyncTs=sv.history_ts||sv.liked_ts||0;
+            // Обновляем только если сервер новее
+            if(serverSyncTs<=localSyncTs)return;
+            // История
+            if(sv.history?.length){
+              const localH=historyRef.current;
+              const seen=new Set(sv.history.map((t:Track)=>t.id));
+              const extra=localH.filter((t:Track)=>!seen.has(t.id));
+              const merged=[...sv.history,...extra].slice(0,50);
+              if(merged.length!==localH.length||merged[0]?.id!==localH[0]?.id){
+                setHistory(merged);try{localStorage.setItem('h47',JSON.stringify(merged));}catch{}
+              }
+            }
+            // Лайки
+            if(sv.liked!=null){
+              const localL=likedRef.current;
+              if(JSON.stringify(sv.liked)!==JSON.stringify(localL)){
+                setLiked(sv.liked);try{localStorage.setItem('l47',JSON.stringify(sv.liked));}catch{}
+              }
+            }
+            // Плейлисты
+            const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
+            if((sv.playlists_ts||0)>localPlTs&&sv.playlists!=null){
+              setPlaylists(sv.playlists);
+              try{localStorage.setItem('p47',JSON.stringify(sv.playlists));localStorage.setItem('p47_ts',String(sv.playlists_ts));}catch{}
+            }
+            // Артисты и альбомы
+            if(sv.favArtists!=null){setFavArtists(sv.favArtists);try{localStorage.setItem('fa47',JSON.stringify(sv.favArtists));}catch{}}
+            if(sv.favAlbums!=null){setFavAlbums(sv.favAlbums);try{localStorage.setItem('fal47',JSON.stringify(sv.favAlbums));}catch{}}
+            if(serverSyncTs>localSyncTs)try{localStorage.setItem('sync_ts',String(serverSyncTs));}catch{}
+          }).catch(()=>{});
+        }
+      }
+    };
     document.addEventListener('visibilitychange',onVisible);
     return()=>document.removeEventListener('visibilitychange',onVisible);
   },[loadRecommendations]);
@@ -1254,10 +1406,18 @@ export default function App(){
 
   useEffect(()=>{
     const a=audio.current;if(!a)return;
-    const onVol=()=>{if(Math.abs(a.volume-volume)>0.02)setVol(a.volume);};
+    // Когда система меняет громкость (кнопки телефона) — обновляем ползунок
+    const onVol=()=>{
+      const sysVol=a.volume;
+      if(Math.abs(sysVol-volumeRef.current)>0.02){
+        setVolume(sysVol);
+        volumeRef.current=sysVol;
+        try{localStorage.setItem('v47',String(sysVol));}catch{}
+      }
+    };
     a.addEventListener('volumechange',onVol);
     return()=>a.removeEventListener('volumechange',onVol);
-  },[volume]);
+  },[]);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
@@ -1902,6 +2062,17 @@ export default function App(){
       onTap:()=>{if(mOpen){setMenuId(null);return;}playTrack(track);},
     });
 
+    // На ПК SwipeManager не работает (mouse) — добавляем обычный onClick
+    const handleClick=(e:React.MouseEvent)=>{
+      // Если touch уже обработал tap через SwipeManager — не дублируем
+      if((e.currentTarget as any).__swipeTapped)return;
+      // Если клик по кнопкам внутри — не обрабатываем
+      const target=e.target as HTMLElement;
+      if(target.closest('button'))return;
+      if(mOpen){setMenuId(null);return;}
+      playTrack(track);
+    };
+
         const menuItems=[
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
       {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
@@ -1911,7 +2082,7 @@ export default function App(){
       ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
     ];
     return(
-      <div ref={wrapRef} style={{position:'relative',overflow:'hidden',touchAction:'pan-y'}}>
+      <div ref={wrapRef} style={{position:'relative',overflow:'hidden',touchAction:'pan-y'}} onClick={handleClick}>
         {/* Фон свайпа вправо — всегда в DOM, opacity управляется через ref */}
         {!track.isArtist&&!track.isAlbum&&<div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
@@ -1985,6 +2156,12 @@ export default function App(){
       onLeft:onRemove,
       onTap:onPlay,
     });
+    // На ПК SwipeManager не работает — добавляем onClick для мыши
+    const handleClick=(e:React.MouseEvent)=>{
+      if((e.currentTarget as any).__swipeTapped)return;
+      if((e.target as HTMLElement).closest('button'))return;
+      onPlay();
+    };
     return(
       <div
         ref={wrapRef}
@@ -1992,6 +2169,7 @@ export default function App(){
         onDragStart={onDragStart}
         onDragOver={e=>e.preventDefault()}
         onDrop={onDrop}
+        onClick={handleClick}
         style={{position:'relative',touchAction:'pan-y',userSelect:'none' as const,borderBottom:'1px solid #111',overflow:'hidden',background:isActive?ACC_DIM:'transparent'}}
       >
         <div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
