@@ -856,6 +856,7 @@ export default function App(){
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
+  const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number}|null>(null);
 
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
   const[artistLoading,setArtistLoading]=useState(false);
@@ -2056,8 +2057,6 @@ export default function App(){
 
   const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
-    const menuBtnRef=useRef<HTMLButtonElement>(null);
-    const [menuPos,setMenuPos]=useState<{top:number,right:number}|null>(null);
     const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
       onRight:()=>{if(!track.isArtist&&!track.isAlbum)toggleQ(track);},
       onLeft:onSwipeLeft,
@@ -2075,14 +2074,6 @@ export default function App(){
       playTrack(track);
     };
 
-        const menuItems=[
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLk(track.id)?ACC:'none'} stroke={isLk(track.id)?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLk(track.id)?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(track,e);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(track);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(track);setMenuId(null);}},
-      {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',track.artist,'',0);setMenuId(null);}},
-      ...(track.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(track.albumId!,track.albumTitle||'',track.artist,track.cover);setMenuId(null);}}]:[]),
-      ...(showBlockBtn?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(track.artist);setMenuId(null);}}]:[]),
-    ];
     return(
       <div ref={wrapRef} style={{position:'relative',touchAction:'pan-y'}} onClick={handleClick}>
         {/* Фон свайпа вправо — всегда в DOM, opacity управляется через ref */}
@@ -2118,7 +2109,7 @@ export default function App(){
               <button onPointerDown={e=>{e.stopPropagation();addQ(track,e);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQ(track.id)?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQ(track.id)?ACC:'#5a5a5a'}/></svg>
               </button>
-              <button ref={menuBtnRef} onPointerDown={e=>{e.stopPropagation();if(!mOpen){const r=e.currentTarget.getBoundingClientRect();const menuH=200;const top=r.bottom+window.scrollY+4;setMenuPos({top:Math.min(top,window.innerHeight-menuH-8),right:Math.max(8,window.innerWidth-r.right)});}else{setMenuPos(null);}setMenuId(mOpen?null:track.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
+              <button onPointerDown={e=>{e.stopPropagation();if(mOpen){setMenuId(null);setMenuAnchor(null);}else{const r=e.currentTarget.getBoundingClientRect();setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2});setMenuId(track.id);}}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...tap}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
               </button>
               <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
@@ -2126,15 +2117,6 @@ export default function App(){
           )}
           {(track.isArtist||track.isAlbum)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
         </div>
-        {mOpen&&menuPos&&(
-          <div className="context-menu" onPointerDown={e=>e.stopPropagation()} style={{position:'fixed',right:menuPos.right,top:menuPos.top,background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:500,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.9)',overflow:'hidden'}}>
-            {menuItems.map((item,i)=>(
-              <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}} style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:i===menuItems.length-1&&showBlockBtn?'#d06060':'#ddd',fontSize:12,borderBottom:i<menuItems.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const,transition:'background 0.15s ease',...tap}}>
-                {item.icon}{item.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
@@ -2392,7 +2374,7 @@ export default function App(){
   );
 
   return(
-    <div onPointerDown={()=>{if(menuId)setMenuId(null);if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
+    <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -2954,6 +2936,31 @@ export default function App(){
         )}
       </div>
  
+      {/* Глобальное контекстное меню треков */}
+      {menuId&&menuAnchor&&(()=>{
+        const tr=results.find(t=>t.id===menuId)||history.find(t=>t.id===menuId)||recs.find(t=>t.id===menuId)||liked.find(t=>t.id===menuId);
+        if(!tr)return null;
+        const isLiked=isLk(menuId);
+        return(
+          <div style={{position:'fixed',inset:0,zIndex:498}} onPointerDown={()=>{setMenuId(null);setMenuAnchor(null);}}>
+            <div className="context-menu" onPointerDown={e=>e.stopPropagation()}
+              style={{position:'fixed',top:Math.min(menuAnchor.top,window.innerHeight-260),right:Math.max(8,menuAnchor.right-80),background:'#222',border:'1px solid #2a2a2a',borderRadius:12,zIndex:499,minWidth:174,boxShadow:'0 12px 32px rgba(0,0,0,0.9)',overflow:'hidden'}}>
+              {[
+                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill={isLiked?ACC:'none'} stroke={isLiked?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,label:isLiked?(lang==='ru'?'Убрать лайк':'Unlike'):(lang==='ru'?'Лайк':'Like'),fn:(e:React.MouseEvent)=>{toggleLike(tr,e);setMenuId(null);setMenuAnchor(null);}},
+                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(tr);setMenuId(null);setMenuAnchor(null);}},
+                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(tr);setMenuId(null);setMenuAnchor(null);}},
+                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist('',tr.artist,'',0);setMenuId(null);setMenuAnchor(null);}},
+                ...(tr.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(tr.albumId!,tr.albumTitle||'',tr.artist,tr.cover);setMenuId(null);setMenuAnchor(null);}}]:[]),
+              ].map((item,i,arr)=>(
+                <button key={i} onPointerDown={e=>{e.stopPropagation();item.fn(e as any);}}
+                  style={{display:'flex',alignItems:'center',gap:9,width:'100%',padding:'11px 12px',background:'none',border:'none',cursor:'pointer',color:'#ddd',fontSize:12,borderBottom:i<arr.length-1?'1px solid #2a2a2a':'none',textAlign:'left' as const}}>
+                  {item.icon}{item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {addToPl&&!fullPlayer&&<PlModalExt track={addToPl} playlists={playlists} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
       {showImport&&<ImportModalExt
         importStep={importStep} setImportStep={setImportStep}
