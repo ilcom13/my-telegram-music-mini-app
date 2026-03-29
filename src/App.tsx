@@ -2361,16 +2361,32 @@ export default function App(){
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
         {/* Прогресс-бар полного плеера — управляется через DOM refs */}
-        <div style={{width:'100%',position:'relative'}}
+        <div style={{width:'100%',position:'relative',padding:'8px 0',margin:'-8px 0',cursor:'pointer',touchAction:'none'}}
           onPointerDown={e=>{
+            e.stopPropagation();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            const rect=e.currentTarget.getBoundingClientRect();
+            const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+            const a=audio.current;if(a?.duration){
+              a.currentTime=v*a.duration;progressRef.current=v*100;
+              if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${v*100}%`;
+              if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${v*100}%`;
+            }
+          }}
+          onPointerMove={e=>{
+            if(e.buttons===0&&e.pressure===0)return;
             e.stopPropagation();
             const rect=e.currentTarget.getBoundingClientRect();
             const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-            const a=audio.current;if(a?.duration){a.currentTime=v*a.duration;progressRef.current=v*100;}
+            const a=audio.current;if(a?.duration){
+              a.currentTime=v*a.duration;progressRef.current=v*100;
+              if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${v*100}%`;
+              if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${v*100}%`;
+            }
           }}>
-          <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.1)',borderRadius:3,position:'relative',cursor:'pointer'}}>
-            <div ref={seekBarFillRef} style={{height:'100%',background:ACC,borderRadius:3,width:'0%',pointerEvents:'none'}}/>
-            <div ref={seekBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:13,height:13,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
+          <div style={{width:'100%',height:4,background:'rgba(255,255,255,0.15)',borderRadius:4,position:'relative'}}>
+            <div ref={seekBarFillRef} style={{height:'100%',background:ACC,borderRadius:4,width:'0%',pointerEvents:'none'}}/>
+            <div ref={seekBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:14,height:14,background:ACC,borderRadius:'50%',pointerEvents:'none',boxShadow:`0 0 4px ${ACC}88`}}/>
           </div>
         </div>
         <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}>
@@ -3402,12 +3418,28 @@ export default function App(){
             onClick={e=>e.stopPropagation()}
           >
             <span ref={miniTimeRef} style={{fontSize:10,color:'#555',minWidth:28,textAlign:'right' as const,flexShrink:0,pointerEvents:'none' as const}}>0:00</span>
-            <div style={{flex:1,minWidth:0,height:18,display:'flex',alignItems:'center',cursor:'pointer'}}
+            <div style={{flex:1,minWidth:0,height:20,display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none'}}
               onPointerDown={e=>{
+                e.stopPropagation();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const rect=e.currentTarget.getBoundingClientRect();
+                const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+                const a=audio.current;if(a?.duration){
+                  a.currentTime=v*a.duration;progressRef.current=v*100;
+                  if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${v*100}%`;
+                  if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${v*100}%`;
+                }
+              }}
+              onPointerMove={e=>{
+                if(e.buttons===0&&e.pressure===0)return;
                 e.stopPropagation();
                 const rect=e.currentTarget.getBoundingClientRect();
                 const v=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-                const a=audio.current;if(a?.duration){a.currentTime=v*a.duration;progressRef.current=v*100;}
+                const a=audio.current;if(a?.duration){
+                  a.currentTime=v*a.duration;progressRef.current=v*100;
+                  if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${v*100}%`;
+                  if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${v*100}%`;
+                }
               }}>
               <div style={{width:'100%',height:3,background:'rgba(255,255,255,0.08)',borderRadius:999,position:'relative'}}>
                 <div ref={miniBarFillRef} style={{height:'100%',background:ACC,borderRadius:999,width:'0%',pointerEvents:'none'}}/>
