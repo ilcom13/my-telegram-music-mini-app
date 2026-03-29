@@ -154,7 +154,7 @@ function useSwipeRow(opts: {
 interface Track {
   id: string; title: string; artist: string; cover: string;
   duration: string; plays: number; mp3: string | null;
-  isArtist?: boolean; isAlbum?: boolean; permalink?: string;
+  isArtist?: boolean; isAlbum?: boolean; permalink?: string; artistId?: string;
   trackCount?: number; albumId?: string; albumTitle?: string;
 }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; sort?: 'default'|'az'|'za'|'artist'|'newest'|'oldest'; }
@@ -1912,7 +1912,10 @@ export default function App(){
     setArtistTracksLoading(true);
     artistUserId.current='';artistTracksCursor.current=null;
     try{
-      const r=await fetch(`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`);
+      // Если permalink — числовой userId, ищем напрямую по id
+      const isUserId=/^\d+$/.test(permalink);
+      const artistUrl=isUserId?`${W}/artist?userId=${encodeURIComponent(permalink)}&name=${encodeURIComponent(name)}`:`${W}/artist?name=${encodeURIComponent(name)}&permalink=${encodeURIComponent(permalink)}`;
+      const r=await fetch(artistUrl);
       const d=await r.json();
       const art=d.artist||d; // поддержка обоих форматов
       const userId=String(art.id||'');
@@ -2075,7 +2078,7 @@ export default function App(){
     </button>
   );
 
-  const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
+  const TRow=({track,num,onArtistClick,showBlockBtn,onSwipeLeft}:{track:Track;num?:number;onArtistClick?:(n:string,c:string,id?:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const active=current?.id===track.id;const mOpen=menuId===track.id;
     const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
       onRight:()=>{if(!track.isArtist&&!track.isAlbum)toggleQ(track);},
@@ -2117,7 +2120,7 @@ export default function App(){
               <div style={{fontSize:13,fontWeight:500,color:active?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{track.title}</div>
               <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
                 {!track.isArtist&&!track.isAlbum&&onArtistClick
-                  ?<button onClick={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...tap}}>{track.artist}</button>
+                  ?<button onClick={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...tap}}>{track.artist}</button>
                   :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:track.artist}</span>
                 }
                 {!track.isArtist&&!track.isAlbum&&track.plays>0&&<span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>· {fmtP(track.plays)}</span>}
@@ -2517,7 +2520,7 @@ export default function App(){
                     <div style={{marginBottom:12,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
                       <SL text={t('popular')}/>
                       <div style={{padding:'0 4px'}}>
-                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c,id)=>openArtist(id||'',n,c,0)}/>)}
                       </div>
                     </div>
                   )}
@@ -2553,7 +2556,7 @@ export default function App(){
                         {artistTracks.length===0
                           ? <div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{t('noTracks')}</div>
                           : <div style={{padding:'0 4px'}}>
-                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}
+                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} track={tr} num={i+1} onArtistClick={(n,c,id)=>openArtist(id||'',n,c,0)}/>)}
                             </div>
                         }
                         {artistTracksLoading&&artistTracks.length>0&&<div style={{textAlign:'center',padding:'10px',color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
@@ -2609,7 +2612,7 @@ export default function App(){
                   </button>
                 </div>
                 {albumPage.tracks.length===0?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>:
-                  <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>)}</div>
+                  <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} track={tr} num={i+1} onArtistClick={(n,c,id)=>openArtist(id||'',n,c,0)}/>)}</div>
                 }
               </div>
             )}
@@ -2827,7 +2830,7 @@ export default function App(){
             ):(
               <div style={{padding:'0 4px 16px'}}>
                 {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'+i} track={tr} num={i+1} showBlockBtn={true} onArtistClick={(n,c)=>openArtist('',n,c,0)}/>
+                  <TRow key={tr.id+'fy'+i} track={tr} num={i+1} showBlockBtn={true} onArtistClick={(n,c,id)=>openArtist(id||'',n,c,0)}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
