@@ -1469,22 +1469,25 @@ export default function App(){
     // чтобы не обрываться на 30 сек из-за истечения токена
     if(tokenRefreshTimer.current)clearTimeout(tokenRefreshTimer.current);
     if(track.id&&!track.isArtist&&!track.isAlbum){
+      // CloudFront токен живёт ~1 мин — обновляем через 50 сек
       tokenRefreshTimer.current=setTimeout(async()=>{
         try{
+          const a2=audio.current;
+          if(!a2||a2.paused)return; // не обновляем если пауза
+          const pos=a2.currentTime;
           const r=await fetch(`${W}/resolve?id=${track.id}`);
           const d=await r.json();
-          if(d.mp3){
-            const a2=audio.current;
-            if(a2&&!a2.paused&&a2.currentTime>0){
-              const pos=a2.currentTime;
-              a2.src=d.mp3;
-              a2.load();
+          if(d.mp3&&a2.currentTime>0){
+            a2.src=d.mp3;
+            a2.load();
+            // Ждём loadedmetadata перед seek
+            a2.addEventListener('loadedmetadata',()=>{
               a2.currentTime=pos;
               a2.play().catch(()=>{});
-            }
+            },{once:true});
           }
         }catch{}
-      },45000);
+      },50000);
     }
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
