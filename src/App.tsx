@@ -2079,10 +2079,11 @@ export default function App(){
     <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
   );
 
+  const goBack=useCallback(()=>setScreen(prevScreen.current),[]);
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{e.stopPropagation();}}
-      onClick={e=>{e.stopPropagation();setScreen(prevScreen.current);}}
+      onClick={e=>{e.stopPropagation();goBack();}}
       style={{background:overlay?'rgba(0,0,0,0.5)':'none',border:'none',cursor:'pointer',padding:overlay?'7px 13px':'6px 10px 6px 0',borderRadius:overlay?20:0,display:'flex',alignItems:'center',gap:5,backdropFilter:overlay?'blur(8px)':'none',...tap,position:overlay?'fixed':'relative',top:overlay?52:undefined,left:overlay?14:undefined,zIndex:overlay?200:undefined,transition:'opacity 0.2s ease'}}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={overlay?'#ddd':'#999'} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span style={{fontSize:12,color:overlay?'#ddd':'#999',fontWeight:500}}>{t('backToSearch')}</span>
