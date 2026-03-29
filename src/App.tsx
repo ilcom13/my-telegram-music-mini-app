@@ -2519,7 +2519,7 @@ export default function App(){
                     <div style={{padding:'0 16px 12px',animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
                       <SL text={t('latestRelease')}/>
                       <div
-                        onPointerDown={()=>{
+                        onClick={()=>{
                           const lr=artistPage.latestRelease!;
                           if(lr.isAlbum)openAlbum(lr.id,lr.title,lr.artist,lr.cover);
                           else playTrack(lr);
