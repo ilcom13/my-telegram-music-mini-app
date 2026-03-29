@@ -2088,12 +2088,11 @@ export default function App(){
 
     // На ПК SwipeManager не работает (mouse) — добавляем обычный onClick
     const handleClick=(e:React.MouseEvent)=>{
-      // Если touch уже обработал tap через SwipeManager — не дублируем
+      if(e.button!==0)return; // только левая кнопка мыши
       if((e.currentTarget as any).__swipeTapped)return;
-      // Если клик по кнопкам внутри — не обрабатываем
       const target=e.target as HTMLElement;
       if(target.closest('button'))return;
-      if(mOpen){setMenuId(null);return;}
+      if(mOpen){setMenuId(null);setMenuAnchor(null);return;}
       playTrack(track);
     };
 
@@ -2165,6 +2164,7 @@ export default function App(){
     });
     // На ПК SwipeManager не работает — добавляем onClick для мыши
     const handleClick=(e:React.MouseEvent)=>{
+      if(e.button!==0)return;
       if((e.currentTarget as any).__swipeTapped)return;
       if((e.target as HTMLElement).closest('button'))return;
       onPlay();
