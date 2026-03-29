@@ -1268,17 +1268,6 @@ export default function App(){
     if(fullPlayer&&current?.cover){
       extractColors(current.cover).then(setFpColors);
     }
-    if(fullPlayer){
-      // Сразу ставим прогресс-бар в правильную позицию без анимации
-      const pct=progressRef.current;
-      if(seekBarFillRef.current){seekBarFillRef.current.style.transition='none';seekBarFillRef.current.style.width=`${pct}%`;}
-      if(seekBarThumbRef.current){seekBarThumbRef.current.style.transition='none';seekBarThumbRef.current.style.left=`${pct}%`;}
-      const a=audio.current;
-      if(a&&curTimeDisplayRef.current){
-        const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);
-        curTimeDisplayRef.current.textContent=`${m}:${s.toString().padStart(2,'0')}`;
-      }
-    }
   },[fullPlayer,current?.cover]);
 
   const loadRecommendations=useCallback(async()=>{
@@ -3165,209 +3154,6 @@ export default function App(){
             </div>
           )}
 
-          {/* ── Время прослушивания ── */}
-          {!isFirstEver&&totalSecs>0&&(
-            <div style={{background:'linear-gradient(135deg,rgba(239,191,127,0.08),rgba(20,20,30,0.95))',border:'1px solid #222',borderRadius:16,padding:'16px 14px',marginBottom:14,animation:'slideUp 0.45s ease both'}}>
-              <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:10,letterSpacing:0.5}}>⏱️ {lang==='ru'?'ВРЕМЯ ПРОСЛУШИВАНИЯ':lang==='uk'?'ЧАС ПРОСЛУХОВУВАННЯ':'LISTENING TIME'}</div>
-              <div style={{display:'flex',gap:8,marginBottom:12}}>
-                <div style={{flex:1,background:'rgba(239,191,127,0.07)',borderRadius:12,padding:'10px 12px'}}>
-                  <div style={{fontSize:26,fontWeight:800,color:ACC,lineHeight:1}}>{fmtT}</div>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginTop:3}}>{lang==='ru'?'прослушано':lang==='uk'?'прослухано':'listened'}</div>
-                </div>
-                {hh>=1&&<div style={{flex:1,background:'rgba(255,255,255,0.04)',borderRadius:12,padding:'10px 12px'}}>
-                  <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,lineHeight:1}}>{(hh/24).toFixed(1)}</div>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginTop:3}}>{lang==='ru'?'дней без сна':lang==='uk'?'днів без сну':'days nonstop'}</div>
-                </div>}
-              </div>
-              {hh>0&&<div style={{fontSize:12,color:TEXT_SEC,fontStyle:'italic' as const,borderLeft:`2px solid ${ACC}44`,paddingLeft:10}}>
-                {hh>=48?(lang==='ru'?`Это как ${Math.floor(hh/24)} дня без остановки 🫡`:lang==='uk'?`Це як ${Math.floor(hh/24)} дні без зупинки 🫡`:`That's like ${Math.floor(hh/24)} days straight 🫡`):
-                 hh>=24?(lang==='ru'?'Целые сутки в музыке. Серьёзно 🎧':lang==='uk'?'Цілу добу в музиці. Серйозно 🎧':'A full day in music. Seriously 🎧'):
-                 hh>=8?(lang==='ru'?'Рабочий день, но только музыка 🎵':lang==='uk'?'Робочий день, але тільки музика 🎵':'A workday, but just music 🎵'):
-                 (lang==='ru'?'Хорошее начало 🚀':lang==='uk'?'Хороший початок 🚀':'Good start 🚀')}
-              </div>}
-            </div>
-          )}
-
-          {/* ── Стрик ── */}
-          {!isFirstEver&&(()=>{
-            const mMonth=mStat.month.slice(0,7);
-            const mDays=streakDays.filter(d=>d.startsWith(mMonth));
-            const streak=maxStreak;
-            if(!streak&&!mDays.length)return null;
-            const activeDays=mDays.length;
-            const daysInMonth=new Date(parseInt(yyyy),parseInt(mm),0).getDate();
-            const pct=Math.round(activeDays/daysInMonth*100);
-            return(
-            <div style={{background:'rgba(20,20,20,0.8)',border:'1px solid #222',borderRadius:16,padding:'16px 14px',marginBottom:14,animation:'slideUp 0.5s ease both'}}>
-              <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:10,letterSpacing:0.5}}>🔥 {lang==='ru'?'АКТИВНОСТЬ':lang==='uk'?'АКТИВНІСТЬ':'ACTIVITY'}</div>
-              <div style={{display:'flex',gap:8,marginBottom:12}}>
-                <div style={{flex:1,background:'rgba(239,191,127,0.07)',borderRadius:12,padding:'10px 12px'}}>
-                  <div style={{fontSize:26,fontWeight:800,color:ACC,lineHeight:1}}>{activeDays}</div>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginTop:3}}>{lang==='ru'?`дн. из ${daysInMonth}`:lang==='uk'?`дн. з ${daysInMonth}`:`days of ${daysInMonth}`}</div>
-                </div>
-                {streak>1&&<div style={{flex:1,background:'rgba(255,255,255,0.04)',borderRadius:12,padding:'10px 12px'}}>
-                  <div style={{fontSize:26,fontWeight:800,color:'#ff9544',lineHeight:1}}>{streak} 🔥</div>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginTop:3}}>{lang==='ru'?'макс. стрик':lang==='uk'?'макс. стрік':'best streak'}</div>
-                </div>}
-              </div>
-              <div style={{background:'rgba(255,255,255,0.05)',borderRadius:8,overflow:'hidden',height:6,marginBottom:8}}>
-                <div style={{width:`${pct}%`,height:'100%',background:`linear-gradient(90deg,${ACC},#ff9544)`,borderRadius:8,transition:'width 0.6s ease'}}/>
-              </div>
-              <div style={{fontSize:11,color:TEXT_SEC}}>{pct}% {lang==='ru'?'дней месяца с музыкой':lang==='uk'?'днів місяця з музикою':'of the month with music'}</div>
-            </div>
-            );
-          })()}
-
-          {/* ── Зацикленный трек ── */}
-          {!isFirstEver&&topTracks[0]&&topTracks[0][1].count>=3&&(
-            <div style={{position:'relative',borderRadius:16,overflow:'hidden',marginBottom:14,animation:'slideUp 0.55s ease both'}}>
-              <img src={topTracks[0][1].cover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(16px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>
-              <div style={{position:'relative',zIndex:1,padding:'16px 14px'}}>
-                <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:8,letterSpacing:0.5}}>🔁 {lang==='ru'?'ТЫ РЕАЛЬНО ЗАЦИКЛИЛСЯ':lang==='uk'?'ТИ РЕАЛЬНО ЗАЦИКЛИВСЯ':'YOU GOT OBSESSED'}</div>
-                <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10}}>
-                  <div style={{width:52,height:52,borderRadius:10,overflow:'hidden',flexShrink:0,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}><Img src={topTracks[0][1].cover} size={52} radius={10}/></div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
-                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{topTracks[0][1].artist}</div>
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:8}}>
-                  <div style={{flex:1,background:'rgba(239,191,127,0.12)',borderRadius:10,padding:'8px 10px',textAlign:'center' as const}}>
-                    <div style={{fontSize:22,fontWeight:800,color:ACC}}>{topTracks[0][1].count}</div>
-                    <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div>
-                  </div>
-                  {totalPlays>0&&<div style={{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:10,padding:'8px 10px',textAlign:'center' as const}}>
-                    <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY}}>{Math.round(topTracks[0][1].count/totalPlays*100)}%</div>
-                    <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'от всего':lang==='uk'?'від усього':'of all plays'}</div>
-                  </div>}
-                </div>
-                <div style={{marginTop:10,fontSize:11,color:'rgba(255,255,255,0.5)',fontStyle:'italic' as const}}>
-                  {topTracks[0][1].count>=20?(lang==='ru'?'Похоже, он тебя не отпускает 👀':lang==='uk'?'Схоже, він тебе не відпускає 👀':'Seems like it won\'t let you go 👀'):
-                   topTracks[0][1].count>=10?(lang==='ru'?'Определённо твой трек месяца 💿':lang==='uk'?'Точно твій трек місяця 💿':'Definitely your track of the month 💿'):
-                   (lang==='ru'?'Хит твоего месяца 🎵':lang==='uk'?'Хіт твого місяця 🎵':'Your month\'s hit 🎵')}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Открытие месяца ── */}
-          {!isFirstEver&&(()=>{
-            // Трек с высоким count но который впервые появился в этом месяце (нет в prev)
-            const prevIds=new Set(monthStats.prev?Object.keys(monthStats.prev.trackPlays):[]);
-            const newHits=topTracks.filter(([id,v])=>!prevIds.has(id)&&v.count>=2);
-            if(!newHits.length)return null;
-            const [id,v]=newHits[0];
-            return(
-            <div style={{background:'linear-gradient(135deg,rgba(30,40,30,0.95),rgba(20,20,20,0.9))',border:'1px solid #2a3a2a',borderRadius:16,padding:'16px 14px',marginBottom:14,animation:'slideUp 0.6s ease both'}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#7ecf7e',marginBottom:10,letterSpacing:0.5}}>✨ {lang==='ru'?'ОТКРЫТИЕ МЕСЯЦА':lang==='uk'?'ВІДКРИТТЯ МІСЯЦЯ':'DISCOVERY OF THE MONTH'}</div>
-              <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10}}>
-                <div style={{position:'relative',flexShrink:0}}>
-                  <Img src={v.cover} size={52} radius={10}/>
-                  <div style={{position:'absolute',inset:0,borderRadius:10,boxShadow:'0 0 20px rgba(126,207,126,0.4)'}}/>
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
-                  <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{v.artist}</div>
-                </div>
-              </div>
-              <div style={{fontSize:12,color:'#7ecf7e',fontStyle:'italic' as const,borderLeft:'2px solid #7ecf7e44',paddingLeft:10}}>
-                {lang==='ru'?`Открыл в этом месяце — и сразу ${v.count}× 🔥`:lang==='uk'?`Відкрив цього місяця — і одразу ${v.count}× 🔥`:`Discovered this month — and already ${v.count}× 🔥`}
-              </div>
-            </div>
-            );
-          })()}
-
-          {/* ── Сравнение с прошлым месяцем ── */}
-          {!isFirstEver&&monthStats.prev&&(()=>{
-            const prev=monthStats.prev!;
-            const prevTotal=prev.totalSec;
-            const curTotal=mStat.totalSec;
-            if(!prevTotal)return null;
-            const diff=Math.round((curTotal-prevTotal)/prevTotal*100);
-            const prevTopArtists=(()=>{const m:Record<string,number>={};for(const v of Object.values(prev.trackPlays)){m[v.artist]=(m[v.artist]||0)+v.count;}return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);})();
-            const curTopArtists=topArtists.slice(0,3).map(a=>a.name);
-            const newArtists=curTopArtists.filter(a=>!prevTopArtists.includes(a));
-            const prevMm=prev.month.slice(5,7);
-            const prevMNameRu:Record<string,string>={'01':'январе','02':'феврале','03':'марте','04':'апреле','05':'мае','06':'июне','07':'июле','08':'августе','09':'сентябре','10':'октябре','11':'ноябре','12':'декабре'};
-            const prevMNameEn:Record<string,string>={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
-            return(
-            <div style={{background:'rgba(20,20,20,0.8)',border:'1px solid #222',borderRadius:16,padding:'16px 14px',marginBottom:14,animation:'slideUp 0.65s ease both'}}>
-              <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:10,letterSpacing:0.5}}>📊 {lang==='ru'?'VS ПРОШЛЫЙ МЕСЯЦ':lang==='uk'?'VS МИНУЛИЙ МІСЯЦЬ':'VS LAST MONTH'}</div>
-              <div style={{display:'flex',gap:8,marginBottom:12}}>
-                <div style={{flex:1,background:'rgba(255,255,255,0.04)',borderRadius:12,padding:'10px 12px'}}>
-                  <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:4}}>{lang==='ru'?`В ${prevMNameRu[prevMm]||prev.month}`:prevMNameEn[prevMm]||prev.month}</div>
-                  <div style={{fontSize:16,fontWeight:700,color:TEXT_SEC}}>{Math.floor(prevTotal/3600)}h {Math.floor((prevTotal%3600)/60)}m</div>
-                </div>
-                <div style={{flex:1,background:diff>=0?'rgba(126,207,126,0.08)':'rgba(207,126,126,0.08)',borderRadius:12,padding:'10px 12px',border:`1px solid ${diff>=0?'#7ecf7e22':'#cf7e7e22'}`}}>
-                  <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:4}}>{lang==='ru'?'Сейчас':lang==='uk'?'Зараз':'Now'}</div>
-                  <div style={{fontSize:16,fontWeight:700,color:diff>=0?'#7ecf7e':'#cf7e7e'}}>{diff>=0?'+':''}{diff}%</div>
-                </div>
-              </div>
-              {newArtists.length>0&&<div style={{fontSize:11,color:TEXT_SEC,marginBottom:6}}>
-                🆕 {lang==='ru'?'Новые в топе:':lang==='uk'?'Нові в топі:':'New in top:'} <span style={{color:ACC,fontWeight:600}}>{newArtists.join(', ')}</span>
-              </div>}
-              <div style={{fontSize:11,color:TEXT_MUTED,fontStyle:'italic' as const}}>
-                {diff>=20?(lang==='ru'?'Твой вкус не стоит на месте 🚀':lang==='uk'?'Твій смак не стоїть на місці 🚀':'Your taste keeps evolving 🚀'):
-                 diff>0?(lang==='ru'?'Слушаешь больше — это хорошо 🎵':lang==='uk'?'Слухаєш більше — це добре 🎵':'Listening more — that\'s good 🎵'):
-                 diff<=-20?(lang==='ru'?'Тише, но качественнее? 🎭':lang==='uk'?'Тихіше, але якісніше? 🎭':'Quieter, but better? 🎭'):
-                 (lang==='ru'?'Стабильно держишь темп 👌':lang==='uk'?'Стабільно тримаєш темп 👌':'Keeping a steady pace 👌')}
-              </div>
-            </div>
-            );
-          })()}
-
-          {/* ── Share карточка ── */}
-          {!isFirstEver&&topTracks[0]&&(
-            <div style={{background:`linear-gradient(135deg,#0e0e0e,#1a1614)`,border:`1px solid ${ACC}44`,borderRadius:16,padding:'16px 14px',marginBottom:14,animation:'slideUp 0.7s ease both'}}>
-              <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:12,letterSpacing:0.5}}>📤 {lang==='ru'?'МОЙ МУЗЫКАЛЬНЫЙ МЕСЯЦ':lang==='uk'?'МІЙ МУЗИЧНИЙ МІСЯЦЬ':'MY MUSIC MONTH'}</div>
-              <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10,padding:'10px',background:'rgba(255,255,255,0.04)',borderRadius:10}}>
-                <Img src={topTracks[0][1].cover} size={42} radius={8}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2}}>{lang==='ru'?'🔥 Трек месяца':'🔥 Track of the month'}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
-                  <div style={{fontSize:10,color:TEXT_SEC}}>{topTracks[0][1].artist}</div>
-                </div>
-              </div>
-              {topArtists[0]&&<div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10,padding:'10px',background:'rgba(255,255,255,0.04)',borderRadius:10}}>
-                <div style={{width:42,height:42,borderRadius:'50%',overflow:'hidden',flexShrink:0}}><Img src={topArtists[0].cover} size={42} radius={21}/></div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2}}>{lang==='ru'?'🎤 Топ-артист':'🎤 Top artist'}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY}}>{topArtists[0].name}</div>
-                  <div style={{fontSize:10,color:TEXT_SEC}}>{topArtists[0].count} {lang==='ru'?'треков':'tracks'}</div>
-                </div>
-              </div>}
-              <div style={{display:'flex',gap:8,marginBottom:12}}>
-                <div style={{flex:1,padding:'8px',background:'rgba(239,191,127,0.07)',borderRadius:8,textAlign:'center' as const}}>
-                  <div style={{fontSize:14,fontWeight:700,color:ACC}}>{fmtT}</div>
-                  <div style={{fontSize:8,color:TEXT_MUTED,marginTop:2}}>{lang==='ru'?'времени':lang==='uk'?'часу':'time'}</div>
-                </div>
-                <div style={{flex:1,padding:'8px',background:'rgba(255,255,255,0.04)',borderRadius:8,textAlign:'center' as const}}>
-                  <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY}}>{mStat.listenedIds.length}</div>
-                  <div style={{fontSize:8,color:TEXT_MUTED,marginTop:2}}>{lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-                </div>
-                <div style={{flex:1,padding:'8px',background:'rgba(255,255,255,0.04)',borderRadius:8,textAlign:'center' as const}}>
-                  <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY}}>{totalPlays}</div>
-                  <div style={{fontSize:8,color:TEXT_MUTED,marginTop:2}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div>
-                </div>
-              </div>
-              <div style={{fontSize:9,color:TEXT_MUTED,textAlign:'center' as const,marginBottom:10,letterSpacing:0.5}}>forty7 · {monthTitle}</div>
-              <button onPointerDown={()=>{
-                const text=`🎧 ${lang==='ru'?'Мой музыкальный месяц':'My Music Month'} — ${monthTitle}
-🔥 ${topTracks[0][1].title} · ${topTracks[0][1].artist}
-🎤 ${topArtists[0]?.name||''}
-⏱ ${fmtT} · ${mStat.listenedIds.length} ${lang==='ru'?'треков':'tracks'}
-
-forty7 — music without limits`;
-                const tg=window.Telegram?.WebApp;
-                if(tg?.shareUrl)tg.shareUrl('https://t.me/forty7mbot',text);
-                else if(navigator.share)navigator.share({text}).catch(()=>{});
-                else{try{navigator.clipboard.writeText(text);}catch{}}
-              }} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
-                📤 {lang==='ru'?'Поделиться':lang==='uk'?'Поділитися':lang==='kk'?'Бөлісу':lang==='pl'?'Udostępnij':lang==='tr'?'Paylaş':'Share'}
-              </button>
-            </div>
-          )}
-
           {/* Empty state */}
           {isFirstEver&&(
             <div style={{textAlign:'center' as const,padding:'40px 20px',animation:'fadeIn 0.4s ease'}}>
@@ -3577,7 +3363,7 @@ forty7 — music without limits`;
               type="button"
               key={current.id+'-c'}
               className="mini-cover"
-              onPointerDown={(e)=>{e.stopPropagation();const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();setFullPlayer(true);}}
               style={{background:'none',border:'none',padding:0,margin:0,cursor:'pointer',borderRadius:10,overflow:'hidden',flexShrink:0,display:'block',animation:'popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both',...tap}}
             >
               <Img src={current.cover} size={52} radius={10}/>
@@ -3585,7 +3371,7 @@ forty7 — music without limits`;
  
             <button
               type="button"
-              onPointerDown={(e)=>{e.stopPropagation();const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();setFullPlayer(true);}}
               style={{flex:1,minWidth:0,background:'none',border:'none',padding:0,margin:0,cursor:'pointer',textAlign:'left' as const,display:'block',...tap}}
             >
               <div key={current.id+'-t'} style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const,animation:'trackIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
