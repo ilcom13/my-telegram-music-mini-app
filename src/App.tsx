@@ -869,6 +869,7 @@ export default function App(){
   const[artistTracksOffset,setArtistTracksOffset]=useState(0);
   const artistTracksCursor=useRef<string|null>(null);
   const artistUserId=useRef('');
+  const tokenRefreshTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   const[favArtists,setFavArtists]=useState<ArtistInfo[]>([]);
   const[blockedArtists,setBlockedArtists]=useState<string[]>([]);
@@ -1446,7 +1447,8 @@ export default function App(){
     const a=audio.current;
     if(a){
       a.pause();
-      a.src=freshMp3; // прямой URL без прокси — воркер обрезал на 30 сек из-за CPU лимита
+      // Проксируем через воркер с trackId для авто-обновления истёкшего токена
+            a.src=freshMp3;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
         console.warn('play failed, retry:',err);
@@ -1463,6 +1465,27 @@ export default function App(){
     if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
+    // Авто-обновление CloudFront токена: через 45 сек получаем свежий URL
+    // чтобы не обрываться на 30 сек из-за истечения токена
+    if(tokenRefreshTimer.current)clearTimeout(tokenRefreshTimer.current);
+    if(track.id&&!track.isArtist&&!track.isAlbum){
+      tokenRefreshTimer.current=setTimeout(async()=>{
+        try{
+          const r=await fetch(`${W}/resolve?id=${track.id}`);
+          const d=await r.json();
+          if(d.mp3){
+            const a2=audio.current;
+            if(a2&&!a2.paused&&a2.currentTime>0){
+              const pos=a2.currentTime;
+              a2.src=d.mp3;
+              a2.load();
+              a2.currentTime=pos;
+              a2.play().catch(()=>{});
+            }
+          }
+        }catch{}
+      },45000);
+    }
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
