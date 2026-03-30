@@ -1448,7 +1448,7 @@ export default function App(){
     if(a){
       a.pause();
       // Проксируем через воркер с trackId для авто-обновления истёкшего токена
-            a.src=freshMp3;
+            a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
         console.warn('play failed, retry:',err);
@@ -1575,7 +1575,7 @@ export default function App(){
       setPlayHistory(p=>p.slice(1));
       if(audio.current&&prev.mp3){
         audio.current.pause();
-        audio.current.src=prev.mp3; // прямой URL
+        audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
         audio.current.load();
         audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       }
