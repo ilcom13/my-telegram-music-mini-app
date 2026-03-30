@@ -973,6 +973,7 @@ export default function App(){
   const[addToPl,setAddToPl]=useState<Track|null>(null);
   const[copied,setCopied]=useState(false);
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
+  const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
@@ -1942,7 +1943,8 @@ export default function App(){
 
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
-    prevScreen.current=screen as typeof prevScreen.current;
+if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof preArtistScreen.current;}
+prevScreen.current='search';
     setScreen('artist');
     setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
     setArtistTracksHasMore(false);setArtistTab('albums');
@@ -2105,7 +2107,11 @@ export default function App(){
     <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
   );
 
-  const goBack=useCallback(()=>setScreen(prevScreen.current),[]);
+const goBack=useCallback(()=>{
+  if(screen==='album'&&prevScreen.current==='artist'){setScreen('artist');return;}
+  if(screen==='artist'){setScreen(preArtistScreen.current);return;}
+  setScreen(prevScreen.current);
+},[screen]);
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{e.stopPropagation();}}
