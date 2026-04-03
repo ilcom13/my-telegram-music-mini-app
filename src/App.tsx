@@ -973,7 +973,6 @@ export default function App(){
   const[addToPl,setAddToPl]=useState<Track|null>(null);
   const[copied,setCopied]=useState(false);
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
-  const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
@@ -1190,6 +1189,7 @@ export default function App(){
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
+  const queueRef=useRef<Track[]>([]);
   const mediaSessionThrottle=useRef<number>(0);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
@@ -1388,9 +1388,9 @@ export default function App(){
         if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct}%`;
         if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct}%`;
         if(miniTimeRef.current)miniTimeRef.current.textContent=timeStr;
-try{
+        try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
-const now2=Date.now();
+            const now2=Date.now();
             if(now2-mediaSessionThrottle.current>2000){
               mediaSessionThrottle.current=now2;
               navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
@@ -1399,16 +1399,12 @@ const now2=Date.now();
         }catch{}
       }
     };
-const onE=()=>{
+    const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
-      else if(queueRef.current.length>0){
-        const nxt=queueRef.current[0];
-        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
-        playDirect(nxt);
-      }
+      else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}
       else{
-        const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
-        const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
+        const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
         const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
         if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
         else setPlaying(false);
@@ -1416,9 +1412,8 @@ const onE=()=>{
     };
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
-},[current,loop]);
+  },[current,loop,queue,recs,history,blockedArtists]);
 
-  
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1460,7 +1455,7 @@ const onE=()=>{
     if(a){
       a.pause();
       // Проксируем через воркер с trackId для авто-обновления истёкшего токена
-a.src=freshMp3;
+            a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
         console.warn('play failed, retry:',err);
@@ -1478,7 +1473,29 @@ a.src=freshMp3;
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
     // Авто-обновление CloudFront токена: через 45 сек получаем свежий URL
-
+    // чтобы не обрываться на 30 сек из-за истечения токена
+    if(tokenRefreshTimer.current)clearTimeout(tokenRefreshTimer.current);
+    if(track.id&&!track.isArtist&&!track.isAlbum){
+      // CloudFront токен живёт ~1 мин — обновляем через 50 сек
+      tokenRefreshTimer.current=setTimeout(async()=>{
+        try{
+          const a2=audio.current;
+          if(!a2||a2.paused)return; // не обновляем если пауза
+          const pos=a2.currentTime;
+          const r=await fetch(`${W}/resolve?id=${track.id}`);
+          const d=await r.json();
+          if(d.mp3&&a2.currentTime>0){
+            a2.src=d.mp3;
+            a2.load();
+            // Ждём loadedmetadata перед seek
+            a2.addEventListener('loadedmetadata',()=>{
+              a2.currentTime=pos;
+              a2.play().catch(()=>{});
+            },{once:true});
+          }
+        }catch{}
+      },50000);
+    }
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
@@ -1616,16 +1633,6 @@ a.src=freshMp3;
   const rmQ=(i:number)=>setQueue(prev=>{const n=[...prev];n.splice(i,1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   const inQ=(id:string)=>queue.some(t=>t.id===id);
   const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
-  useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
-      if(e.code==='Space'&&(e.target===document.body||e.target===document.documentElement)){
-        e.preventDefault();
-        if(current)togglePlay();
-      }
-    };
-    window.addEventListener('keydown',onKey);
-    return()=>window.removeEventListener('keydown',onKey);
-  },[current,togglePlay]);
   const setVol=(v:number)=>{setVolume(v);volumeRef.current=v;try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
@@ -1894,7 +1901,7 @@ a.src=freshMp3;
       }
       setImportProgress(Math.round(((i+1)/tracks.length)*100));
       setImportResults([...allResults]);
-      if(i%5===4)await new Promise(r=>setTimeout(r,80));
+      if(i%5===4)await new Promise(r=>setTimeout(r,200));
     }
 
     const matched=allResults.filter(r=>r.status==='found'&&r.matched).map(r=>r.matched as Track);
@@ -1942,8 +1949,7 @@ a.src=freshMp3;
 
   const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
-if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof preArtistScreen.current;}
-prevScreen.current='search';
+    prevScreen.current=screen as typeof prevScreen.current;
     setScreen('artist');
     setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
     setArtistTracksHasMore(false);setArtistTab('albums');
@@ -2106,11 +2112,7 @@ prevScreen.current='search';
     <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
   );
 
-const goBack=useCallback(()=>{
-  if(screen==='album'&&prevScreen.current==='artist'){setScreen('artist');return;}
-  if(screen==='artist'){setScreen(preArtistScreen.current);return;}
-  setScreen(prevScreen.current);
-},[screen]);
+  const goBack=useCallback(()=>setScreen(prevScreen.current),[]);
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{e.stopPropagation();}}
