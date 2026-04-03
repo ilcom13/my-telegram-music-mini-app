@@ -1408,6 +1408,14 @@ export default function App(){
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop,queue,recs,history,blockedArtists]);
 
+useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      if(e.code==='Space'&&e.target===document.body){e.preventDefault();if(current)togglePlay();}
+    };
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[current,togglePlay]);
+  
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1467,29 +1475,7 @@ a.src=freshMp3;
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
     // Авто-обновление CloudFront токена: через 45 сек получаем свежий URL
-    // чтобы не обрываться на 30 сек из-за истечения токена
-    if(tokenRefreshTimer.current)clearTimeout(tokenRefreshTimer.current);
-    if(track.id&&!track.isArtist&&!track.isAlbum){
-      // CloudFront токен живёт ~1 мин — обновляем через 50 сек
-      tokenRefreshTimer.current=setTimeout(async()=>{
-        try{
-          const a2=audio.current;
-          if(!a2||a2.paused)return; // не обновляем если пауза
-          const pos=a2.currentTime;
-          const r=await fetch(`${W}/resolve?id=${track.id}`);
-          const d=await r.json();
-          if(d.mp3&&a2.currentTime>0){
-            a2.src=d.mp3;
-            a2.load();
-            // Ждём loadedmetadata перед seek
-            a2.addEventListener('loadedmetadata',()=>{
-              a2.currentTime=pos;
-              a2.play().catch(()=>{});
-            },{once:true});
-          }
-        }catch{}
-      },50000);
-    }
+
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
@@ -1895,7 +1881,7 @@ a.src=freshMp3;
       }
       setImportProgress(Math.round(((i+1)/tracks.length)*100));
       setImportResults([...allResults]);
-      if(i%5===4)await new Promise(r=>setTimeout(r,200));
+      if(i%5===4)await new Promise(r=>setTimeout(r,80));
     }
 
     const matched=allResults.filter(r=>r.status==='found'&&r.matched).map(r=>r.matched as Track);
