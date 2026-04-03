@@ -456,8 +456,8 @@ function SliderTrack({sp,h=3}:{sp:ReturnType<typeof useSlider>;h?:number}){
       style={{flex:1,height:Math.max(h,22),display:'flex',alignItems:'center',cursor:'pointer',touchAction:'none',userSelect:'none'}}
     >
       <div style={{width:'100%',height:h,background:'rgba(255,255,255,0.1)',borderRadius:h,position:'relative'}}>
-        <div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:h,transition:'width 0.1s linear'}}/>
-        <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:h+10,height:h+10,background:ACC,borderRadius:'50%',pointerEvents:'none',transition:'left 0.1s linear'}}/>
+<div style={{width:`${val*100}%`,height:'100%',background:ACC,borderRadius:h}}/>
+        <div style={{position:'absolute',top:'50%',left:`${val*100}%`,transform:'translate(-50%,-50%)',width:h+10,height:h+10,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
       </div>
     </div>
   );
@@ -2338,7 +2338,7 @@ export default function App(){
         </div>
       )}
       <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
-        <button onPointerDown={()=>setFullPlayer(false)} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
+        <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
@@ -2352,7 +2352,7 @@ export default function App(){
         <div
           className="full-player-cover"
           style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
-          onPointerDown={()=>setFullPlayer(false)}
+          onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
         >
           <Img src={current.cover} size={Math.min(window.innerWidth-64,230)} radius={0}/>
         </div>
