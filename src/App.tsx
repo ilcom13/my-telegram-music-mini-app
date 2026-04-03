@@ -1190,6 +1190,7 @@ export default function App(){
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
+  useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
   useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
   useEffect(()=>{recsRef.current=recs;},[recs]);
@@ -1386,19 +1387,27 @@ export default function App(){
         if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct}%`;
         if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct}%`;
         if(miniTimeRef.current)miniTimeRef.current.textContent=timeStr;
-        try{
+try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
-            navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
+            const now2=Date.now();
+            if(!a._lastPos||now2-a._lastPos>2000){
+              a._lastPos=now2;
+              navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
+            }
           }
         }catch{}
       }
     };
-    const onE=()=>{
+const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
-      else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}
+      else if(queueRef.current.length>0){
+        const nxt=queueRef.current[0];
+        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
+        playDirect(nxt);
+      }
       else{
-        const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
-        const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
+        const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
         if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
         else setPlaying(false);
@@ -1406,7 +1415,7 @@ export default function App(){
     };
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
-  },[current,loop,queue,recs,history,blockedArtists]);
+},[current,loop]);
 
 useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
