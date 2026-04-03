@@ -1190,6 +1190,7 @@ export default function App(){
   const historyRef=useRef<Track[]>([]);
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
+  const mediaSessionThrottle=useRef<number>(0);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
   useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
@@ -1389,9 +1390,9 @@ export default function App(){
         if(miniTimeRef.current)miniTimeRef.current.textContent=timeStr;
 try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
-            const now2=Date.now();
-            if(!a._lastPos||now2-a._lastPos>2000){
-              a._lastPos=now2;
+const now2=Date.now();
+            if(now2-mediaSessionThrottle.current>2000){
+              mediaSessionThrottle.current=now2;
               navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
             }
           }
@@ -1417,13 +1418,6 @@ const onE=()=>{
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
 },[current,loop]);
 
-useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
-      if(e.code==='Space'&&e.target===document.body){e.preventDefault();if(current)togglePlay();}
-    };
-    window.addEventListener('keydown',onKey);
-    return()=>window.removeEventListener('keydown',onKey);
-  },[current,togglePlay]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
@@ -1622,6 +1616,16 @@ a.src=freshMp3;
   const rmQ=(i:number)=>setQueue(prev=>{const n=[...prev];n.splice(i,1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   const inQ=(id:string)=>queue.some(t=>t.id===id);
   const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      if(e.code==='Space'&&(e.target===document.body||e.target===document.documentElement)){
+        e.preventDefault();
+        if(current)togglePlay();
+      }
+    };
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[current,togglePlay]);
   const setVol=(v:number)=>{setVolume(v);volumeRef.current=v;try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
