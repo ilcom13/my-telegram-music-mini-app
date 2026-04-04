@@ -1415,6 +1415,13 @@ export default function App(){
   },[current,loop,queue,recs,history,blockedArtists]);
 
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      if(e.code==='Space'&&e.target===document.body){e.preventDefault();if(current)togglePlay();}
+    };
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[current,togglePlay]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
@@ -1878,7 +1885,7 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
       }
       setImportProgress(Math.round(((i+1)/tracks.length)*100));
       setImportResults([...allResults]);
-      if(i%5===4)await new Promise(r=>setTimeout(r,200));
+      if(i%5===4)await new Promise(r=>setTimeout(r,80));
     }
 
     const matched=allResults.filter(r=>r.status==='found'&&r.matched).map(r=>r.matched as Track);
