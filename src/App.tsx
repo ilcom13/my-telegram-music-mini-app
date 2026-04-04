@@ -609,8 +609,12 @@ interface PlModalProps {
   playlists: Playlist[];
   onClose: () => void;
   onAdd: (plId: string, track: Track) => void;
-  lang: string;
+lang: string;
   t: (k: string) => string;
+  importSource: string;
+  setImportSource: (s: string) => void;
+  importSizeQ: string;
+  setImportSizeQ: (s: string) => void;
 }
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
@@ -655,14 +659,19 @@ interface ImportModalProps {
   onClose: () => void;
   onImport: () => void;
   onMatch: (title: string) => void;
-  lang: string;
+lang: string;
   t: (k: string) => string;
+  importSource: string;
+  setImportSource: (s: string) => void;
+  importSizeQ: string;
+  setImportSizeQ: (s: string) => void;
 }
 
 const ImportModalExt = React.memo(({
   importStep, setImportStep, importTab, setImportTab,
   importUrl, setImportUrl, importError, importPreview,
-  importResults, importProgress, onClose, onImport, onMatch, lang, t
+importResults, importProgress, onClose, onImport, onMatch, lang, t,
+  importSource, setImportSource, importSizeQ, setImportSizeQ
 }: ImportModalProps) => {
   const tap: React.CSSProperties = {outline:'none',WebkitTapHighlightColor:'transparent' as any};
 
@@ -693,29 +702,134 @@ const ImportModalExt = React.memo(({
         )}
 
         {/* Main tab */}
-        {(importStep==='idle'||importStep==='error')&&importTab==='main'&&(<>
-          <div style={{display:'flex',gap:6,marginBottom:12}}>
-            {[{icon:'🟢',label:'Spotify'},{icon:'🔴',label:'YouTube'},{icon:'🟠',label:'SoundCloud'}].map(s=>(
-              <div key={s.label} style={{padding:'4px 10px',background:BG3,borderRadius:8,fontSize:10,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
-                <span>{s.icon}</span><span>{s.label}</span>
+{(importStep==='idle'||importStep==='error')&&importTab==='main'&&(<>
+
+          {/* Главный экран выбора источника */}
+          {importSource==='none'&&(<>
+            {/* SoundCloud — большая кнопка */}
+            <button onPointerDown={()=>setImportSource('sc')}
+              style={{width:'100%',padding:'14px',marginBottom:10,background:'linear-gradient(135deg,#f50,#ff7700)',border:'none',borderRadius:12,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+              <span style={{fontSize:20}}>☁️</span> SoundCloud
+            </button>
+            {/* 4 кнопки в ряд */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,marginBottom:8}}>
+              {[
+                {key:'spotify',icon:'🟢',label:'Spotify'},
+                {key:'youtube',icon:'▶️',label:'YouTube'},
+                {key:'yandex',icon:'🔴',label:'Яндекс'},
+                {key:'apple',icon:'🍎',label:'Apple'},
+              ].map(s=>(
+                <button key={s.key} onPointerDown={()=>setImportSource(s.key)}
+                  style={{padding:'10px 4px',background:'#252525',border:'1px solid #333',borderRadius:10,color:TEXT_PRIMARY,fontSize:10,fontWeight:600,cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:4,...tap}}>
+                  <span style={{fontSize:18}}>{s.icon}</span>
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </>)}
+
+          {/* SoundCloud — ввод ссылки */}
+          {importSource==='sc'&&(<>
+            <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>☁️ {lang==='ru'?'Вставь ссылку на плейлист SoundCloud':'Paste your SoundCloud playlist link'}</div>
+            <input autoFocus placeholder="https://soundcloud.com/user/sets/..."
+              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={onImport} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?'#f50':BG3,border:'none',borderRadius:10,color:importUrl.trim()?'#fff':TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+              {t('importFindBtn')}
+            </button>
+          </>)}
+
+          {/* Spotify — вопрос о размере */}
+          {importSource==='spotify'&&importSizeQ==='none'&&(<>
+            <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:8}}>🟢 Spotify</div>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:16,lineHeight:1.5}}>{lang==='ru'?'Сколько треков в вашем плейлисте?':lang==='uk'?'Скільки треків у вашому плейлисті?':'How many tracks in your playlist?'}</div>
+            <div style={{display:'flex',gap:8}}>
+              <button onPointerDown={()=>setImportSizeQ('spotify')}
+                style={{flex:1,padding:'12px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                ✓ {lang==='ru'?'До 100 треков':lang==='uk'?'До 100 треків':'Up to 100 tracks'}
+              </button>
+              <button onPointerDown={()=>setImportSource('soundiiz')}
+                style={{flex:1,padding:'12px',background:'#2a1a1a',border:'1px solid #4a2a2a',borderRadius:10,color:'#cf7e7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                ✗ {lang==='ru'?'Больше 100':lang==='uk'?'Більше 100':'More than 100'}
+              </button>
+            </div>
+          </>)}
+
+          {/* Spotify — ввод ссылки */}
+          {importSource==='spotify'&&importSizeQ==='spotify'&&(<>
+            <button onPointerDown={()=>setImportSizeQ('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>🟢 {lang==='ru'?'Вставь ссылку на плейлист Spotify':'Paste your Spotify playlist link'}</div>
+            <input autoFocus placeholder="https://open.spotify.com/playlist/..."
+              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={onImport} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+              {t('importFindBtn')}
+            </button>
+          </>)}
+
+          {/* YouTube — вопрос о размере */}
+          {importSource==='youtube'&&importSizeQ==='none'&&(<>
+            <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:8}}>▶️ YouTube Music</div>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:16,lineHeight:1.5}}>{lang==='ru'?'Сколько треков в вашем плейлисте?':lang==='uk'?'Скільки треків у вашому плейлисті?':'How many tracks in your playlist?'}</div>
+            <div style={{display:'flex',gap:8}}>
+              <button onPointerDown={()=>setImportSizeQ('youtube')}
+                style={{flex:1,padding:'12px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                ✓ {lang==='ru'?'До 240 треков':lang==='uk'?'До 240 треків':'Up to 240 tracks'}
+              </button>
+              <button onPointerDown={()=>setImportSource('soundiiz')}
+                style={{flex:1,padding:'12px',background:'#2a1a1a',border:'1px solid #4a2a2a',borderRadius:10,color:'#cf7e7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                ✗ {lang==='ru'?'Больше 240':lang==='uk'?'Більше 240':'More than 240'}
+              </button>
+            </div>
+          </>)}
+
+          {/* YouTube — ввод ссылки */}
+          {importSource==='youtube'&&importSizeQ==='youtube'&&(<>
+            <button onPointerDown={()=>setImportSizeQ('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>▶️ {lang==='ru'?'Вставь ссылку на плейлист YouTube Music':'Paste your YouTube Music playlist link'}</div>
+            <input autoFocus placeholder="https://music.youtube.com/playlist?list=..."
+              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={onImport} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+              {t('importFindBtn')}
+            </button>
+          </>)}
+
+          {/* Яндекс / Apple / Soundiiz инструкция */}
+          {(importSource==='yandex'||importSource==='apple'||importSource==='soundiiz')&&(<>
+            <button onPointerDown={()=>{setImportSource('none');setImportSizeQ('none');}} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>
+              {importSource==='yandex'?'🔴 Яндекс Музыка':importSource==='apple'?'🍎 Apple Music':'🔄 Soundiiz'}
+            </div>
+            <div style={{background:'#1a1a2a',borderRadius:12,padding:'14px',marginBottom:14}}>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.7,marginBottom:12}}>
+                {lang==='ru'?
+                  <>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Подключи свой аккаунт и перенеси плейлист в SoundCloud<br/>3. Вернись сюда и импортируй плейлист через кнопку SoundCloud</>:
+                  lang==='uk'?
+                  <>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Підключи свій акаунт і перенеси плейлист у SoundCloud<br/>3. Повернись сюди та імпортуй плейлист через кнопку SoundCloud</>:
+                  <>1. Go to <span style={{color:ACC}}>soundiiz.com</span><br/>2. Connect your account and transfer playlist to SoundCloud<br/>3. Come back here and import via SoundCloud button</>
+                }
               </div>
-            ))}
-          </div>
-          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8}}>{t('importLinkHint')}</div>
-          <input
-            autoFocus
-            placeholder="https://open.spotify.com/playlist/..."
-            value={importUrl}
-            onChange={e=>setImportUrl(e.target.value)}
-            style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}
-          />
-          {importStep==='error'&&importError&&(
-            <div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>
-          )}
-          <button onPointerDown={onImport} disabled={!importUrl.trim()}
-            style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
-            {t('importFindBtn')}
-          </button>
+              <a href="https://soundiiz.com" target="_blank" rel="noopener noreferrer"
+                style={{display:'block',padding:'12px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textAlign:'center' as const,textDecoration:'none'}}>
+                {lang==='ru'?'Открыть Soundiiz':lang==='uk'?'Відкрити Soundiiz':'Open Soundiiz'} →
+              </a>
+            </div>
+            <button onPointerDown={()=>{setImportSource('sc');setImportSizeQ('none');}}
+              style={{width:'100%',padding:'12px',background:'linear-gradient(135deg,#f50,#ff7700)',border:'none',borderRadius:10,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              ☁️ {lang==='ru'?'Импортировать SoundCloud плейлист':lang==='uk'?'Імпортувати SoundCloud плейлист':'Import SoundCloud playlist'}
+            </button>
+          </>)}
+
         </>)}
 
         {/* Other tab */}
@@ -962,7 +1076,9 @@ export default function App(){
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const[importUrl,setImportUrl]=useState('');
-  const[importTab,setImportTab]=useState<'main'|'other'>('main');
+const[importTab,setImportTab]=useState<'main'|'other'>('main');
+  const[importSource,setImportSource]=useState<'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz'>('none');
+  const[importSizeQ,setImportSizeQ]=useState<'none'|'spotify'|'youtube'>('none');
   const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'>('idle');
   const[importError,setImportError]=useState('');
   const[importPreview,setImportPreview]=useState<{source:string;title:string;cover:string;totalTracks:number;tracks:{sourceTitle:string;sourceArtist:string}[]}|null>(null);
@@ -1841,6 +1957,7 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
           setImportResults(scData.tracks.map((tr:Track)=>({imported:{sourceTitle:tr.title,sourceArtist:tr.artist},matched:tr,status:'found'})));
           setImportProgress(scData.tracks.length);
           setImportStep('done');
+          setImportSource('none');setImportSizeQ('none');
           setTimeout(()=>{setShowImport(false);setLibTab('playlists');setScreen('library');},1400);
         }else{
           setImportError(lang==='ru'?'Не удалось загрузить плейлист SoundCloud':'Failed to load SoundCloud playlist');
@@ -1892,6 +2009,7 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
       const pl:Playlist={id:Date.now().toString(),name:playlistName,tracks:matched,repeat:false};
       setPlaylists(prev=>{const n=[pl,...prev];try{localStorage.setItem('p47',JSON.stringify(n));}catch{}doFullSync();return n;});
       setImportStep('done');
+      setImportSource('none');setImportSizeQ('none');
       setTimeout(()=>{setShowImport(false);setLibTab('playlists');setScreen('library');},1400);
     }else{
       setImportError(lang==='ru'?'Ни один трек не найден на SoundCloud':lang==='uk'?'Жоден трек не знайдено':'No tracks found on SoundCloud');
@@ -3043,10 +3161,12 @@ const goBack=useCallback(()=>{
         importPreview={importPreview} setImportPreview={setImportPreview}
         importResults={importResults}
         importProgress={importProgress}
-        onClose={()=>setShowImport(false)}
+onClose={()=>{setShowImport(false);setImportSource('none');setImportSizeQ('none');}}
         onImport={runImport}
         onMatch={runMatch}
         lang={lang} t={t}
+importSource={importSource} setImportSource={setImportSource}
+        importSizeQ={importSizeQ} setImportSizeQ={setImportSizeQ}
       />}
  
       {/* ── MONTH STATS SCREEN ── */}
