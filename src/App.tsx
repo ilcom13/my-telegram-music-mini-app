@@ -1289,7 +1289,6 @@ export default function App(){
       if(miniBarFillRef.current){miniBarFillRef.current.style.transition='none';miniBarFillRef.current.style.width=`${pct}%`;}
       if(miniBarThumbRef.current){miniBarThumbRef.current.style.transition='none';miniBarThumbRef.current.style.left=`${pct}%`;}
     }
-    }
   },[fullPlayer,current?.cover]);
 
   const loadRecommendations=useCallback(async()=>{
