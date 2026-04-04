@@ -611,10 +611,6 @@ interface PlModalProps {
   onAdd: (plId: string, track: Track) => void;
 lang: string;
   t: (k: string) => string;
-  importSource: string;
-  setImportSource: (s: string) => void;
-  importSizeQ: string;
-  setImportSizeQ: (s: string) => void;
 }
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
@@ -662,8 +658,8 @@ interface ImportModalProps {
 lang: string;
   t: (k: string) => string;
   importSource: string;
-  setImportSource: (s: string) => void;
-  importSizeQ: string;
+setImportSource: (s: 'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz') => void;
+  setImportSizeQ: (s: 'none'|'spotify'|'youtube') => void;
   setImportSizeQ: (s: string) => void;
 }
 
