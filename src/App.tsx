@@ -1414,14 +1414,15 @@ export default function App(){
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop,queue,recs,history,blockedArtists]);
 
-  useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
-  useEffect(()=>{
+useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
       if(e.code==='Space'&&e.target===document.body){e.preventDefault();if(current)togglePlay();}
     };
     window.addEventListener('keydown',onKey);
     return()=>window.removeEventListener('keydown',onKey);
   },[current,togglePlay]);
+  
+  useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
