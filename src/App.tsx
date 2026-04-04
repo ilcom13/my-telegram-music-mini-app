@@ -1274,8 +1274,7 @@ export default function App(){
     if(fullPlayer&&current?.cover){
       extractColors(current.cover).then(setFpColors);
     }
-    if(fullPlayer){
-      // Сразу ставим прогресс-бар в правильную позицию без анимации
+ if(fullPlayer){
       const pct=progressRef.current;
       if(seekBarFillRef.current){seekBarFillRef.current.style.transition='none';seekBarFillRef.current.style.width=`${pct}%`;}
       if(seekBarThumbRef.current){seekBarThumbRef.current.style.transition='none';seekBarThumbRef.current.style.left=`${pct}%`;}
@@ -1284,6 +1283,12 @@ export default function App(){
         const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);
         curTimeDisplayRef.current.textContent=`${m}:${s.toString().padStart(2,'0')}`;
       }
+    } else {
+      // При закрытии fullPlayer — синхронизируем miniBar
+      const pct=progressRef.current;
+      if(miniBarFillRef.current){miniBarFillRef.current.style.transition='none';miniBarFillRef.current.style.width=`${pct}%`;}
+      if(miniBarThumbRef.current){miniBarThumbRef.current.style.transition='none';miniBarThumbRef.current.style.left=`${pct}%`;}
+    }
     }
   },[fullPlayer,current?.cover]);
 
@@ -1415,14 +1420,6 @@ export default function App(){
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop,queue,recs,history,blockedArtists]);
-
-useEffect(()=>{
-    const onKey=(e:KeyboardEvent)=>{
-      if(e.code==='Space'&&e.target===document.body){e.preventDefault();if(current)togglePlay();}
-    };
-    window.addEventListener('keydown',onKey);
-    return()=>window.removeEventListener('keydown',onKey);
-  },[current,togglePlay]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
