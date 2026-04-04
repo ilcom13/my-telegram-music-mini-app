@@ -655,12 +655,12 @@ interface ImportModalProps {
   onClose: () => void;
   onImport: () => void;
   onMatch: (title: string) => void;
+  importSizeQ: 'none'|'spotify'|'youtube';
 lang: string;
   t: (k: string) => string;
   importSource: string;
 setImportSource: (s: 'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz') => void;
   setImportSizeQ: (s: 'none'|'spotify'|'youtube') => void;
-  setImportSizeQ: (s: string) => void;
 }
 
 const ImportModalExt = React.memo(({
@@ -715,7 +715,7 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
                 {key:'yandex',icon:'🔴',label:'Яндекс'},
                 {key:'apple',icon:'🍎',label:'Apple'},
               ].map(s=>(
-                <button key={s.key} onPointerDown={()=>setImportSource(s.key)}
+<button key={s.key} onPointerDown={()=>setImportSource(s.key as 'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz')}
                   style={{padding:'10px 4px',background:'#252525',border:'1px solid #333',borderRadius:10,color:TEXT_PRIMARY,fontSize:10,fontWeight:600,cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:4,...tap}}>
                   <span style={{fontSize:18}}>{s.icon}</span>
                   <span>{s.label}</span>
