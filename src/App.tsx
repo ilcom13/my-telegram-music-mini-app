@@ -683,19 +683,7 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
           {importStep!=='matching'&&<button onPointerDown={onClose} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:20,padding:4,lineHeight:1,...tap}}>×</button>}
         </div>
 
-        {/* Tabs */}
-        {(importStep==='idle'||importStep==='error')&&(
-          <div style={{display:'flex',gap:6,marginBottom:16,background:BG,borderRadius:12,padding:4}}>
-            {(['main','other'] as const).map(tab=>(
-              <button key={tab} onPointerDown={()=>{setImportTab(tab);setImportUrl('');}}
-                style={{flex:1,padding:'8px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
-                  background:importTab===tab?'#2a2a2a':'transparent',
-                  color:importTab===tab?TEXT_PRIMARY:TEXT_MUTED,...tap}}>
-                {tab==='main'?t('importTabMain'):t('importTabOther')}
-              </button>
-            ))}
-          </div>
-        )}
+
 
         {/* Main tab */}
 {(importStep==='idle'||importStep==='error')&&importTab==='main'&&(<>
