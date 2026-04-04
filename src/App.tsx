@@ -3052,7 +3052,10 @@ const goBack=useCallback(()=>{
       {/* ── MONTH STATS SCREEN ── */}
       {screen==='monthstats'&&(()=>{
         // Показываем текущий месяц — он всегда собирается
-        const mStat=monthStats.current;
+// До 25 числа показываем итоги прошлого месяца, после 25 — текущего
+        const today=new Date();
+        const showPrev=today.getDate()<25&&monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);
+        const mStat=showPrev?monthStats.prev!:monthStats.current;
         const mNames={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'} as Record<string,string>;
         const mNamesRu={'01':'январь','02':'февраль','03':'март','04':'апрель','05':'май','06':'июнь','07':'июль','08':'август','09':'сентябрь','10':'октябрь','11':'ноябрь','12':'декабрь'} as Record<string,string>;
         const mNamesUk={'01':'січень','02':'лютий','03':'березень','04':'квітень','05':'травень','06':'червень','07':'липень','08':'серпень','09':'вересень','10':'жовтень','11':'листопад','12':'грудень'} as Record<string,string>;
@@ -3066,6 +3069,14 @@ const goBack=useCallback(()=>{
         const topArtists=(()=>{const m:Record<string,{name:string;cover:string;count:number;secs:number}>={};for(const [,v] of topTracks){if(!m[v.artist])m[v.artist]={name:v.artist,cover:v.cover,count:0,secs:0};m[v.artist].count+=v.count;m[v.artist].secs+=v.count*210;}return Object.values(m).sort((a,b)=>b.count-a.count).slice(0,5);})();
         const totalPlays=topTracks.reduce((s,[,v])=>s+v.count,0);
         const topCover=topTracks[0]?topTracks[0][1].cover:'';
+      // Для obsession берём топ-2 трек если он отличается от топ-1
+        const obsessionIdx=topTracks.length>1&&topTracks[1][1].count>=3?1:0;
+        const obsessionTrack=topTracks[obsessionIdx];
+        // Для discovery берём новый трек который не в prev но с хорошим count
+        const prevIds2=new Set(monthStats.prev?Object.keys(monthStats.prev.trackPlays):[]);
+        const discoveries=topTracks.filter(([id,v])=>!prevIds2.has(id)&&v.count>=2);
+        // Топ артист для share отличается от obsession
+        const shareArtist=topArtists.find(a=>obsessionTrack&&a.name!==obsessionTrack[1].artist)||topArtists[0];
         const isFirstEver=monthStats.current.totalSec===0&&monthStats.current.listenedIds.length===0;
         const isCollecting=monthStats.current.totalSec>0||monthStats.current.listenedIds.length>0;
         return(
@@ -3241,31 +3252,31 @@ const goBack=useCallback(()=>{
           })()}
 
           {/* ── Зацикленный трек ── */}
-          {!isFirstEver&&topTracks[0]&&topTracks[0][1].count>=3&&(
+          {!isFirstEver&&obsessionTrack&&obsessionTrack[1].count>=3&&(
             <div style={{position:'relative',borderRadius:16,overflow:'hidden',marginBottom:14,animation:'slideUp 0.55s ease both'}}>
-              <img src={topTracks[0][1].cover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(16px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>
+              <img src={obsessionTrack[1].cover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(16px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>
               <div style={{position:'relative',zIndex:1,padding:'16px 14px'}}>
                 <div style={{fontSize:11,fontWeight:700,color:ACC,marginBottom:8,letterSpacing:0.5}}>🔁 {lang==='ru'?'ТЫ РЕАЛЬНО ЗАЦИКЛИЛСЯ':lang==='uk'?'ТИ РЕАЛЬНО ЗАЦИКЛИВСЯ':'YOU GOT OBSESSED'}</div>
                 <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10}}>
-                  <div style={{width:52,height:52,borderRadius:10,overflow:'hidden',flexShrink:0,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}><Img src={topTracks[0][1].cover} size={52} radius={10}/></div>
+                  <div style={{width:52,height:52,borderRadius:10,overflow:'hidden',flexShrink:0,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}><Img src={obsessionTrack[1].cover} size={52} radius={10}/></div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
-                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{topTracks[0][1].artist}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{obsessionTrack[1].title}</div>
+                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{obsessionTrack[1].artist}</div>
                   </div>
                 </div>
                 <div style={{display:'flex',gap:8}}>
                   <div style={{flex:1,background:'rgba(239,191,127,0.12)',borderRadius:10,padding:'8px 10px',textAlign:'center' as const}}>
-                    <div style={{fontSize:22,fontWeight:800,color:ACC}}>{topTracks[0][1].count}</div>
+                    <div style={{fontSize:22,fontWeight:800,color:ACC}}>{obsessionTrack[1].count}</div>
                     <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div>
                   </div>
                   {totalPlays>0&&<div style={{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:10,padding:'8px 10px',textAlign:'center' as const}}>
-                    <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY}}>{Math.round(topTracks[0][1].count/totalPlays*100)}%</div>
+                    <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY}}>{Math.round(obsessionTrack[1].count/totalPlays*100)}%</div>
                     <div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'от всего':lang==='uk'?'від усього':'of all plays'}</div>
                   </div>}
                 </div>
                 <div style={{marginTop:10,fontSize:11,color:'rgba(255,255,255,0.5)',fontStyle:'italic' as const}}>
-                  {topTracks[0][1].count>=20?(lang==='ru'?'Похоже, он тебя не отпускает 👀':lang==='uk'?'Схоже, він тебе не відпускає 👀':'Seems like it won\'t let you go 👀'):
-                   topTracks[0][1].count>=10?(lang==='ru'?'Определённо твой трек месяца 💿':lang==='uk'?'Точно твій трек місяця 💿':'Definitely your track of the month 💿'):
+                  {obsessionTrack[1].count>=20?(lang==='ru'?'Похоже, он тебя не отпускает 👀':lang==='uk'?'Схоже, він тебе не відпускає 👀':'Seems like it won\'t let you go 👀'):
+                   obsessionTrack[1].count>=10?(lang==='ru'?'Определённо твой трек месяца 💿':lang==='uk'?'Точно твій трек місяця 💿':'Definitely your track of the month 💿'):
                    (lang==='ru'?'Хит твоего месяца 🎵':lang==='uk'?'Хіт твого місяця 🎵':'Your month\'s hit 🎵')}
                 </div>
               </div>
@@ -3350,12 +3361,12 @@ const goBack=useCallback(()=>{
                   <div style={{fontSize:10,color:TEXT_SEC}}>{topTracks[0][1].artist}</div>
                 </div>
               </div>
-              {topArtists[0]&&<div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10,padding:'10px',background:'rgba(255,255,255,0.04)',borderRadius:10}}>
-                <div style={{width:42,height:42,borderRadius:'50%',overflow:'hidden',flexShrink:0}}><Img src={topArtists[0].cover} size={42} radius={21}/></div>
+              {shareArtist&&<div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10,padding:'10px',background:'rgba(255,255,255,0.04)',borderRadius:10}}>
+                <div style={{width:42,height:42,borderRadius:'50%',overflow:'hidden',flexShrink:0}}><Img src={shareArtist.cover} size={42} radius={21}/></div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2}}>{lang==='ru'?'🎤 Топ-артист':'🎤 Top artist'}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY}}>{topArtists[0].name}</div>
-                  <div style={{fontSize:10,color:TEXT_SEC}}>{topArtists[0].count} {lang==='ru'?'треков':'tracks'}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY}}>{shareArtist.name}</div>
+                  <div style={{fontSize:10,color:TEXT_SEC}}>{shareArtist.count} {lang==='ru'?'треков':'tracks'}</div>
                 </div>
               </div>}
               <div style={{display:'flex',gap:8,marginBottom:12}}>
