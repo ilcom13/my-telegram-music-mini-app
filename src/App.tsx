@@ -857,6 +857,8 @@ export default function App(){
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
   const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
+    const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
+
 
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
   const[artistLoading,setArtistLoading]=useState(false);
@@ -1617,7 +1619,6 @@ useEffect(()=>{
   const addQ=(track:Track,e?:React.MouseEvent)=>{if(e)e.stopPropagation();toggleQ(track);};
   const rmQ=(i:number)=>setQueue(prev=>{const n=[...prev];n.splice(i,1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   const inQ=(id:string)=>queue.some(t=>t.id===id);
-  const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
   const setVol=(v:number)=>{setVolume(v);volumeRef.current=v;try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
   const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
