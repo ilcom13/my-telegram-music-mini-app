@@ -2955,7 +2955,7 @@ const goBack=useCallback(()=>{
                   </div>
                   {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
-                  {(()=>{const mStat=monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
+                  {(()=>{const _today=new Date();const _showPrev=_today.getDate()<25&&!!monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);const mStat=_showPrev?monthStats.prev!:monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
                   <button onPointerDown={()=>setScreen('monthstats')} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
                     <div style={{fontSize:26,flexShrink:0}}>📊</div>
                     <div style={{flex:1,minWidth:0}}>
