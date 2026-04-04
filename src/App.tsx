@@ -1826,7 +1826,7 @@ export default function App(){
       }
 
       // ── SOUNDCLOUD (прямой через /album) ──
-      if(trimmedUrl.includes('soundcloud.com')){
+if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com')){
         const scRes=await fetch(`${W}/sc/playlist?url=${encodeURIComponent(trimmedUrl)}`);
         const scData=await scRes.json();
         if(scData.tracks?.length){
