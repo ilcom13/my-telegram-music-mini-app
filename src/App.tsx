@@ -748,7 +748,17 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
           </>)}
 
           {/* Spotify — ввод ссылки */}
-
+            <button onPointerDown={()=>setImportSizeQ('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>🟢 {lang==='ru'?'Вставь ссылку на плейлист Spotify':'Paste your Spotify playlist link'}</div>
+            <input autoFocus placeholder="https://open.spotify.com/playlist/..."
+              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={onImport} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+              {t('importFindBtn')}
+            </button>
+          </>)}
 
           {/* YouTube — вопрос о размере */}
           {importSource==='youtube'&&importSizeQ==='none'&&(<>
@@ -807,11 +817,13 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
             </button>
           </>)}
 
+        
+
         {/* Other tab */}
         {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(<>
           <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
           {[
-            {num:'1',text:<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>},
+            {num:'1',{text:(<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>)},
             {num:'2',text:t('importOtherStep3')},
             {num:'3',text:t('importOtherStep4')},
           ].map(step=>(
