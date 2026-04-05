@@ -1956,8 +1956,8 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
         'Supported: Spotify (public playlists) and SoundCloud.'
       );
       setImportStep('error');
-    }catch(e:any){
-      setImportError(e?.message||String(e));
+}catch(e:any){
+      setImportError('Error: '+(e?.message||String(e))+' | URL: '+importUrl.trim().slice(0,50));
       setImportStep('error');
     }
   };
