@@ -823,7 +823,7 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
         {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(<>
           <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
           {[
-            {num:'1',{text:(<>{t('importOtherStep1')} <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span> {t('importOtherStep2')}</>)},
+            {num:'1',text:[t('importOtherStep1'), <span style={{color:ACC,fontWeight:600}}>soundiiz.com</span>, t('importOtherStep2')]},
             {num:'2',text:t('importOtherStep3')},
             {num:'3',text:t('importOtherStep4')},
           ].map(step=>(
