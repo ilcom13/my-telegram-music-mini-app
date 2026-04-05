@@ -1886,7 +1886,6 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
     try{
       // ── SPOTIFY ──
       if(trimmedUrl.includes('spotify.com/playlist')||trimmedUrl.startsWith('spotify:playlist')){
-        const res=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
 const spRes=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
         const spText=await spRes.text();
         let data:any={};
