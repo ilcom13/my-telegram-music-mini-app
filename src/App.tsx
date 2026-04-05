@@ -817,8 +817,6 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
             </button>
           </>)}
 
-        </>)}
-
         {/* Other tab */}
         {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(<>
           <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('importOtherTitle')}</div>
