@@ -1887,10 +1887,11 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
       // ── SPOTIFY ──
       if(trimmedUrl.includes('spotify.com/playlist')||trimmedUrl.startsWith('spotify:playlist')){
         const res=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
-const res=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
-        const text=await res.text();
+const spRes=await fetch(`${W}/spotify/playlist?url=${encodeURIComponent(trimmedUrl)}`);
+        const spText=await spRes.text();
         let data:any={};
-        try{data=JSON.parse(text);}catch{setImportError('Worker error: '+text.slice(0,200));setImportStep('error');return;}
+        try{data=JSON.parse(spText);}catch{setImportError('Worker error: '+spText.slice(0,200));setImportStep('error');return;}
+        const res={ok:spRes.ok};
         if(!res.ok||data.error){
           if(data.code==='PRIVATE_PLAYLIST'){
             setImportError(
