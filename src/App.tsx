@@ -727,24 +727,27 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
           </>)}
 
           {/* Spotify — вопрос о размере */}
-          {importSource==='spotify'&&importSizeQ==='none'&&(<>
+{importSource==='spotify'&&(<>
             <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
-            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:8}}>🟢 Spotify</div>
-            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:16,lineHeight:1.5}}>{lang==='ru'?'Сколько треков в вашем плейлисте?':lang==='uk'?'Скільки треків у вашому плейлисті?':'How many tracks in your playlist?'}</div>
-            <div style={{display:'flex',gap:8}}>
-              <button onPointerDown={()=>setImportSizeQ('spotify')}
-                style={{flex:1,padding:'12px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
-                ✓ {lang==='ru'?'До 100 треков':lang==='uk'?'До 100 треків':'Up to 100 tracks'}
-              </button>
-              <button onPointerDown={()=>setImportSource('soundiiz')}
-                style={{flex:1,padding:'12px',background:'#2a1a1a',border:'1px solid #4a2a2a',borderRadius:10,color:'#cf7e7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
-                ✗ {lang==='ru'?'Больше 100':lang==='uk'?'Більше 100':'More than 100'}
-              </button>
+            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>🟢 Spotify</div>
+            <div style={{background:'#1a1a2a',borderRadius:12,padding:'14px',marginBottom:14}}>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.7,marginBottom:12}}>
+                {lang==='ru'?<>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Подключи Spotify и перенеси плейлист в SoundCloud<br/>3. Вернись сюда и импортируй через кнопку SoundCloud</>:
+                 lang==='uk'?<>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Підключи Spotify і перенеси плейлист у SoundCloud<br/>3. Повернись сюди та імпортуй через кнопку SoundCloud</>:
+                 <>1. Go to <span style={{color:ACC}}>soundiiz.com</span><br/>2. Connect Spotify and transfer playlist to SoundCloud<br/>3. Come back here and import via SoundCloud button</>}
+              </div>
+              <a href="https://soundiiz.com" target="_blank" rel="noopener noreferrer"
+                style={{display:'block',padding:'12px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textAlign:'center' as const,textDecoration:'none'}}>
+                {lang==='ru'?'Открыть Soundiiz':lang==='uk'?'Відкрити Soundiiz':'Open Soundiiz'} →
+              </a>
             </div>
+            <button onPointerDown={()=>{setImportSource('sc');setImportSizeQ('none');}}
+              style={{width:'100%',padding:'12px',background:'linear-gradient(135deg,#f50,#ff7700)',border:'none',borderRadius:10,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              ☁️ {lang==='ru'?'Импортировать SoundCloud плейлист':lang==='uk'?'Імпортувати SoundCloud плейлист':'Import SoundCloud playlist'}
+            </button>
           </>)}
 
           {/* Spotify — ввод ссылки */}
-          {importSource==='spotify'&&importSizeQ==='spotify'&&(<>
             <button onPointerDown={()=>setImportSizeQ('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
             <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>🟢 {lang==='ru'?'Вставь ссылку на плейлист Spotify':'Paste your Spotify playlist link'}</div>
             <input autoFocus placeholder="https://open.spotify.com/playlist/..."
