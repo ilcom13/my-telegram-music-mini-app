@@ -817,7 +817,7 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
             </button>
           </>)}
 
-        
+        </>)}
 
         {/* Other tab */}
         {(importStep==='idle'||importStep==='error')&&importTab==='other'&&(<>
