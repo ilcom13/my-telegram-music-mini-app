@@ -2134,7 +2134,7 @@ if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof
   const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
   const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setAddToPl(null);};
-  const playPl=(pl:Playlist)=>{if(!pl.tracks.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(pl.tracks[0]);setQueue(pl.tracks.slice(1));};
+  const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(sh[0]);setQueue(sh.slice(1));};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
@@ -3578,7 +3578,7 @@ importSource={importSource} setImportSource={setImportSource}
               </div>
               {/* Action buttons */}
               <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
-                <button onPointerDown={()=>playPl(pl)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
+                <button onPointerDown={()=>playPl(pl,sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
                   {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
                 </button>
