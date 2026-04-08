@@ -2154,7 +2154,7 @@ if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof
       setQueue(q=>{
         // Remove any existing copy first, then insert at position 0
         const without=q.filter(t=>t.id!==track.id);
-        return[track,...without];
+        return[...without,track];
       });
       return next;
     });
