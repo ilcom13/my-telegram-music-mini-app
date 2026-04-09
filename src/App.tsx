@@ -752,20 +752,26 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
 
           {/* YouTube — вопрос о размере */}
 
-          {/* YouTube — ввод ссылки */}
-          {importSource==='youtube'&&importSizeQ==='youtube'&&(<>
+{/* YouTube — инструкция */}
+          {importSource==='youtube'&&(<>
             <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
-            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>▶️ {lang==='ru'?'Вставь ссылку на плейлист YouTube Music':'Paste your YouTube Music playlist link'}</div>
-            <input autoFocus placeholder="https://music.youtube.com/playlist?list=..."
-              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
-              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
-            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
-            <button onPointerDown={onImport} disabled={!importUrl.trim()}
-              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
-              {t('importFindBtn')}
+            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>▶️ YouTube Music</div>
+            <div style={{background:'#1a1a2a',borderRadius:12,padding:'14px',marginBottom:14}}>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.7,marginBottom:12}}>
+                {lang==='ru'?<>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Подключи YouTube Music и перенеси плейлист в SoundCloud<br/>3. Вернись сюда и импортируй через кнопку SoundCloud</>:
+                 lang==='uk'?<>1. Перейди на сайт <span style={{color:ACC}}>soundiiz.com</span><br/>2. Підключи YouTube Music і перенеси плейлист у SoundCloud<br/>3. Повернись сюди та імпортуй через кнопку SoundCloud</>:
+                 <>1. Go to <span style={{color:ACC}}>soundiiz.com</span><br/>2. Connect YouTube Music and transfer playlist to SoundCloud<br/>3. Come back here and import via SoundCloud button</>}
+              </div>
+              <a href="https://soundiiz.com" target="_blank" rel="noopener noreferrer"
+                style={{display:'block',padding:'12px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textAlign:'center' as const,textDecoration:'none'}}>
+                {lang==='ru'?'Открыть Soundiiz':lang==='uk'?'Відкрити Soundiiz':'Open Soundiiz'} →
+              </a>
+            </div>
+            <button onPointerDown={()=>{setImportSource('sc');setImportSizeQ('none');}}
+              style={{width:'100%',padding:'12px',background:'linear-gradient(135deg,#f50,#ff7700)',border:'none',borderRadius:10,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              ☁️ {lang==='ru'?'Импортировать SoundCloud плейлист':lang==='uk'?'Імпортувати SoundCloud плейлист':'Import SoundCloud playlist'}
             </button>
           </>)}
-
           {/* Яндекс / Apple / Soundiiz инструкция */}
           {(importSource==='yandex'||importSource==='apple'||importSource==='soundiiz')&&(<>
             <button onPointerDown={()=>{setImportSource('none');setImportSizeQ('none');}} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
