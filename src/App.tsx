@@ -936,6 +936,20 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
   );
 });
 
+// Вычисляет первые 4 обложки плейлиста с учётом текущей сортировки
+function getPlCovers(pl: Playlist): Track[] {
+  const sort = pl.sort || 'default';
+  const sorted = [...pl.tracks].sort((a, b) => {
+    if (sort === 'az') return a.title.localeCompare(b.title);
+    if (sort === 'za') return b.title.localeCompare(a.title);
+    if (sort === 'artist') return a.artist.localeCompare(b.artist);
+    if (sort === 'newest') return pl.tracks.indexOf(b) - pl.tracks.indexOf(a);
+    if (sort === 'oldest') return pl.tracks.indexOf(a) - pl.tracks.indexOf(b);
+    return 0;
+  });
+  return sorted.slice(0, 4);
+}
+
 export default function App(){
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
@@ -2824,7 +2838,7 @@ const goBack=useCallback(()=>{
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:8}}>📌 {lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген':lang==='pl'?'Przypięta playlista':'Pinned playlist'}</div>
                 <div onPointerDown={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
                   <div style={{width:52,height:52,borderRadius:9,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
-                    {pp.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
+                    {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
                     {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -2925,7 +2939,7 @@ const goBack=useCallback(()=>{
                 {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
                 {playlists.map(pl=>(
                   <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)} style={{background:BG2,border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#1e1e1e'}`,borderRadius:12,marginBottom:7,padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
-                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
+                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{getPlCovers(pl).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:5}}>
                         {pl.name}
