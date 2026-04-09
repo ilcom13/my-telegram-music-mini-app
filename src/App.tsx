@@ -751,23 +751,20 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
           {/* Spotify — ввод ссылки */}
 
           {/* YouTube — вопрос о размере */}
-          {importSource==='youtube'&&(<>
-            <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
-            <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:8}}>▶️ YouTube Music</div>
-            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:16,lineHeight:1.5}}>{lang==='ru'?'Сколько треков в вашем плейлисте?':lang==='uk'?'Скільки треків у вашому плейлисті?':'How many tracks in your playlist?'}</div>
-            <div style={{display:'flex',gap:8}}>
-              <button onPointerDown={()=>setImportSizeQ('youtube')}
-                style={{flex:1,padding:'12px',background:'#1a2a1a',border:'1px solid #2a4a2a',borderRadius:10,color:'#7ecf7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
-                ✓ {lang==='ru'?'До 240 треков':lang==='uk'?'До 240 треків':'Up to 240 tracks'}
-              </button>
-              <button onPointerDown={()=>setImportSource('soundiiz')}
-                style={{flex:1,padding:'12px',background:'#2a1a1a',border:'1px solid #4a2a2a',borderRadius:10,color:'#cf7e7e',fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
-                ✗ {lang==='ru'?'Больше 240':lang==='uk'?'Більше 240':'More than 240'}
-              </button>
-            </div>
-          </>)}
 
           {/* YouTube — ввод ссылки */}
+          {importSource==='youtube'&&(<>
+            <button onPointerDown={()=>setImportSizeQ('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
+            <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>▶️ {lang==='ru'?'Вставь ссылку на плейлист YouTube Music':'Paste your YouTube Music playlist link'}</div>
+            <input autoFocus placeholder="https://music.youtube.com/playlist?list=..."
+              value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+              style={{width:'100%',padding:'12px 13px',fontSize:13,background:BG,border:`1px solid ${importStep==='error'?'#d06060':'#2a2a2a'}`,borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            {importStep==='error'&&importError&&<div style={{padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12,marginBottom:8}}>{importError}</div>}
+            <button onPointerDown={onImport} disabled={!importUrl.trim()}
+              style={{width:'100%',padding:'13px',background:importUrl.trim()?ACC:BG3,border:'none',borderRadius:10,color:importUrl.trim()?BG:TEXT_MUTED,fontSize:13,fontWeight:700,cursor:importUrl.trim()?'pointer':'default',...tap}}>
+              {t('importFindBtn')}
+            </button>
+          </>)}
 
           {/* Яндекс / Apple / Soundiiz инструкция */}
           {(importSource==='yandex'||importSource==='apple'||importSource==='soundiiz')&&(<>
