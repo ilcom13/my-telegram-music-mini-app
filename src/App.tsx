@@ -753,7 +753,7 @@ importResults, importProgress, onClose, onImport, onMatch, lang, t,
           {/* YouTube — вопрос о размере */}
 
           {/* YouTube — ввод ссылки */}
-          {importSource==='youtube'&&(<>
+          {importSource==='youtube'&&importSizeQ==='youtube'&&(<>
             <button onPointerDown={()=>setImportSource('none')} style={{background:'none',border:'none',color:TEXT_SEC,cursor:'pointer',fontSize:12,marginBottom:12,padding:0,...tap}}>← {lang==='ru'?'Назад':'Back'}</button>
             <div style={{fontSize:13,color:TEXT_SEC,marginBottom:10}}>▶️ {lang==='ru'?'Вставь ссылку на плейлист YouTube Music':'Paste your YouTube Music playlist link'}</div>
             <input autoFocus placeholder="https://music.youtube.com/playlist?list=..."
