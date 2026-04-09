@@ -2315,7 +2315,7 @@ const goBack=useCallback(()=>{
         <div ref={bgLRef} style={{position:'absolute',inset:0,background:'rgba(200,60,60,0.12)',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:14,pointerEvents:'none',opacity:0}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         </div>
-        <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
+<div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
           {curSort==='default'
             ?<div style={{color:'#333',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>
             :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
@@ -2824,7 +2824,7 @@ const goBack=useCallback(()=>{
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:8}}>📌 {lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген':lang==='pl'?'Przypięta playlista':'Pinned playlist'}</div>
                 <div onPointerDown={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
                   <div style={{width:52,height:52,borderRadius:9,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
-                    {[...new Map(pp.tracks.map(t=>[t.cover,t])).values()].slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
+                    {pp.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
                     {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -2923,9 +2923,9 @@ const goBack=useCallback(()=>{
                   </button>
                 </div>
                 {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
-{playlists.map(pl=>(
+                {playlists.map(pl=>(
                   <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)} style={{background:BG2,border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#1e1e1e'}`,borderRadius:12,marginBottom:7,padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
-                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.length===0?<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>:[...new Map([...pl.tracks].reverse().map(t=>[t.cover,t])).values()].slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}</div>
+                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:5}}>
                         {pl.name}
@@ -2935,7 +2935,7 @@ const goBack=useCallback(()=>{
                     </div>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </div>
-                ))}
+                ))}              </div>
             )}
           </div>
         )}
