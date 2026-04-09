@@ -3530,7 +3530,6 @@ importSource={importSource} setImportSource={setImportSource}
         if(!pl)return null;
         if(screen!=='library')return null;
         const isPinned=pinnedPlId===pl.id;
-        const coverSrc=pl.tracks[0]?.cover||'';
         const sortPl=(s:'default'|'az'|'za'|'artist'|'newest'|'oldest')=>{
           setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
         };
@@ -3543,6 +3542,8 @@ importSource={importSource} setImportSource={setImportSource}
           if(curSort==='oldest')return pl.tracks.indexOf(a)-pl.tracks.indexOf(b);
           return 0;
         });
+        const coverSrc=sortedTracks[0]?.cover||'';
+        const collageCovers=sortedTracks.slice(0,4);
         const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           [lang==='ru'?'По умолчанию':lang==='uk'?'За замовч.':'Default','default'],
           [lang==='ru'?'А → Я':lang==='uk'?'А → Я':'A → Z','az'],
@@ -3564,7 +3565,7 @@ importSource={importSource} setImportSource={setImportSource}
               </button>
               <div style={{display:'flex',gap:16,alignItems:'flex-end',marginBottom:18}}>
                 <div style={{width:100,height:100,borderRadius:14,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
-                  {pl.tracks.slice(0,4).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={50} radius={0}/></div>)}
+                  {collageCovers.map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={50} radius={0}/></div>)}
                   {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,color:ACC}}>🎵</div>}
                 </div>
                 <div style={{flex:1,minWidth:0,paddingBottom:4}}>
