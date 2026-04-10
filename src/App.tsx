@@ -2767,7 +2767,7 @@ const goBack=useCallback(()=>{
                         {artistTracks.length===0
                           ? <div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{t('noTracks')}</div>
                           : <div style={{padding:'0 4px'}}>
-                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})}/>)}
+                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(artistTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}}/>)}
                             </div>
                         }
                         {artistTracksLoading&&artistTracks.length>0&&<div style={{textAlign:'center',padding:'10px',color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
@@ -3040,8 +3040,8 @@ const goBack=useCallback(()=>{
               </div>
             ):(
               <div style={{padding:'0 4px 16px'}}>
-                {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})}/>
+{forYouTracks.map((tr,i)=>(
+                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
