@@ -347,69 +347,32 @@ function calcMaxStreak(days:string[]):number{
   return mx;
 }
 
-function extractColors(src: string): Promise<{dark: string; mid: string; accent: string; c2: string; c3: string}> {
+function extractColors(src: string): Promise<{dark: string; mid: string; accent: string}> {
   return new Promise((resolve) => {
-    const fallback = { dark: '#1a0a1a', mid: '#0a1a2a', accent: '#2a1a0a', c2: '#0a2a1a', c3: '#1a1a2a' };
+    const fallback = { dark: '#1a1208', mid: '#2a1f10', accent: '#3a2d18' };
     if (!src) { resolve(fallback); return; }
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
         try {
-          const SIZE = 80;
           const canvas = document.createElement('canvas');
-          canvas.width = SIZE; canvas.height = SIZE;
+          canvas.width = 50; canvas.height = 50;
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(fallback); return; }
-          ctx.drawImage(img, 0, 0, SIZE, SIZE);
-          const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
-          // Квантизация: разбиваем пространство RGB на кластеры
-          const buckets: Record<string, {r:number,g:number,b:number,count:number}> = {};
-          for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i+1], b = data[i+2];
-            // Пропускаем слишком тёмные и слишком светлые пиксели
-            const brightness = (r + g + b) / 3;
-            if (brightness < 20 || brightness > 235) continue;
-            // Сатурация — пропускаем серые
-            const max = Math.max(r,g,b), min = Math.min(r,g,b);
-            if (max - min < 30) continue;
-            // Квантизуем в ячейки 32x32x32
-            const key = `${r>>5}_${g>>5}_${b>>5}`;
-            if (!buckets[key]) buckets[key] = {r:0,g:0,b:0,count:0};
-            buckets[key].r += r; buckets[key].g += g; buckets[key].b += b; buckets[key].count++;
+          ctx.drawImage(img, 0, 0, 50, 50);
+          const data = ctx.getImageData(0, 0, 50, 50).data;
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let i = 0; i < data.length; i += 16) {
+            r += data[i]; g += data[i+1]; b += data[i+2]; count++;
           }
-          const sorted = Object.values(buckets)
-            .filter(b => b.count > 2)
-            .sort((a,b) => b.count - a.count);
-          // Берём топ-5 доминирующих цветов, достаточно далёких друг от друга
-          const picks: {r:number,g:number,b:number}[] = [];
-          for (const bk of sorted) {
-            const r = Math.round(bk.r/bk.count), g = Math.round(bk.g/bk.count), b = Math.round(bk.b/bk.count);
-            const tooClose = picks.some(p => Math.abs(p.r-r)+Math.abs(p.g-g)+Math.abs(p.b-b) < 80);
-            if (!tooClose) picks.push({r,g,b});
-            if (picks.length >= 5) break;
-          }
-          // Заполняем fallback-цветами если пикселей не хватило
-          while (picks.length < 5) picks.push({r:40,g:30,b:50});
-          const mk = (c:{r:number,g:number,b:number}, boost=1.0) =>
-            `rgb(${Math.min(255,Math.round(c.r*boost))},${Math.min(255,Math.round(c.g*boost))},${Math.min(255,Math.round(c.b*boost))})`;
-// Насыщаем цвет: тянем от серого к чистому тону
-          const saturate=(c:{r:number,g:number,b:number},s:number)=>{
-            const avg=(c.r+c.g+c.b)/3;
-            // Минимальная яркость чтобы цвет был виден на тёмном фоне
-            const lift=60;
-            const r=Math.min(255,Math.max(lift,Math.round(avg+(c.r-avg)*s)));
-            const g=Math.min(255,Math.max(lift,Math.round(avg+(c.g-avg)*s)));
-            const b=Math.min(255,Math.max(lift,Math.round(avg+(c.b-avg)*s)));
-            return `rgb(${r},${g},${b})`;
-          };
-          resolve({
-            accent: saturate(picks[0], 3.5),
-            c2:     saturate(picks[1], 3.2),
-            mid:    saturate(picks[2], 3.0),
-            c3:     saturate(picks[3], 3.2),
-            dark:   saturate(picks[4], 2.8),
-          });
+          r = Math.floor(r / count);
+          g = Math.floor(g / count);
+          b = Math.floor(b / count);
+          const dark = `rgb(${Math.floor(r*0.25)},${Math.floor(g*0.25)},${Math.floor(b*0.25)})`;
+          const mid = `rgb(${Math.floor(r*0.45)},${Math.floor(g*0.45)},${Math.floor(b*0.45)})`;
+          const accent = `rgb(${Math.floor(r*0.65)},${Math.floor(g*0.65)},${Math.floor(b*0.65)})`;
+          resolve({ dark, mid, accent });
         } catch { resolve(fallback); }
       };
       img.onerror = () => resolve(fallback);
@@ -1180,7 +1143,7 @@ export default function App(){
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
   const[current,setCurrent]=useState<Track|null>(null);
   const[bgCover,setBgCover]=useState('');
-  const[fpColors,setFpColors]=useState({dark:'#1a0a1a',mid:'#0a1a2a',accent:'#2a1a0a',c2:'#0a2a1a',c3:'#1a1a2a'});
+  const[fpColors,setFpColors]=useState({dark:'#1a1208',mid:'#2a1f10',accent:'#3a2d18'});
   const[playing,setPlaying]=useState(false);
   // progress и curTime — refs, не state. Ре-рендера от аудио нет.
   const progressRef=useRef(0);
@@ -2421,20 +2384,8 @@ const goBack=useCallback(()=>{
   ];
 
   if(fullPlayer&&current)return(
-    <div style={{position:'relative',height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
-<div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#050505',overflow:'hidden'}}>
-        {/* верхний левый */}
-        <div style={{position:'absolute',width:'75%',height:'75%',top:'-15%',left:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 70%)`,opacity:0.95,animation:'gradShift1 14s ease-in-out infinite',transition:'background 1.2s ease'}}/>
-        {/* верхний правый */}
-        <div style={{position:'absolute',width:'70%',height:'70%',top:'-10%',right:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.c2} 0%, transparent 70%)`,opacity:0.9,animation:'gradShift2 18s ease-in-out infinite',transition:'background 1.2s ease'}}/>
-        {/* нижний левый */}
-        <div style={{position:'absolute',width:'70%',height:'70%',bottom:'-15%',left:'-10%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 70%)`,opacity:0.9,animation:'gradShift3 16s ease-in-out infinite',transition:'background 1.2s ease'}}/>
-        {/* нижний правый */}
-        <div style={{position:'absolute',width:'68%',height:'68%',bottom:'-12%',right:'-12%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.c3} 0%, transparent 70%)`,opacity:0.85,animation:'gradShift2 20s ease-in-out infinite reverse',transition:'background 1.2s ease'}}/>
-        {/* центр */}
-        <div style={{position:'absolute',width:'55%',height:'55%',top:'22%',left:'22%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 65%)`,opacity:0.7,animation:'gradShift1 22s ease-in-out infinite reverse',transition:'background 1.2s ease'}}/>
-        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)'}}/>
-      </div>
+    <div style={{background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',transition:'background 0.8s ease',animation:'fadeIn 0.3s ease'}}>
+      <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -2466,9 +2417,6 @@ const goBack=useCallback(()=>{
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
-        @keyframes gradShift1{0%{transform:translate(0%,0%) scale(1)}20%{transform:translate(22%,-18%) scale(1.15)}45%{transform:translate(-14%,22%) scale(1.08)}70%{transform:translate(18%,14%) scale(1.18)}100%{transform:translate(0%,0%) scale(1)}}
-        @keyframes gradShift2{0%{transform:translate(0%,0%) scale(1.1)}25%{transform:translate(-24%,16%) scale(1)}55%{transform:translate(18%,-20%) scale(1.14)}80%{transform:translate(-10%,22%) scale(1.06)}100%{transform:translate(0%,0%) scale(1.1)}}
-        @keyframes gradShift3{0%{transform:translate(0%,0%) scale(1)}30%{transform:translate(20%,24%) scale(1.12)}65%{transform:translate(-18%,-16%) scale(1.08)}100%{transform:translate(0%,0%) scale(1)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
@@ -2534,7 +2482,7 @@ const goBack=useCallback(()=>{
           </div>
         </div>
       )}
-      <div style={{position:'relative',zIndex:1,width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
+      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
         <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
