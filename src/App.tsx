@@ -1680,27 +1680,46 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
-    let freshMp3=track.mp3;
+let freshMp3=track.mp3;
+    const a=audio.current;
+
+    // Если есть mp3 из кэша — стартуем немедленно, не ждём resolve
+    if(freshMp3&&a&&!track.isArtist&&!track.isAlbum){
+      a.pause();
+      const isHlsEarly=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
+      a.src=isHlsEarly?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      a.load();
+      a.play().then(()=>setPlaying(true)).catch(()=>{});
+    }
+
+    // Параллельно получаем свежий/качественный URL
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
         const r=await fetch(`${W}/resolve?id=${track.id}`);
         const d=await r.json();
         if(d.hls)freshMp3=d.hls;
-else if(d.mp3)freshMp3=d.mp3;
-        else if(d.error)return;
+        else if(d.mp3)freshMp3=d.mp3;
+        else if(d.error&&!track.mp3)return;
       }catch{}
     }
     if(!freshMp3)return;
-const a=audio.current;
+
+    // Обновляем src на качественный если он отличается от уже запущенного
     if(a){
-      a.pause();
       const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
-      a.load();
-      a.play().then(()=>setPlaying(true)).catch(err=>{
-        console.warn('play failed, retry:',err);
-        setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
-      });
+      const newSrc=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      if(a.src!==newSrc){
+        const wasPlaying=!a.paused;
+        const curTime=a.currentTime;
+        a.src=newSrc;
+        a.load();
+        if(wasPlaying||curTime<1){
+          a.play().then(()=>setPlaying(true)).catch(err=>{
+            console.warn('play failed, retry:',err);
+            setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
+          });
+        }
+      }
     }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
