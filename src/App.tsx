@@ -2491,19 +2491,19 @@ const goBack=useCallback(()=>{
           {queue.length>0&&<span style={{position:'absolute',top:4,right:0,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn 0.2s ease'}}>{queue.length}</span>}
         </button>
       </div>
-      <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:14}}>
+      <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:'2vh'}}>
         <div
           className="full-player-cover"
           style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
           onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
         >
-          <Img src={current.cover} size={Math.min(window.innerWidth-64,230)} radius={0}/>
+          <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.38, 380)} radius={0}/>
         </div>
       </div>
       <div style={{width:'100%',flexShrink:0,marginBottom:10,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-        <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{current.title}</div>
+        <div style={{fontSize:'clamp(15px,4.5vw,20px)',fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{current.title}</div>
         <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,...tap}}>
-          <span style={{fontSize:13,color:ACC}}>{current.artist}</span>
+          <span style={{fontSize:'clamp(11px,3.5vw,15px)',color:ACC}}>{current.artist}</span>
         </button>
         {current.plays>0&&<div style={{fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
       </div>
@@ -2559,16 +2559,16 @@ const goBack=useCallback(()=>{
           <span>{current.duration}</span>
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:28,flexShrink:0,marginBottom:12,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(20px,7vw,36px)',flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
         <button className="prev-next-btn" onPointerDown={playPrev} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
         </button>
-        <button className="play-btn" onPointerDown={togglePlay} style={{width:58,height:58,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 20px ${ACC}55`,...tap}}><PP sz="lg"/></button>
+        <button className="play-btn" onPointerDown={togglePlay} style={{width:'clamp(52px,14vw,70px)',height:'clamp(52px,14vw,70px)',borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 20px ${ACC}55`,...tap}}><PP sz="lg"/></button>
         <button className="prev-next-btn" onPointerDown={playNext} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
       </div>
-      <div style={{width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both'}}>
+      <div style={{width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'3vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both'}}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
         <SliderTrack sp={volSP} h={3}/>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
