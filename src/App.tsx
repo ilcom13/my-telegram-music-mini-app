@@ -1542,7 +1542,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
         .slice(0,8);
       if(!sortedArtists.length){setRecsLoading(false);return;}
       const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
-      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`);
+      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`,{priority:'low'} as RequestInit);
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
       if(d.tracks?.length){
@@ -1557,14 +1557,23 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
     setRecsLoading(false);
   },[]);
 
-  useEffect(()=>{
-    if(history.length>=1)loadRecommendations();
+useEffect(()=>{
+    if(history.length<1)return;
+    // Откладываем на 3 сек при старте — чтобы не мешать воспроизведению
+    const delay=recsVersion===0?3000:800;
+    const t=setTimeout(()=>{
+      // Не грузим если сейчас играет трек (пользователь уже включил музыку)
+      if(isPlayingRef.current)return;
+      loadRecommendations();
+    },delay);
+    return()=>clearTimeout(t);
   },[recsVersion,history.length,blockedArtists.join(',')]);
 
   useEffect(()=>{
-    const onVisible=()=>{
+const onVisible=()=>{
       if(document.visibilityState==='visible'){
-        loadRecommendations();
+        // Не обновляем рекомендации если пользователь слушает музыку
+        if(!isPlayingRef.current)loadRecommendations();
         // Подгружаем свежие данные с сервера при возврате в приложение
         if(uid!=='anon'){
           fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
