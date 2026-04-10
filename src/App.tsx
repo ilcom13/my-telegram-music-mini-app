@@ -2384,7 +2384,14 @@ const goBack=useCallback(()=>{
   ];
 
   if(fullPlayer&&current)return(
-    <div style={{background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',transition:'background 0.8s ease',animation:'fadeIn 0.3s ease'}}>
+    <div style={{position:'relative',height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+      <div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#080808',overflow:'hidden'}}>
+        <div style={{position:'absolute',width:'170%',height:'170%',top:'-35%',left:'-35%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 65%)`,opacity:0.5,willChange:'transform',animation:'gradShift1 20s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'155%',height:'155%',top:'-27%',right:'-30%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 60%)`,opacity:0.4,willChange:'transform',animation:'gradShift2 26s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'145%',height:'145%',bottom:'-30%',left:'-20%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 70%)`,opacity:0.65,willChange:'transform',animation:'gradShift3 22s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.42)'}}/>
+        <div style={{position:'relative',zIndex:1,width:'100%',display:'contents'}}>
+      </div>
       <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -2417,6 +2424,9 @@ const goBack=useCallback(()=>{
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
+        @keyframes gradShift1{0%{transform:translate(0%,0%) scale(1)}25%{transform:translate(18%,-12%) scale(1.08)}50%{transform:translate(8%,15%) scale(1.04)}75%{transform:translate(-14%,8%) scale(1.1)}100%{transform:translate(0%,0%) scale(1)}}
+        @keyframes gradShift2{0%{transform:translate(0%,0%) scale(1.05)}30%{transform:translate(-16%,14%) scale(1)}60%{transform:translate(12%,-10%) scale(1.08)}100%{transform:translate(0%,0%) scale(1.05)}}
+        @keyframes gradShift3{0%{transform:translate(0%,0%) scale(1)}40%{transform:translate(10%,18%) scale(1.06)}70%{transform:translate(-8%,-14%) scale(1.03)}100%{transform:translate(0%,0%) scale(1)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
@@ -2482,7 +2492,7 @@ const goBack=useCallback(()=>{
           </div>
         </div>
       )}
-      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
+      <div style={{position:'relative',zIndex:1,width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
         <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
