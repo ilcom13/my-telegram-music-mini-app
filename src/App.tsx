@@ -347,32 +347,59 @@ function calcMaxStreak(days:string[]):number{
   return mx;
 }
 
-function extractColors(src: string): Promise<{dark: string; mid: string; accent: string}> {
+function extractColors(src: string): Promise<{dark: string; mid: string; accent: string; c2: string; c3: string}> {
   return new Promise((resolve) => {
-    const fallback = { dark: '#1a1208', mid: '#2a1f10', accent: '#3a2d18' };
+    const fallback = { dark: '#1a0a1a', mid: '#0a1a2a', accent: '#2a1a0a', c2: '#0a2a1a', c3: '#1a1a2a' };
     if (!src) { resolve(fallback); return; }
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
         try {
+          const SIZE = 80;
           const canvas = document.createElement('canvas');
-          canvas.width = 50; canvas.height = 50;
+          canvas.width = SIZE; canvas.height = SIZE;
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(fallback); return; }
-          ctx.drawImage(img, 0, 0, 50, 50);
-          const data = ctx.getImageData(0, 0, 50, 50).data;
-          let r = 0, g = 0, b = 0, count = 0;
-          for (let i = 0; i < data.length; i += 16) {
-            r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+          ctx.drawImage(img, 0, 0, SIZE, SIZE);
+          const data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+          // Квантизация: разбиваем пространство RGB на кластеры
+          const buckets: Record<string, {r:number,g:number,b:number,count:number}> = {};
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            // Пропускаем слишком тёмные и слишком светлые пиксели
+            const brightness = (r + g + b) / 3;
+            if (brightness < 20 || brightness > 235) continue;
+            // Сатурация — пропускаем серые
+            const max = Math.max(r,g,b), min = Math.min(r,g,b);
+            if (max - min < 30) continue;
+            // Квантизуем в ячейки 32x32x32
+            const key = `${r>>5}_${g>>5}_${b>>5}`;
+            if (!buckets[key]) buckets[key] = {r:0,g:0,b:0,count:0};
+            buckets[key].r += r; buckets[key].g += g; buckets[key].b += b; buckets[key].count++;
           }
-          r = Math.floor(r / count);
-          g = Math.floor(g / count);
-          b = Math.floor(b / count);
-          const dark = `rgb(${Math.floor(r*0.25)},${Math.floor(g*0.25)},${Math.floor(b*0.25)})`;
-          const mid = `rgb(${Math.floor(r*0.45)},${Math.floor(g*0.45)},${Math.floor(b*0.45)})`;
-          const accent = `rgb(${Math.floor(r*0.65)},${Math.floor(g*0.65)},${Math.floor(b*0.65)})`;
-          resolve({ dark, mid, accent });
+          const sorted = Object.values(buckets)
+            .filter(b => b.count > 2)
+            .sort((a,b) => b.count - a.count);
+          // Берём топ-5 доминирующих цветов, достаточно далёких друг от друга
+          const picks: {r:number,g:number,b:number}[] = [];
+          for (const bk of sorted) {
+            const r = Math.round(bk.r/bk.count), g = Math.round(bk.g/bk.count), b = Math.round(bk.b/bk.count);
+            const tooClose = picks.some(p => Math.abs(p.r-r)+Math.abs(p.g-g)+Math.abs(p.b-b) < 80);
+            if (!tooClose) picks.push({r,g,b});
+            if (picks.length >= 5) break;
+          }
+          // Заполняем fallback-цветами если пикселей не хватило
+          while (picks.length < 5) picks.push({r:40,g:30,b:50});
+          const mk = (c:{r:number,g:number,b:number}, boost=1.0) =>
+            `rgb(${Math.min(255,Math.round(c.r*boost))},${Math.min(255,Math.round(c.g*boost))},${Math.min(255,Math.round(c.b*boost))})`;
+          resolve({
+            accent: mk(picks[0], 1.15),
+            mid:    mk(picks[1], 1.0),
+            dark:   mk(picks[2], 0.85),
+            c2:     mk(picks[3], 1.1),
+            c3:     mk(picks[4], 0.9),
+          });
         } catch { resolve(fallback); }
       };
       img.onerror = () => resolve(fallback);
@@ -1143,7 +1170,7 @@ export default function App(){
   const[favAlbums,setFavAlbums]=useState<AlbumInfo[]>([]);
   const[current,setCurrent]=useState<Track|null>(null);
   const[bgCover,setBgCover]=useState('');
-  const[fpColors,setFpColors]=useState({dark:'#1a1208',mid:'#2a1f10',accent:'#3a2d18'});
+  const[fpColors,setFpColors]=useState({dark:'#1a0a1a',mid:'#0a1a2a',accent:'#2a1a0a',c2:'#0a2a1a',c3:'#1a1a2a'});
   const[playing,setPlaying]=useState(false);
   // progress и curTime — refs, не state. Ре-рендера от аудио нет.
   const progressRef=useRef(0);
@@ -2385,13 +2412,14 @@ const goBack=useCallback(()=>{
 
   if(fullPlayer&&current)return(
     <div style={{position:'relative',height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
-      <div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#080808',overflow:'hidden'}}>
-        <div style={{position:'absolute',width:'170%',height:'170%',top:'-35%',left:'-35%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 65%)`,opacity:0.5,willChange:'transform',animation:'gradShift1 20s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'155%',height:'155%',top:'-27%',right:'-30%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 60%)`,opacity:0.4,willChange:'transform',animation:'gradShift2 26s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'145%',height:'145%',bottom:'-30%',left:'-20%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 70%)`,opacity:0.65,willChange:'transform',animation:'gradShift3 22s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.42)'}}/>
+<div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#060606',overflow:'hidden'}}>
+        <div style={{position:'absolute',width:'160%',height:'160%',top:'-30%',left:'-30%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 60%)`,opacity:0.75,willChange:'transform',animation:'gradShift1 18s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'150%',height:'150%',top:'-20%',right:'-25%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 55%)`,opacity:0.65,willChange:'transform',animation:'gradShift2 24s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'140%',height:'140%',bottom:'-25%',left:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 60%)`,opacity:0.7,willChange:'transform',animation:'gradShift3 20s ease-in-out infinite',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'120%',height:'120%',top:'10%',left:'20%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${(fpColors as any).c2||fpColors.accent} 0%, transparent 55%)`,opacity:0.55,willChange:'transform',animation:'gradShift2 28s ease-in-out infinite reverse',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',width:'130%',height:'130%',bottom:'5%',right:'-10%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${(fpColors as any).c3||fpColors.mid} 0%, transparent 58%)`,opacity:0.5,willChange:'transform',animation:'gradShift1 32s ease-in-out infinite reverse',transition:'background 1.4s ease'}}/>
+        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.28)'}}/>
       </div>
-      <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
