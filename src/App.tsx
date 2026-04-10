@@ -1647,9 +1647,13 @@ const onVisible=()=>{
         }catch{}
       }
     };
-    const onE=()=>{
+const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
-      else if(queue.length>0){const nxt=queue[0];setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});playDirect(nxt);}
+      else if(queueRef.current.length>0){
+        const nxt=queueRef.current[0];
+        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
+        playDirect(nxt);
+      }
       else{
         const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
         const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
@@ -2767,7 +2771,11 @@ const goBack=useCallback(()=>{
                         {artistTracks.length===0
                           ? <div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{t('noTracks')}</div>
                           : <div style={{padding:'0 4px'}}>
-                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(artistTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}}/>)}
+                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{
+  const rest=artistTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id);
+  setQueue(rest);
+  playTrack(tr);
+}}/>)}
                             </div>
                         }
                         {artistTracksLoading&&artistTracks.length>0&&<div style={{textAlign:'center',padding:'10px',color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
