@@ -393,12 +393,22 @@ function extractColors(src: string): Promise<{dark: string; mid: string; accent:
           while (picks.length < 5) picks.push({r:40,g:30,b:50});
           const mk = (c:{r:number,g:number,b:number}, boost=1.0) =>
             `rgb(${Math.min(255,Math.round(c.r*boost))},${Math.min(255,Math.round(c.g*boost))},${Math.min(255,Math.round(c.b*boost))})`;
+// Насыщаем цвет: тянем от серого к чистому тону
+          const saturate=(c:{r:number,g:number,b:number},s:number)=>{
+            const avg=(c.r+c.g+c.b)/3;
+            // Минимальная яркость чтобы цвет был виден на тёмном фоне
+            const lift=60;
+            const r=Math.min(255,Math.max(lift,Math.round(avg+(c.r-avg)*s)));
+            const g=Math.min(255,Math.max(lift,Math.round(avg+(c.g-avg)*s)));
+            const b=Math.min(255,Math.max(lift,Math.round(avg+(c.b-avg)*s)));
+            return `rgb(${r},${g},${b})`;
+          };
           resolve({
-            accent: mk(picks[0], 1.15),
-            mid:    mk(picks[1], 1.0),
-            dark:   mk(picks[2], 0.85),
-            c2:     mk(picks[3], 1.1),
-            c3:     mk(picks[4], 0.9),
+            accent: saturate(picks[0], 3.5),
+            c2:     saturate(picks[1], 3.2),
+            mid:    saturate(picks[2], 3.0),
+            c3:     saturate(picks[3], 3.2),
+            dark:   saturate(picks[4], 2.8),
           });
         } catch { resolve(fallback); }
       };
@@ -2412,13 +2422,18 @@ const goBack=useCallback(()=>{
 
   if(fullPlayer&&current)return(
     <div style={{position:'relative',height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
-<div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#060606',overflow:'hidden'}}>
-        <div style={{position:'absolute',width:'160%',height:'160%',top:'-30%',left:'-30%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 60%)`,opacity:0.75,willChange:'transform',animation:'gradShift1 18s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'150%',height:'150%',top:'-20%',right:'-25%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 55%)`,opacity:0.65,willChange:'transform',animation:'gradShift2 24s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'140%',height:'140%',bottom:'-25%',left:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 60%)`,opacity:0.7,willChange:'transform',animation:'gradShift3 20s ease-in-out infinite',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'120%',height:'120%',top:'10%',left:'20%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${(fpColors as any).c2||fpColors.accent} 0%, transparent 55%)`,opacity:0.55,willChange:'transform',animation:'gradShift2 28s ease-in-out infinite reverse',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',width:'130%',height:'130%',bottom:'5%',right:'-10%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${(fpColors as any).c3||fpColors.mid} 0%, transparent 58%)`,opacity:0.5,willChange:'transform',animation:'gradShift1 32s ease-in-out infinite reverse',transition:'background 1.4s ease'}}/>
-        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.28)'}}/>
+<div aria-hidden="true" style={{position:'absolute',inset:0,zIndex:0,background:'#050505',overflow:'hidden'}}>
+        {/* верхний левый */}
+        <div style={{position:'absolute',width:'75%',height:'75%',top:'-15%',left:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.accent} 0%, transparent 70%)`,opacity:0.95,animation:'gradShift1 14s ease-in-out infinite',transition:'background 1.2s ease'}}/>
+        {/* верхний правый */}
+        <div style={{position:'absolute',width:'70%',height:'70%',top:'-10%',right:'-15%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.c2} 0%, transparent 70%)`,opacity:0.9,animation:'gradShift2 18s ease-in-out infinite',transition:'background 1.2s ease'}}/>
+        {/* нижний левый */}
+        <div style={{position:'absolute',width:'70%',height:'70%',bottom:'-15%',left:'-10%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 70%)`,opacity:0.9,animation:'gradShift3 16s ease-in-out infinite',transition:'background 1.2s ease'}}/>
+        {/* нижний правый */}
+        <div style={{position:'absolute',width:'68%',height:'68%',bottom:'-12%',right:'-12%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.c3} 0%, transparent 70%)`,opacity:0.85,animation:'gradShift2 20s ease-in-out infinite reverse',transition:'background 1.2s ease'}}/>
+        {/* центр */}
+        <div style={{position:'absolute',width:'55%',height:'55%',top:'22%',left:'22%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 65%)`,opacity:0.7,animation:'gradShift1 22s ease-in-out infinite reverse',transition:'background 1.2s ease'}}/>
+        <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)'}}/>
       </div>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -2451,9 +2466,9 @@ const goBack=useCallback(()=>{
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,191,127,0.4)}50%{box-shadow:0 0 14px 4px rgba(239,191,127,0.25)}}
-        @keyframes gradShift1{0%{transform:translate(0%,0%) scale(1)}25%{transform:translate(18%,-12%) scale(1.08)}50%{transform:translate(8%,15%) scale(1.04)}75%{transform:translate(-14%,8%) scale(1.1)}100%{transform:translate(0%,0%) scale(1)}}
-        @keyframes gradShift2{0%{transform:translate(0%,0%) scale(1.05)}30%{transform:translate(-16%,14%) scale(1)}60%{transform:translate(12%,-10%) scale(1.08)}100%{transform:translate(0%,0%) scale(1.05)}}
-        @keyframes gradShift3{0%{transform:translate(0%,0%) scale(1)}40%{transform:translate(10%,18%) scale(1.06)}70%{transform:translate(-8%,-14%) scale(1.03)}100%{transform:translate(0%,0%) scale(1)}}
+        @keyframes gradShift1{0%{transform:translate(0%,0%) scale(1)}20%{transform:translate(22%,-18%) scale(1.15)}45%{transform:translate(-14%,22%) scale(1.08)}70%{transform:translate(18%,14%) scale(1.18)}100%{transform:translate(0%,0%) scale(1)}}
+        @keyframes gradShift2{0%{transform:translate(0%,0%) scale(1.1)}25%{transform:translate(-24%,16%) scale(1)}55%{transform:translate(18%,-20%) scale(1.14)}80%{transform:translate(-10%,22%) scale(1.06)}100%{transform:translate(0%,0%) scale(1.1)}}
+        @keyframes gradShift3{0%{transform:translate(0%,0%) scale(1)}30%{transform:translate(20%,24%) scale(1.12)}65%{transform:translate(-18%,-16%) scale(1.08)}100%{transform:translate(0%,0%) scale(1)}}
         button:focus{outline:none!important}
         *{-webkit-tap-highlight-color:transparent}
         ::-webkit-scrollbar{display:none}
