@@ -1542,7 +1542,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
         .slice(0,8);
       if(!sortedArtists.length){setRecsLoading(false);return;}
       const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
-      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`,{priority:'low'} as RequestInit);
+      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`);
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
       if(d.tracks?.length){
@@ -1557,23 +1557,14 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
     setRecsLoading(false);
   },[]);
 
-useEffect(()=>{
-    if(history.length<1)return;
-    // Откладываем на 3 сек при старте — чтобы не мешать воспроизведению
-    const delay=recsVersion===0?3000:800;
-    const t=setTimeout(()=>{
-      // Не грузим если сейчас играет трек (пользователь уже включил музыку)
-      if(isPlayingRef.current)return;
-      loadRecommendations();
-    },delay);
-    return()=>clearTimeout(t);
+  useEffect(()=>{
+    if(history.length>=1)loadRecommendations();
   },[recsVersion,history.length,blockedArtists.join(',')]);
 
   useEffect(()=>{
-const onVisible=()=>{
+    const onVisible=()=>{
       if(document.visibilityState==='visible'){
-        // Не обновляем рекомендации если пользователь слушает музыку
-        if(!isPlayingRef.current)loadRecommendations();
+        loadRecommendations();
         // Подгружаем свежие данные с сервера при возврате в приложение
         if(uid!=='anon'){
           fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
@@ -1689,46 +1680,27 @@ const onVisible=()=>{
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
   const playDirect=async(track:Track)=>{
-let freshMp3=track.mp3;
-    const a=audio.current;
-
-    // Если есть mp3 из кэша — стартуем немедленно, не ждём resolve
-    if(freshMp3&&a&&!track.isArtist&&!track.isAlbum){
-      a.pause();
-      const isHlsEarly=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      a.src=isHlsEarly?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
-      a.load();
-      a.play().then(()=>setPlaying(true)).catch(()=>{});
-    }
-
-    // Параллельно получаем свежий/качественный URL
+    let freshMp3=track.mp3;
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
         const r=await fetch(`${W}/resolve?id=${track.id}`);
         const d=await r.json();
         if(d.hls)freshMp3=d.hls;
-        else if(d.mp3)freshMp3=d.mp3;
-        else if(d.error&&!track.mp3)return;
+else if(d.mp3)freshMp3=d.mp3;
+        else if(d.error)return;
       }catch{}
     }
     if(!freshMp3)return;
-
-    // Обновляем src на качественный если он отличается от уже запущенного
+const a=audio.current;
     if(a){
+      a.pause();
       const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      const newSrc=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
-      if(a.src!==newSrc){
-        const wasPlaying=!a.paused;
-        const curTime=a.currentTime;
-        a.src=newSrc;
-        a.load();
-        if(wasPlaying||curTime<1){
-          a.play().then(()=>setPlaying(true)).catch(err=>{
-            console.warn('play failed, retry:',err);
-            setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
-          });
-        }
-      }
+      a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      a.load();
+      a.play().then(()=>setPlaying(true)).catch(err=>{
+        console.warn('play failed, retry:',err);
+        setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
+      });
     }
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
