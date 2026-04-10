@@ -2390,7 +2390,6 @@ const goBack=useCallback(()=>{
         <div style={{position:'absolute',width:'155%',height:'155%',top:'-27%',right:'-30%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.mid} 0%, transparent 60%)`,opacity:0.4,willChange:'transform',animation:'gradShift2 26s ease-in-out infinite',transition:'background 1.4s ease'}}/>
         <div style={{position:'absolute',width:'145%',height:'145%',bottom:'-30%',left:'-20%',borderRadius:'50%',background:`radial-gradient(ellipse at center, ${fpColors.dark} 0%, transparent 70%)`,opacity:0.65,willChange:'transform',animation:'gradShift3 22s ease-in-out infinite',transition:'background 1.4s ease'}}/>
         <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.42)'}}/>
-        <div style={{position:'relative',zIndex:1,width:'100%',display:'contents'}}>
       </div>
       <audio ref={audio}/>
       <style>{`
