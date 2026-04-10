@@ -1560,7 +1560,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
 useEffect(()=>{
     if(history.length<1)return;
     // Откладываем на 3 сек при старте — чтобы не мешать воспроизведению
-    const delay=recsVersion===0?3000:800;
+const delay=recsVersion===0?4000:5000;
     const t=setTimeout(()=>{
       // Не грузим если сейчас играет трек (пользователь уже включил музыку)
       if(isPlayingRef.current)return;
@@ -1704,7 +1704,7 @@ let freshMp3=track.mp3;
     // Параллельно получаем свежий/качественный URL
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
-        const r=await fetch(`${W}/resolve?id=${track.id}`);
+        const r=await fetch(`${W}/resolve?id=${track.id}`,{priority:'low'} as RequestInit);
         const d=await r.json();
         if(d.hls)freshMp3=d.hls;
         else if(d.mp3)freshMp3=d.mp3;
@@ -1787,8 +1787,8 @@ let freshMp3=track.mp3;
         localStorage.setItem('h47',JSON.stringify(n));
         localStorage.setItem('sync_ts',String(Date.now())); // помечаем что локальные данные обновились
       }catch{}
-      playCountRef.current+=1;
-      setRecsVersion(v=>v+1);
+playCountRef.current+=1;
+      if(playCountRef.current%4===0)setRecsVersion(v=>v+1);
       triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
       return n;
     });
