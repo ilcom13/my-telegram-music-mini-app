@@ -1664,7 +1664,7 @@ const onE=()=>{
     };
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
-  },[current,loop,queue,recs,history,blockedArtists]);
+  },[current,loop,recs,history,blockedArtists]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
