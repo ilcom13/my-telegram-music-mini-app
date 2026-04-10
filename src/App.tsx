@@ -1685,16 +1685,17 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
       try{
         const r=await fetch(`${W}/resolve?id=${track.id}`);
         const d=await r.json();
-        if(d.mp3)freshMp3=d.mp3;
+        if(d.hls)freshMp3=d.hls;
+else if(d.mp3)freshMp3=d.mp3;
         else if(d.error)return;
       }catch{}
     }
     if(!freshMp3)return;
-    const a=audio.current;
+const a=audio.current;
     if(a){
       a.pause();
-      // Проксируем через воркер с trackId для авто-обновления истёкшего токена
-            a.src=`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
+      a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       a.load();
       a.play().then(()=>setPlaying(true)).catch(err=>{
         console.warn('play failed, retry:',err);
@@ -1780,8 +1781,8 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
           const trackId=startParam.replace('track-','');
           const r=await fetch(`${W}/resolve?id=${trackId}`);
           const d=await r.json();
-          if(d.mp3){
-            const track:Track={id:trackId,title:d.title||'',artist:d.artist||'',cover:d.cover||'',duration:d.duration||'',plays:d.plays||0,mp3:d.mp3};
+if(d.hls||d.mp3){
+            const track:Track={id:trackId,title:d.title||'',artist:d.artist||'',cover:d.cover||'',duration:d.duration||'',plays:d.plays||0,mp3:d.hls||d.mp3};
             setCurrent(track);
             playDirect(track);
           }
@@ -1798,7 +1799,8 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
       setPlayHistory(p=>p.slice(1));
       if(audio.current&&prev.mp3){
         audio.current.pause();
-        audio.current.src=`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
+const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
+        audio.current.src=isHlsPrev?prev.mp3:`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
         audio.current.load();
         audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       }
