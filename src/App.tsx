@@ -1699,22 +1699,10 @@ const playDirect=async(track:Track)=>{
     (playDirect as any)._lastCallId=callId;
 
     // Стартуем немедленно с тем что есть
-    if(freshMp3&&a&&!track.isArtist&&!track.isAlbum){
-      a.pause();
-      const isHlsEarly=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      const earlySrc=isHlsEarly?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
-      a.src=earlySrc;
-      a.load();
-      try{await a.play();setPlaying(true);}catch(e:any){
-        // AbortError — значит пришёл новый вызов, выходим
-        if(e?.name==='AbortError')return;
-      }
-    }
-
-    // Фоном получаем качественный HLS
+// Сначала получаем качественный URL, потом один раз запускаем
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
-        const r=await fetch(`${W}/resolve?id=${track.id}`,{priority:'low'} as RequestInit);
+        const r=await fetch(`${W}/resolve?id=${track.id}`);
         const d=await r.json();
         if(d.hls)freshMp3=d.hls;
         else if(d.mp3)freshMp3=d.mp3;
@@ -1722,27 +1710,16 @@ const playDirect=async(track:Track)=>{
       }catch{}
     }
     if(!freshMp3)return;
-
-    // Проверяем что этот вызов всё ещё актуален (не был вытеснен новым треком)
     if((playDirect as any)._lastCallId!==callId)return;
 
-    // Обновляем на HLS только если URL реально изменился и трек всё ещё играет
-    if(a){
-      const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      const newSrc=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
-      if(a.src!==newSrc){
-        const wasPlaying=!a.paused;
-        a.src=newSrc;
-        a.load();
-        if(wasPlaying){
-          try{await a.play();setPlaying(true);}catch(e:any){
-            if(e?.name!=='AbortError'){
-              setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
-            }
-          }
-        }
-      }
-    }
+    // Один раз: pause → src → load → play. Никаких прерываний.
+    a.pause();
+    const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
+    a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+    a.load();
+    a.play().then(()=>setPlaying(true)).catch(()=>{
+      setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
+    });
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
     progressRef.current=0;curTimeRef.current='0:00';
