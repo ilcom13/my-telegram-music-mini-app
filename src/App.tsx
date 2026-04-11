@@ -1709,9 +1709,9 @@ const playDirect=async(track:Track)=>{
         else if(d.error&&!track.mp3)return;
       }catch{}
     }
-    if(!freshMp3)return;
+if(!freshMp3)return;
     if((playDirect as any)._lastCallId!==callId)return;
-
+    if(!a)return;
     // Один раз: pause → src → load → play. Никаких прерываний.
     a.pause();
     const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
