@@ -1209,7 +1209,6 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
   const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
-  const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
