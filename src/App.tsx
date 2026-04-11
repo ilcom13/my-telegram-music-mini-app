@@ -1692,20 +1692,26 @@ const onE=()=>{
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
-  const playDirect=async(track:Track)=>{
-let freshMp3=track.mp3;
+const playDirect=async(track:Track)=>{
+    let freshMp3=track.mp3;
     const a=audio.current;
+    const callId=Date.now();
+    (playDirect as any)._lastCallId=callId;
 
-    // Если есть mp3 из кэша — стартуем немедленно, не ждём resolve
+    // Стартуем немедленно с тем что есть
     if(freshMp3&&a&&!track.isArtist&&!track.isAlbum){
       a.pause();
       const isHlsEarly=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
-      a.src=isHlsEarly?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      const earlySrc=isHlsEarly?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
+      a.src=earlySrc;
       a.load();
-      a.play().then(()=>setPlaying(true)).catch(()=>{});
+      try{await a.play();setPlaying(true);}catch(e:any){
+        // AbortError — значит пришёл новый вызов, выходим
+        if(e?.name==='AbortError')return;
+      }
     }
 
-    // Параллельно получаем свежий/качественный URL
+    // Фоном получаем качественный HLS
     if(track.id&&!track.isArtist&&!track.isAlbum){
       try{
         const r=await fetch(`${W}/resolve?id=${track.id}`,{priority:'low'} as RequestInit);
@@ -1717,8 +1723,10 @@ let freshMp3=track.mp3;
     }
     if(!freshMp3)return;
 
-    // Обновляем src на качественный если он отличается от уже запущенного
-// Обновляем src на качественный если он отличается от уже запущенного
+    // Проверяем что этот вызов всё ещё актуален (не был вытеснен новым треком)
+    if((playDirect as any)._lastCallId!==callId)return;
+
+    // Обновляем на HLS только если URL реально изменился и трек всё ещё играет
     if(a){
       const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
       const newSrc=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
@@ -1727,10 +1735,11 @@ let freshMp3=track.mp3;
         a.src=newSrc;
         a.load();
         if(wasPlaying){
-          a.play().then(()=>setPlaying(true)).catch(err=>{
-            console.warn('play failed, retry:',err);
-            setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
-          });
+          try{await a.play();setPlaying(true);}catch(e:any){
+            if(e?.name!=='AbortError'){
+              setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
+            }
+          }
         }
       }
     }
