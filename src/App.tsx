@@ -1717,8 +1717,18 @@ if(!freshMp3)return;
     const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
     a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
     a.load();
-    a.play().then(()=>setPlaying(true)).catch(()=>{
-      setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
+a.play().then(()=>setPlaying(true)).catch((err)=>{
+      if(err?.name==='NotAllowedError'){
+        const resume=()=>{
+          window.removeEventListener('focus',resume);
+          document.removeEventListener('visibilitychange',resume);
+          if(audio.current)audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
+        };
+        window.addEventListener('focus',resume);
+        document.addEventListener('visibilitychange',resume);
+      } else {
+        setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
+      }
     });
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
