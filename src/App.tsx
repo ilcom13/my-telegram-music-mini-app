@@ -1718,15 +1718,15 @@ let freshMp3=track.mp3;
     if(!freshMp3)return;
 
     // Обновляем src на качественный если он отличается от уже запущенного
+// Обновляем src на качественный если он отличается от уже запущенного
     if(a){
       const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
       const newSrc=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
       if(a.src!==newSrc){
         const wasPlaying=!a.paused;
-        const curTime=a.currentTime;
         a.src=newSrc;
         a.load();
-        if(wasPlaying||curTime<1){
+        if(wasPlaying){
           a.play().then(()=>setPlaying(true)).catch(err=>{
             console.warn('play failed, retry:',err);
             setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},400);
