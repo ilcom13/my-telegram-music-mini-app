@@ -1208,6 +1208,8 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[copied,setCopied]=useState(false);
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
   const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
+  const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
+  const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const audio=useRef<HTMLAudioElement|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
@@ -2197,10 +2199,11 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
     finally{setLoading(false);}
   };
 
-  const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
+const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
     setArtistLoading(true);
-if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof preArtistScreen.current;}
+    if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof preArtistScreen.current;}
     prevScreen.current=screen as typeof prevScreen.current;
+    screenStack.current.push(screen as any);
     setScreen('artist');
     setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
     setArtistTracksHasMore(false);setArtistTab('albums');
@@ -2282,9 +2285,12 @@ if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof
     }catch{}
     setArtistTracksLoading(false);
   }
-  const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
+const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     setAlbumLoading(true);
-    if(screen!=='album')prevScreen.current=screen as typeof prevScreen.current;
+    if(screen!=='album'){
+      prevScreen.current=screen as typeof prevScreen.current;
+      screenStack.current.push(screen as any);
+    }
     setScreen('album');setAlbumPage(null);
     try{
       const r=await fetch(`${W}/album?id=${id}`);const d=await r.json();
@@ -2383,6 +2389,11 @@ if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof
   );
 
 const goBack=useCallback(()=>{
+    if(screenStack.current.length>0){
+      const prev=screenStack.current.pop()!;
+      setScreen(prev);
+      return;
+    }
     if(screen==='artist'){setScreen(preArtistScreen.current);return;}
     if(screen==='album'&&prevScreen.current==='artist'){setScreen('artist');return;}
     setScreen(prevScreen.current);
