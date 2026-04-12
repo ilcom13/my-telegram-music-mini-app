@@ -1483,7 +1483,14 @@ const audioCtx=useRef<AudioContext|null>(null);
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
     navigator.mediaSession.playbackState=playing?'playing':'paused';
-    navigator.mediaSession.setActionHandler('play',()=>{if(audio.current){audio.current.play();setPlaying(true);}});
+    navigator.mediaSession.setActionHandler('play',()=>{
+      if(audio.current){
+        if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
+        audio.current.play().then(()=>setPlaying(true)).catch(()=>{
+          setTimeout(()=>{if(audio.current)audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
+        });
+      }
+    });
     navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);}});
     navigator.mediaSession.setActionHandler('previoustrack',()=>playPrev());
     navigator.mediaSession.setActionHandler('nexttrack',()=>playNext());
