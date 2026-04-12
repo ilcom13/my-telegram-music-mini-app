@@ -1210,6 +1210,8 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
   const audio=useRef<HTMLAudioElement|null>(null);
+  const audioCtx=useRef<AudioContext|null>(null);
+  const audioCtxSource=useRef<MediaElementAudioSourceNode|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -1687,8 +1689,22 @@ else{
         try{localStorage.setItem('v47',String(sysVol));}catch{}
       }
     };
-    a.addEventListener('volumechange',onVol);
+a.addEventListener('volumechange',onVol);
     return()=>a.removeEventListener('volumechange',onVol);
+  },[]);
+
+  useEffect(()=>{
+    const onFocus=()=>{
+      if(audioCtx.current?.state==='suspended'){
+        audioCtx.current.resume().catch(()=>{});
+      }
+    };
+    window.addEventListener('focus',onFocus);
+    document.addEventListener('visibilitychange',onFocus);
+    return()=>{
+      window.removeEventListener('focus',onFocus);
+      document.removeEventListener('visibilitychange',onFocus);
+    };
   },[]);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
@@ -1713,7 +1729,18 @@ const playDirect=async(track:Track)=>{
 if(!freshMp3)return;
     if((playDirect as any)._lastCallId!==callId)return;
     if(!a)return;
-    // Один раз: pause → src → load → play. Никаких прерываний.
+// Один раз: pause → src → load → play. Никаких прерываний.
+    // Вариант А: держим AudioContext живым чтобы браузер не блокировал autoplay
+    if(!audioCtx.current){
+      try{
+        audioCtx.current=new (window.AudioContext||( window as any).webkitAudioContext)();
+        audioCtxSource.current=audioCtx.current.createMediaElementSource(a);
+        audioCtxSource.current.connect(audioCtx.current.destination);
+      }catch{}
+    }
+    if(audioCtx.current?.state==='suspended'){
+      try{await audioCtx.current.resume();}catch{}
+    }
     a.pause();
     const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
     a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
