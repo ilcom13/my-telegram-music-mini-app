@@ -1157,8 +1157,6 @@ export default function App(){
   const miniTimeRef=useRef<HTMLSpanElement>(null);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
-  const[geniusUrl,setGeniusUrl]=useState<string|null>(null);
-  const geniusTrackId=useRef<string>('');
   const[fullPlayer,setFullPlayer]=useState(false);
   const[showQueue,setShowQueue]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
@@ -1729,32 +1727,7 @@ a.addEventListener('volumechange',onVol);
     return()=>clearInterval(interval);
   },[]);
 
-const normalizeStr=(s:string)=>s.toLowerCase()
-    .replace(/\(.*?(sped up|slowed|reverb|remix|remaster|feat\.?|ft\.?|official|video|audio|lyrics|prod\.?|instrumental|cover|karaoke|nightcore|lofi|lo-fi|bass boost|extended|radio edit|version|edit|live|acoustic)[^)]*\)/gi,'')
-    .replace(/[\-–—]/g,' ').replace(/[^\w\s]/g,'').replace(/\s+/g,' ').trim();
-
-  const fetchGeniusUrl=async(track:Track):Promise<string|null>=>{
-    if(!track.id||track.isArtist||track.isAlbum)return null;
-    try{
-      const q=encodeURIComponent(`${track.artist} ${track.title}`);
-      const r=await fetch(`${W}/genius?q=${q}`);
-      if(!r.ok)return null;
-      const d=await r.json();
-      if(!d.url||!d.title||!d.artist)return null;
-      const normTitle=normalizeStr(track.title);
-      const normArtist=normalizeStr(track.artist);
-      const normResTitle=normalizeStr(d.title);
-      const normResArtist=normalizeStr(d.artist);
-      // Проверяем что артист совпадает и название содержит основную часть
-      const artistMatch=normResArtist.includes(normArtist)||normArtist.includes(normResArtist);
-      const titleMatch=normResTitle.includes(normTitle)||normTitle.includes(normResTitle)||
-        (normTitle.split(' ').filter(w=>w.length>3).every(w=>normResTitle.includes(w)));
-      if(artistMatch&&titleMatch)return d.url;
-      return null;
-    }catch{return null;}
-  };
-
-  const playDirect=async(track:Track)=>{
+const playDirect=async(track:Track)=>{
     let freshMp3=track.mp3;
     const a=audio.current;
     const callId=Date.now();
@@ -1804,13 +1777,6 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
 
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
-    if(geniusTrackId.current!==track.id){
-      geniusTrackId.current=track.id;
-      setGeniusUrl(null);
-      fetchGeniusUrl(track).then(url=>{
-        if(geniusTrackId.current===track.id)setGeniusUrl(url);
-      });
-    }
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
     setStreakDays(prev=>{if(prev.includes(today))return prev;const n=[...prev,today];try{localStorage.setItem('sdays47',JSON.stringify(n));}catch{}setMaxStreak(calcMaxStreak(n));return n;});
@@ -2623,14 +2589,9 @@ const goBack=useCallback(()=>{
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center'}}>
-<button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+          <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
-          {geniusUrl&&(
-            <button onPointerDown={()=>window.open(geniusUrl,'_blank')} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}} title="Текст песни">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            </button>
-          )}
           <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
