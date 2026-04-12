@@ -3920,7 +3920,9 @@ importSource={importSource} setImportSource={setImportSource}
               item={item}
               active={screen===item.id||(item.id==='library'&&openPlPage!==null&&screen==='library')}
               onSelect={()=>{
+                screenStack.current=[];
                 setScreen(item.id as 'home'|'search'|'library'|'trending');
+              }}
               }}
             />
           ))}
