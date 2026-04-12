@@ -3923,7 +3923,6 @@ importSource={importSource} setImportSource={setImportSource}
                 screenStack.current=[];
                 setScreen(item.id as 'home'|'search'|'library'|'trending');
               }}
-              }}
             />
           ))}
         </div>
