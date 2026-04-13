@@ -1431,7 +1431,6 @@ const plToSave=playlistsRef.current;
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
   const queueRef=useRef<Track[]>([]);
-  const currentQueueIdx=useRef<number>(-1);
   const mediaSessionThrottle=useRef<number>(0);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
@@ -1861,17 +1860,27 @@ if(d.hls||d.mp3){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  const playPrev=()=>{
+const playPrev=()=>{
     if(playHistory.length>0){
       const prev=playHistory[0];
       setPlayHistory(p=>p.slice(1));
+      // Возвращаем текущий трек в начало очереди
+      if(current){
+        setQueue(q=>{
+          const already=q.some(t=>t.id===current.id);
+          const n=already?q:[current,...q];
+          try{localStorage.setItem('q47',JSON.stringify(n));}catch{}
+          return n;
+        });
+      }
       if(audio.current&&prev.mp3){
         audio.current.pause();
-const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
+        const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
         audio.current.src=isHlsPrev?prev.mp3:`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
         audio.current.load();
         audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       }
+      setCurrent(prev);
       setCurrent(prev);
       progressRef.current=0;curTimeRef.current='0:00';
       if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
@@ -1885,15 +1894,17 @@ const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
     }
   };
 
-  const playNext=()=>{
-    if(queue.length>0){
-      const nxt=queue[0];
+const playNext=()=>{
+    if(queueRef.current.length>0){
+      const nxt=queueRef.current[0];
       setManualQIds(prev=>{const n=new Set(prev);n.delete(nxt.id);return n;});
+      // Если есть current — возвращаем его в историю и НЕ удаляем из очереди сразу
+      // Удаляем только воспроизведённый трек
       setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
       playDirect(nxt);
     } else {
-      const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
-      const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
+      const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+      const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
       const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
       if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
     }
@@ -2639,11 +2650,11 @@ const goBack=useCallback(()=>{
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(20px,7vw,36px)',flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
-        <button className="prev-next-btn" onPointerDown={playPrev} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
         </button>
         <button className="play-btn" onPointerDown={togglePlay} style={{width:'clamp(52px,14vw,70px)',height:'clamp(52px,14vw,70px)',borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 20px ${ACC}55`,...tap}}><PP sz="lg"/></button>
-        <button className="prev-next-btn" onPointerDown={playNext} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
       </div>
