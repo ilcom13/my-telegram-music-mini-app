@@ -1431,6 +1431,7 @@ const plToSave=playlistsRef.current;
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
   const queueRef=useRef<Track[]>([]);
+  const currentQueueIdx=useRef<number>(-1);
   const mediaSessionThrottle=useRef<number>(0);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
