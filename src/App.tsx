@@ -1663,10 +1663,21 @@ const onVisible=()=>{
     };
 const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
-      else if(queueRef.current.length>0){
-        const nxt=queueRef.current[0];
-        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
-        playDirect(nxt);
+else if(queueRef.current.length>0){
+        const nextIdx=currentQueueIdx.current+1;
+        if(nextIdx<queueRef.current.length){
+          currentQueueIdx.current=nextIdx;
+          playDirect(queueRef.current[nextIdx]);
+        } else {
+          currentQueueIdx.current=-1;
+          setQueue([]);
+          try{localStorage.setItem('q47',JSON.stringify([]));}catch{}
+          const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+          if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+          else setPlaying(false);
+        }
       }
 else{
         const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
