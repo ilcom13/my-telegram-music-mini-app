@@ -1295,7 +1295,8 @@ const audioCtx=useRef<AudioContext|null>(null);
         const localPl=playlistsRef.current;
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
         const serverPlTs=sv.playlists_ts||0;
-        const plFromServer=serverPlTs>localPlTs&&sv.playlists!=null?sv.playlists:localPl;
+const serverPlValid=sv.playlists!=null&&Array.isArray(sv.playlists)&&sv.playlists.length>=localPl.length;
+        const plFromServer=serverPlTs>localPlTs&&serverPlValid?sv.playlists:localPl;
         if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
           setPlaylists(plFromServer);try{localStorage.setItem('p47',JSON.stringify(plFromServer));}catch{}
           if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
