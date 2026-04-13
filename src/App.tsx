@@ -1232,7 +1232,7 @@ const audioCtx=useRef<AudioContext|null>(null);
       liked:likedRef.current,
       liked_ts:now_ts,
       playlists:playlistsRef.current,
-      playlists_ts:now_ts,
+      playlists_ts:playlistsRef.current.length>0?now_ts:parseInt(localStorage.getItem('p47_ts')||String(now_ts)),
       history:historyRef.current,
       history_ts:now_ts,
       favArtists:favArtistsRef.current,
