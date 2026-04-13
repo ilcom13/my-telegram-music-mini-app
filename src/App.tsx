@@ -1297,7 +1297,9 @@ const plToSave=playlistsRef.current;
         const localPl=playlistsRef.current;
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
         const serverPlTs=sv.playlists_ts||0;
-        const plFromServer=serverPlTs>localPlTs&&sv.playlists!=null?sv.playlists:localPl;
+        const serverPlValid=Array.isArray(sv.playlists)&&sv.playlists.length>0;
+        const plFromServer=serverPlTs>localPlTs&&serverPlValid?sv.playlists:
+          (localPl.length>0?localPl:(serverPlValid?sv.playlists:[]));
         if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
           setPlaylists(plFromServer);try{localStorage.setItem('p47',JSON.stringify(plFromServer));}catch{}
           if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
