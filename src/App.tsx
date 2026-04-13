@@ -1896,13 +1896,21 @@ const playPrev=()=>{
   };
 
 const playNext=()=>{
-    if(queueRef.current.length>0){
-      const nxt=queueRef.current[0];
-      setManualQIds(prev=>{const n=new Set(prev);n.delete(nxt.id);return n;});
-      // Если есть current — возвращаем его в историю и НЕ удаляем из очереди сразу
-      // Удаляем только воспроизведённый трек
-      setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
-      playDirect(nxt);
+    const q=queueRef.current;
+    if(q.length>0){
+      const nextIdx=currentQueueIdx.current+1;
+      if(nextIdx<q.length){
+        currentQueueIdx.current=nextIdx;
+        playDirect(q[nextIdx]);
+      } else {
+        currentQueueIdx.current=-1;
+        setQueue([]);
+        try{localStorage.setItem('q47',JSON.stringify([]));}catch{}
+        const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+        if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+      }
     } else {
       const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
       const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
