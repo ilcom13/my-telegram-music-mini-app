@@ -3224,7 +3224,7 @@ const goBack=useCallback(()=>{
  
       {/* Глобальное контекстное меню треков */}
       {menuId&&menuAnchor&&(()=>{
-        const tr=results.find(t=>t.id===menuId)||history.find(t=>t.id===menuId)||recs.find(t=>t.id===menuId)||liked.find(t=>t.id===menuId);
+        const tr=results.find(t=>t.id===menuId)||history.find(t=>t.id===menuId)||recs.find(t=>t.id===menuId)||liked.find(t=>t.id===menuId)||(albumPage?.tracks||[]).find(t=>t.id===menuId)||(artistPage?.tracks||[]).find(t=>t.id===menuId)||(artistTracks||[]).find(t=>t.id===menuId);
         if(!tr)return null;
         const isLiked=isLk(menuId);
         return(
