@@ -1630,9 +1630,9 @@ const onVisible=()=>{
     return()=>document.removeEventListener('visibilitychange',onVisible);
   },[loadRecommendations]);
 
-  useEffect(()=>{
+useEffect(()=>{
     const a=audio.current;if(!a)return;
-const nearEndFired=useRef(false);
+    nearEndFired.current=false;
     const onT=()=>{
       if(a.duration){
         // Watchdog: если осталось < 0.8сек — переключаем сами не ждём ended
@@ -1687,7 +1687,6 @@ else{
         else setPlaying(false);
       }
     };
-nearEndFired.current=false;
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop]);
