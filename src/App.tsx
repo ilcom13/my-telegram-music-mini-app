@@ -1295,8 +1295,7 @@ const audioCtx=useRef<AudioContext|null>(null);
         const localPl=playlistsRef.current;
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
         const serverPlTs=sv.playlists_ts||0;
-const serverPlValid=sv.playlists!=null&&Array.isArray(sv.playlists)&&sv.playlists.length>=localPl.length;
-        const plFromServer=serverPlTs>localPlTs&&serverPlValid?sv.playlists:localPl;
+        const plFromServer=serverPlTs>localPlTs&&sv.playlists!=null?sv.playlists:localPl;
         if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
           setPlaylists(plFromServer);try{localStorage.setItem('p47',JSON.stringify(plFromServer));}catch{}
           if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
@@ -1428,7 +1427,6 @@ const serverPlValid=sv.playlists!=null&&Array.isArray(sv.playlists)&&sv.playlist
   const blockedRef=useRef<string[]>([]);
   const recsRef=useRef<Track[]>([]);
   const queueRef=useRef<Track[]>([]);
-  const nearEndFired=useRef(false);
   const mediaSessionThrottle=useRef<number>(0);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
@@ -1631,25 +1629,10 @@ const onVisible=()=>{
     return()=>document.removeEventListener('visibilitychange',onVisible);
   },[loadRecommendations]);
 
-useEffect(()=>{
+  useEffect(()=>{
     const a=audio.current;if(!a)return;
-    nearEndFired.current=false;
     const onT=()=>{
       if(a.duration){
-        // Watchdog: если осталось < 0.8сек — переключаем сами не ждём ended
-        if(!loop&&a.duration>0&&!isNaN(a.duration)&&(a.duration-a.currentTime)<0.8&&!nearEndFired.current){
-          nearEndFired.current=true;
-          if(queueRef.current.length>0){
-            const nxt=queueRef.current[0];
-            setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
-            playDirect(nxt);
-          } else {
-            const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
-            const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
-            const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
-            if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
-          }
-        }
         const pct=a.currentTime/a.duration*100;
         const m=Math.floor(a.currentTime/60),s=Math.floor(a.currentTime%60);
         const timeStr=`${m}:${s.toString().padStart(2,'0')}`;
