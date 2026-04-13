@@ -1228,11 +1228,13 @@ const audioCtx=useRef<AudioContext|null>(null);
     const now_ts=Date.now();
     // Сохраняем timestamp каждого типа данных локально
     try{localStorage.setItem('sync_ts',String(now_ts));}catch{}
+const plToSave=playlistsRef.current;
+    const plTs=plToSave.length>0?now_ts:parseInt(localStorage.getItem('p47_ts')||'0');
     syncTimer.current=setTimeout(()=>syncSave({
       liked:likedRef.current,
       liked_ts:now_ts,
-      playlists:playlistsRef.current,
-      playlists_ts:playlistsRef.current.length>0?now_ts:parseInt(localStorage.getItem('p47_ts')||String(now_ts)),
+      playlists:plToSave.length>0?plToSave:(playlistsRef.current.length>0?playlistsRef.current:[]),
+      playlists_ts:plTs,
       history:historyRef.current,
       history_ts:now_ts,
       favArtists:favArtistsRef.current,
