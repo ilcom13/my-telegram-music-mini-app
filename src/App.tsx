@@ -1721,13 +1721,36 @@ a.addEventListener('volumechange',onVol);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
-  // Watchdog: если трек должен играть но остановился — перезапускаем
   useEffect(()=>{
-    const interval=setInterval(()=>{
+    const onOnline=()=>{
       const a=audio.current;
       if(!a||!isPlayingRef.current)return;
-      if(a.paused&&!a.ended&&a.src&&a.readyState>=2){
-        a.play().catch(()=>{});
+      if(a.paused&&!a.ended&&a.src){
+        const t=a.currentTime;
+        a.load();
+        a.currentTime=t;
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
+      }
+    };
+    window.addEventListener('online',onOnline);
+    return()=>window.removeEventListener('online',onOnline);
+  },[]);
+
+  // Watchdog: если трек должен играть но остановился — перезапускаем
+  useEffect(()=>{
+const interval=setInterval(()=>{
+      const a=audio.current;
+      if(!a||!isPlayingRef.current)return;
+      if(a.paused&&!a.ended&&a.src){
+        if(a.readyState>=2){
+          a.play().catch(()=>{});
+        } else if(navigator.onLine&&a.readyState<2){
+          // Сеть есть но аудио завис — перезагружаем
+          const t=a.currentTime;
+          a.load();
+          a.currentTime=t;
+          a.play().catch(()=>{});
+        }
       }
     },2000);
     return()=>clearInterval(interval);
