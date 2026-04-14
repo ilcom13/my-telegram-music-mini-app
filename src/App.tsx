@@ -1412,7 +1412,8 @@ const plToSave=playlistsRef.current;
 
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
-      if(e.code==='Space'&&e.target===document.body){
+      const tgt=e.target as HTMLElement;
+      if(e.code==='Space'&&tgt.tagName!=='INPUT'&&tgt.tagName!=='TEXTAREA'&&!tgt.isContentEditable){
         e.preventDefault();
         if(audio.current){
           if(isPlayingRef.current){audio.current.pause();setPlaying(false);}
