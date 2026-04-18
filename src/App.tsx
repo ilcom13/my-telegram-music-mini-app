@@ -156,6 +156,7 @@ interface Track {
   id: string; title: string; artist: string; cover: string;
   duration: string; plays: number; mp3: string | null;
   isArtist?: boolean; isAlbum?: boolean; permalink?: string; artistId?: string;
+  source?: string; amId?: string;
   trackCount?: number; albumId?: string; albumTitle?: string;
 }
 interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; sort?: 'default'|'az'|'za'|'artist'|'newest'|'oldest'; }
@@ -1082,6 +1083,7 @@ export default function App(){
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
+  const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
   const[results,setResults]=useState<Track[]>([]);
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
@@ -1758,6 +1760,14 @@ const interval=setInterval(()=>{
 
 const playDirect=async(track:Track)=>{
     let freshMp3=track.mp3;
+  if(!track.mp3 && track.source==='audiomack' && track.amId){
+  try{
+    const r=await fetch(`${W}/audiomack-stream?id=${track.amId}`);
+    const d=await r.json();
+    if(d.url)freshMp3=d.url;
+    else return;
+  }catch{return;}
+}
     const a=audio.current;
     const callId=Date.now();
     (playDirect as any)._lastCallId=callId;
@@ -2244,6 +2254,15 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
     if(!query.trim())return;
     setLoading(true);setError('');setResults([]);
     try{
+      if(searchSource==='audiomack'){
+  const r=await fetch(`${W}/search-audiomack?q=${encodeURIComponent(query)}`);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  const tracks:Track[]=d.tracks||[];
+  if(!tracks.length)throw new Error(t('notFound'));
+  setResults(tracks);
+  return;
+}
       const ep=mode==='albums'?'albums':'search';
       const serverMode=mode==='covers'?'sound':mode;
       const r=await fetch(`${W}/${ep}?q=${encodeURIComponent(query)}&mode=${serverMode}`);
@@ -3025,11 +3044,20 @@ const goBack=useCallback(()=>{
           <div className="screen-slide-up">
             <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}>
               <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{t('search')}</div>
+              <div style={{display:'flex',gap:4,marginBottom:10,background:BG2,borderRadius:10,padding:3,width:'fit-content'}}>
+    {(['soundcloud','audiomack'] as const).map(src=>(
+    <button key={src} onPointerDown={()=>{setSearchSource(src);setResults([]);setError('');}}
+      style={{padding:'5px 14px',borderRadius:8,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:12,fontWeight:searchSource===src?600:400,cursor:'pointer',transition:'background 0.2s ease',...TAP}}>
+      {src==='soundcloud'?'SoundCloud':'Audiomack'}
+    </button>
+  ))}
+</div>
               <div style={{display:'flex',gap:8}}>
                 <input className="search-input" type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
                   style={{flex:1,padding:'11px 14px',fontSize:14,background:BG2,border:'1px solid #2a2a2a',borderRadius:12,color:TEXT_PRIMARY,outline:'none',width:'100%',boxSizing:'border-box' as const}}/>
                 <button onPointerDown={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0,transition:'background 0.2s ease,transform 0.15s ease',...tap}}>{loading?'...':t('find')}</button>
               </div>
+              {searchSource==='soundcloud'&&(
               <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto'}}>
                 {(['sound','albums','covers','remix','artists'] as const).map(m=>(
                   <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
@@ -3037,6 +3065,7 @@ const goBack=useCallback(()=>{
                   </button>
                 ))}
               </div>
+            )}
               {error&&<div style={{marginTop:8,padding:'8px 12px',background:'#1a0a0a',borderRadius:9,color:'#d06060',fontSize:12,animation:'fadeIn 0.2s ease'}}>{error}</div>}
             </div>
             <div style={{padding:'0 4px'}}>
