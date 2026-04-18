@@ -1440,6 +1440,49 @@ try{localStorage.setItem('p47_ts',String(newPlTs));}catch{}
     try{const lg=localStorage.getItem('lg47');if(lg)setLang(lg as 'ru'|'en'|'uk'|'kk'|'pl'|'tr');}catch{}
   },[]);
 
+useEffect(()=>{
+  if(uid==='anon')return;
+  const interval=setInterval(()=>{
+    fetch(`${W}/sync/load?uid=${uid}`).then(r=>r.json()).then(d=>{
+      if(!d.data)return;
+      const sv=d.data;
+      const localSyncTs=parseInt(localStorage.getItem('sync_ts')||'0');
+      const serverSyncTs=sv.saved_at||sv.liked_ts||0;
+      if(serverSyncTs<=localSyncTs)return; // данные не изменились
+      // Обновляем лайки
+      if(sv.liked!=null&&JSON.stringify(sv.liked)!==JSON.stringify(likedRef.current)){
+        setLiked(sv.liked);try{localStorage.setItem('l47',JSON.stringify(sv.liked));}catch{}
+      }
+      // Обновляем плейлисты
+      if(Array.isArray(sv.playlists)&&sv.playlists.length>0){
+        const serverPlTs=sv.playlists_ts||0;
+        const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
+        if(serverPlTs>localPlTs){
+          setPlaylists(sv.playlists);
+          try{localStorage.setItem('p47',JSON.stringify(sv.playlists));}catch{}
+          try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
+        }
+      }
+      // Обновляем favArtists
+      if(sv.favArtists!=null&&JSON.stringify(sv.favArtists)!==JSON.stringify(favArtistsRef.current)){
+        setFavArtists(sv.favArtists);try{localStorage.setItem('fa47',JSON.stringify(sv.favArtists));}catch{}
+      }
+      // Обновляем favAlbums
+      if(sv.favAlbums!=null&&JSON.stringify(sv.favAlbums)!==JSON.stringify(favAlbumsRef.current)){
+        setFavAlbums(sv.favAlbums);try{localStorage.setItem('fal47',JSON.stringify(sv.favAlbums));}catch{}
+      }
+      // Обновляем pinnedPlId
+      if(sv.pinnedPlId!==undefined&&sv.pinnedPlId!==null){
+        setPinnedPlId(sv.pinnedPlId);
+        pinnedPlIdRef.current=sv.pinnedPlId;
+        try{if(sv.pinnedPlId)localStorage.setItem('pin47',sv.pinnedPlId);else localStorage.removeItem('pin47');}catch{}
+      }
+      try{localStorage.setItem('sync_ts',String(serverSyncTs));}catch{}
+    }).catch(()=>{});
+  },30000); // каждые 30 секунд
+  return()=>clearInterval(interval);
+},[uid]);
+  
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
       const tgt=e.target as HTMLElement;
