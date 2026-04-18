@@ -1774,7 +1774,7 @@ const playDirect=async(track:Track)=>{
 
     // Стартуем немедленно с тем что есть
 // Сначала получаем качественный URL, потом один раз запускаем
-    if(track.id&&!track.isArtist&&!track.isAlbum){
+    if(track.id&&!track.isArtist&&!track.isAlbum&&track.source!=='audiomack'){
       try{
         const r=await fetch(`${W}/resolve?id=${track.id}`);
         const d=await r.json();
