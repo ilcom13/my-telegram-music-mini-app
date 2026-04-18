@@ -3709,7 +3709,7 @@ importSource={importSource} setImportSource={setImportSource}
         if(screen!=='library')return null;
         const isPinned=pinnedPlId===pl.id;
         const sortPl=(s:'default'|'az'|'za'|'artist'|'newest'|'oldest')=>{
-          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});
+          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});
         };
         const curSort=pl.sort||'default';
         const sortedTracks=[...pl.tracks].sort((a,b)=>{
