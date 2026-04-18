@@ -1000,7 +1000,7 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
             </div>
           </div>
         </div>
-        {!track.isArtist&&!track.isAlbum&&(
+        {!track.isArtist&&!track.isAlbum&&onArtistClick&&track.source!=='audiomack'
           <div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
             <button onPointerDown={e=>{e.stopPropagation();onToggleQ();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...TAP}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="12" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/><circle cx="3" cy="18" r="1.2" fill={inQueue?ACC:'#5a5a5a'}/></svg>
@@ -1989,7 +1989,8 @@ const playNext=()=>{
   };
 
   const playTrack=(track:Track)=>{
-    if(track.isArtist){openArtist('',track.title,track.cover,track.plays);return;}
+    if(track.isArtist&&track.source!=='audiomack'){openArtist('',track.title,track.cover,track.plays);return;}
+if(track.isArtist&&track.source==='audiomack')return;
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
     if(!track.id)return;
     if(current?.id===track.id){togglePlay();return;}
