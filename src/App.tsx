@@ -1727,12 +1727,29 @@ a.addEventListener('volumechange',onVol);
     const onOnline=()=>{
       const a=audio.current;
       if(!a||!isPlayingRef.current)return;
-      if(a.paused&&!a.ended&&a.src){
-        const t=a.currentTime;
-        a.load();
-        a.currentTime=t;
-        a.play().then(()=>setPlaying(true)).catch(()=>{});
-      }
+if(a.paused&&a.src){
+  if(a.ended){
+    if(queueRef.current.length>0){
+      const nxt=queueRef.current[0];
+      setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
+      playDirect(nxt);
+    } else {
+      const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+      const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+      const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+      if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+    }
+    return;
+  }
+  if(a.readyState>=2){
+    a.play().catch(()=>{});
+  } else if(navigator.onLine&&a.readyState<2){
+    const t=a.currentTime;
+    a.load();
+    a.currentTime=t;
+    a.play().catch(()=>{});
+  }
+}
     };
     window.addEventListener('online',onOnline);
     return()=>window.removeEventListener('online',onOnline);
