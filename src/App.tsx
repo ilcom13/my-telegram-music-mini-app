@@ -1297,16 +1297,42 @@ const plToSave=playlistsRef.current;
         }
 
         // ПЛЕЙЛИСТЫ — timestamp merge
-        const localPl=playlistsRef.current;
-        const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
-        const serverPlTs=sv.playlists_ts||0;
-        const serverPlValid=Array.isArray(sv.playlists)&&sv.playlists.length>0;
-        const plFromServer=serverPlTs>localPlTs&&serverPlValid?sv.playlists:
-          (localPl.length>0?localPl:(serverPlValid?sv.playlists:[]));
-        if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
-          setPlaylists(plFromServer);try{localStorage.setItem('p47',JSON.stringify(plFromServer));}catch{}
-          if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
-        }
+     const localPl=playlistsRef.current;
+const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
+const serverPlTs=sv.playlists_ts||0;
+const serverPlValid=Array.isArray(sv.playlists)&&sv.playlists.length>0;
+
+let mergedPl=localPl;
+if(serverPlValid){
+  if(serverPlTs>localPlTs){
+    // Сервер новее — берём сервер как базу, но добавляем локальные треки в плейлисты
+    mergedPl=sv.playlists.map((sp:any)=>{
+      const lp=localPl.find((p:any)=>p.id===sp.id);
+      if(!lp)return sp;
+      // Объединяем треки — берём все уникальные из обоих
+      const allTracks=[...sp.tracks];
+      lp.tracks.forEach((lt:any)=>{if(!allTracks.some((t:any)=>t.id===lt.id))allTracks.push(lt);});
+      return{...sp,tracks:allTracks,sort:sp.sort||lp.sort};
+    });
+    // Добавляем плейлисты которые есть локально но нет на сервере
+    localPl.forEach((lp:any)=>{if(!mergedPl.some((p:any)=>p.id===lp.id))mergedPl.push(lp);});
+  } else {
+    // Локал новее — берём локал как базу, добавляем серверные плейлисты которых нет локально
+    mergedPl=localPl.map((lp:any)=>{
+      const sp=sv.playlists.find((p:any)=>p.id===lp.id);
+      if(!sp)return lp;
+      const allTracks=[...lp.tracks];
+      sp.tracks.forEach((st:any)=>{if(!allTracks.some((t:any)=>t.id===st.id))allTracks.push(st);});
+      return{...lp,tracks:allTracks};
+    });
+    sv.playlists.forEach((sp:any)=>{if(!mergedPl.some((p:any)=>p.id===sp.id))mergedPl.push(sp);});
+  }
+}
+if(JSON.stringify(mergedPl)!==JSON.stringify(localPl)){
+  setPlaylists(mergedPl);try{localStorage.setItem('p47',JSON.stringify(mergedPl));}catch{}
+}
+const newPlTs=Math.max(localPlTs,serverPlTs);
+try{localStorage.setItem('p47_ts',String(newPlTs));}catch{}
 
         // ИСТОРИЯ — объединяем всегда: сервер + локальная, без дублей, макс 50
         const localH=historyRef.current;
