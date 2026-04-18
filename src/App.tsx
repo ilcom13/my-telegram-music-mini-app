@@ -993,7 +993,7 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
             <div style={{fontSize:13,fontWeight:500,color:isActive?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{track.title}</div>
             <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
               {!track.isArtist&&!track.isAlbum&&onArtistClick
-                ?<button onClick={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{track.artist}</button>
+               ?<button onClick={e=>{e.stopPropagation();if(track.source!=='audiomack')onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{track.artist}</button>
                 :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:track.artist}</span>
               }
               {!track.isArtist&&!track.isAlbum&&track.plays>0&&<span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>· {fmtP(track.plays)}</span>}
