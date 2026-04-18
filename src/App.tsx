@@ -1448,7 +1448,7 @@ useEffect(()=>{
       const sv=d.data;
       const localSyncTs=parseInt(localStorage.getItem('sync_ts')||'0');
       const serverSyncTs=sv.saved_at||sv.liked_ts||0;
-      if(serverSyncTs<=localSyncTs)return; // данные не изменились
+      // всегда проверяем изменения
       // Обновляем лайки
       if(sv.liked!=null&&JSON.stringify(sv.liked)!==JSON.stringify(likedRef.current)){
         setLiked(sv.liked);try{localStorage.setItem('l47',JSON.stringify(sv.liked));}catch{}
