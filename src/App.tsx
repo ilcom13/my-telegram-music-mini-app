@@ -2487,7 +2487,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}return n;});setNewPlName('');setShowNewPl(false);doFullSync();};
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
  const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
-  const removeFromPl=(plId:string,trackId:string)=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}return n;});doFullSync();};
+  const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
  const addToPl2=(plId:string,track:Track)=>{setPlaylists(prev=>{const n=prev.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,track]}:pl);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}return n;});setAddToPl(null);doFullSync();};
 const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
@@ -3893,6 +3893,7 @@ importSource={importSource} setImportSource={setImportSource}
               </div>
             </>
           )}
+          
           {/* Track 3-dot menu overlay - compact, near track */}
           {trackMenuPlId===pl.id&&trackMenuTr&&(
             <>
