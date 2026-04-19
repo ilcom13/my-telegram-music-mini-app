@@ -1082,6 +1082,8 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
+  const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
+const [showLibSettings,setShowLibSettings]=useState(false);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
   const [recentSearches, setRecentSearches] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('rsrch47')||'[]');}catch{return [];}});
@@ -3187,7 +3189,25 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
 {screen==='library'&&(
   <div className="screen-slide-up">
     <div style={{padding:'18px 16px 6px'}}>
-      <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5,marginBottom:2}}>{t('library')}</div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:2}}>
+  <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div>
+  <button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'#1a1a1a',border:'1px solid #282828',borderRadius:'50%',width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+  </button>
+</div>
+{showLibSettings&&(
+  <div style={{background:'#141414',border:'1px solid #252525',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.2s ease both'}}>
+    <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Вкладка по умолчанию':lang==='uk'?'Вкладка за замовч.':'Default tab'}</div>
+    <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
+      {(['liked','playlists','artists','albums'] as const).map(tab=>(
+        <button key={tab} onPointerDown={()=>{setLibDefaultTab(tab);try{localStorage.setItem('libdef47',tab);}catch{}setShowLibSettings(false);}}
+          style={{padding:'6px 12px',borderRadius:10,border:`1px solid ${libDefaultTab===tab?ACC:'#2a2a2a'}`,background:libDefaultTab===tab?ACC_DIM:'transparent',color:libDefaultTab===tab?ACC:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>
+          {tab==='liked'?t('likedTracks'):tab==='playlists'?t('playlists'):tab==='artists'?t('favArtists'):t('albums')}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
       <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:16}}>{lang==='ru'?'Твоя музыкальная коллекция':lang==='uk'?'Твоя музична колекція':'Your music collection'}</div>
       {/* Табы с иконками */}
       <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto'}}>
@@ -3198,7 +3218,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           {id:'albums',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='albums'?BG:ACC} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>,lbl:t('albums')},
         ] as const).map(tab=>(
           <button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
-            style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':ACC+'33'}`,background:libTab===tab.id?ACC:ACC_DIM,color:libTab===tab.id?BG:ACC,fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
+            style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',color:libTab===tab.id?BG:ACC,fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
             {tab.icon}{tab.lbl}
           </button>
         ))}
@@ -3209,7 +3229,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
     {libTab==='playlists'&&(
       <div style={{padding:'0 16px'}}>
         {/* Кнопки создать и импорт */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:10,marginBottom:20}}>
           <button onPointerDown={()=>setShowNewPl(true)}
             style={{padding:'14px 16px',background:ACC,border:'none',borderRadius:16,color:BG,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'opacity 0.2s ease',...tap}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
