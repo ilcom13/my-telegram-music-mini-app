@@ -1806,7 +1806,17 @@ useEffect(()=>{
   return()=>clearInterval(endedGuard);
 },[current?.id]);
 
-  useEffect(()=>{
+useEffect(()=>{
+    const onOnline=()=>{
+      const a=audio.current;
+      if(!a||!isPlayingRef.current)return;
+      if(a.paused&&!a.ended&&a.src){
+        const t=a.currentTime;
+        a.load();
+        a.currentTime=t;
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
+      }
+    };
     window.addEventListener('online',onOnline);
     return()=>window.removeEventListener('online',onOnline);
   },[]);
