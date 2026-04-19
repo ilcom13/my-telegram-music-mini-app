@@ -1457,11 +1457,11 @@ useEffect(()=>{
       if(Array.isArray(sv.playlists)&&sv.playlists.length>0){
         const serverPlTs=sv.playlists_ts||0;
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
-        if(serverPlTs>localPlTs){
-          setPlaylists(sv.playlists);
-          try{localStorage.setItem('p47',JSON.stringify(sv.playlists));}catch{}
-          try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
-        }
+if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
+  setPlaylists(sv.playlists);
+  try{localStorage.setItem('p47',JSON.stringify(sv.playlists));}catch{}
+  try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
+}
       }
       // Обновляем favArtists
       if(sv.favArtists!=null&&JSON.stringify(sv.favArtists)!==JSON.stringify(favArtistsRef.current)){
