@@ -3136,10 +3136,10 @@ const goBack=useCallback(()=>{
             style={{width:'100%',padding:'12px 14px 12px 36px',fontSize:14,background:'#1a1a1a',border:'1px solid #252525',borderRadius:14,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
         </div>
 <button onPointerDown={()=>doSearch()} disabled={loading}
-  style={{width:48,height:48,background:loading?BG3:ACC,border:'none',borderRadius:14,cursor:loading?'not-allowed':'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'background 0.2s ease',padding:0,...tap}}>
+  style={{width:46,height:46,background:loading?BG3:ACC,border:'none',borderRadius:14,cursor:loading?'not-allowed':'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'background 0.2s ease',padding:0,...tap}}>
   {loading
-    ?<div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${BG}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
-    :<svg viewBox="0 0 24 24" style={{width:24,height:24,display:'block',flexShrink:0}} fill="none" stroke={BG} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    ?<div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${BG}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>
+    :<svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block',flexShrink:0}} fill="none" stroke={BG} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
   }
 </button>
       </div>
