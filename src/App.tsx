@@ -1207,7 +1207,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
 
-  const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
+  const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>(libDefaultTab);
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
   const[addToPl,setAddToPl]=useState<Track|null>(null);
