@@ -1611,7 +1611,8 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
       if(d.tracks?.length){
-        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist));
+        const knownArtists=new Set(sortedArtists.map((a:string)=>a.toLowerCase()));
+const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownArtists.has(tr.artist.toLowerCase()));
         if(fresh.length>0){
           setRecs(fresh);
           try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
