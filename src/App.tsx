@@ -10,7 +10,7 @@ const BG3 = '#1e1e1e';
 const TEXT_PRIMARY = '#f0f0f0';
 const TEXT_SEC = '#9a9a9a';
 const TEXT_MUTED = '#5a5a5a';
-const NAV_H = 60;
+const NAV_H = 62;
 const TAP:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
 
 // ── ГЛОБАЛЬНЫЙ СВАЙП-МЕНЕДЖЕР ──
@@ -2151,7 +2151,7 @@ if(track.isArtist&&track.source==='audiomack')return;
       const addUniq=(arr:Track[],max:number)=>{
         let c=0;
         const sh=[...arr].sort(()=>Math.random()-0.5);
-        for(const t of sh){if(c>=max)break;if(!seen.has(t.id)){seen.add(t.id);result.push(t);c++;}}
+        for(const t of sh){if(c>=max)break;const titleKey=t.title.toLowerCase().trim();if(!seen.has(t.id)&&!seen.has(titleKey)){seen.add(t.id);seen.add(titleKey);result.push(t);c++;}}
       };
 
       addUniq(fresh1,12);   // знакомое
@@ -2573,7 +2573,7 @@ const goBack=useCallback(()=>{
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
     {id:'search',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,lbl:()=>t('search')},
     {id:'library',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,lbl:()=>t('library')},
-    {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>,lbl:()=>t('trending')},
+    {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill={a?ACC:'none'} stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease,fill 0.2s ease'}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,lbl:()=>t('trending')},
   ];
 
   if(fullPlayer&&current)return(
@@ -3187,7 +3187,7 @@ const goBack=useCallback(()=>{
             <div style={{padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontSize:24,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>
-                  {lang==='ru'?'✨ Для тебя':lang==='uk'?'✨ Для тебе':lang==='kk'?'✨ Сен үшін':lang==='pl'?'✨ Dla Ciebie':lang==='tr'?'✨ Senin İçin':'✨ For You'}
+                  {lang==='ru'?'❤️ Для тебя':lang==='uk'?'❤️ Для тебе':lang==='kk'?'❤️ Сен үшін':lang==='pl'?'❤️ Dla Ciebie':lang==='tr'?'❤️ Senin İçin':'❤️ For You'}
                 </div>
                 <div style={{fontSize:11,color:'#666',marginTop:3,letterSpacing:0.3}}>
                   {lang==='ru'?'Подобрано по твоему вкусу':lang==='uk'?'Підібрано за твоїм смаком':lang==='kk'?'Талғамыңа сай':lang==='pl'?'Dobrane dla Ciebie':lang==='tr'?'Zevkine göre seçildi':'Curated just for you'}
@@ -3220,7 +3220,7 @@ const goBack=useCallback(()=>{
             ):(
               <div style={{padding:'0 4px 16px'}}>
 {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}}/>
+                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
@@ -4045,7 +4045,7 @@ importSource={importSource} setImportSource={setImportSource}
  
       {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&screen!=='monthstats'&&(
-        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'rgba(10,10,10,0.97)',backdropFilter:'blur(20px)',borderTop:'1px solid #1e1e1e',display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H}}>
+        <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:20,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
           {NAV.map(item=>(
             <NavItem
               key={item.id}
