@@ -3145,7 +3145,7 @@ const goBack=useCallback(()=>{
         <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
           {(['sound','albums','covers','remix','artists'] as const).map(m=>(
             <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)}
-             style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC+'66':'#222'}`,background:searchMode===m?ACC_DIM:'transparent',color:searchMode===m?ACC:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}
+style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC+'66':'#222'}`,background:searchMode===m?ACC_DIM:'transparent',color:searchMode===m?ACC:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
               {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
             </button>
           ))}
@@ -3972,7 +3972,7 @@ importSource={importSource} setImportSource={setImportSource}
           style={{
             position:'fixed',
             left:8,right:8,
-            bottom:NAV_H+5,
+            bottom:NAV_H+14,
             height:96,
             background:'rgba(18,18,18,0.98)',
             backdropFilter:'blur(20px)',
@@ -4016,7 +4016,7 @@ importSource={importSource} setImportSource={setImportSource}
               </div>
             </button>
  
-            <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0,marginTop:2}}>
               <button className="prev-next-btn"
                 onPointerDown={(e)=>{e.stopPropagation();playPrev();}}
                 style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:playHistory.length>0?1:0.35,...tap}}>
@@ -4031,7 +4031,7 @@ importSource={importSource} setImportSource={setImportSource}
  
             <button className="play-btn"
               onPointerDown={(e)=>{e.stopPropagation();togglePlay();}}
-              style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,...tap}}>
+             style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,marginTop:2,...tap}}
               <PP sz="sm" col={BG}/>
             </button>
           </div>
