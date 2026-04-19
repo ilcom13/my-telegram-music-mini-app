@@ -3239,7 +3239,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           </button>
           <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}
             style={{padding:'14px 16px',background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:16,color:TEXT_PRIMARY,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.2s ease',...tap}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <div style={{textAlign:'left' as const}}>
               <div style={{fontSize:13,fontWeight:600}}>{lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}</div>
               <div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{lang==='ru'?'Из файла или ссылки':lang==='uk'?'З файлу або посилання':'From file or link'}</div>
