@@ -3183,48 +3183,101 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
   </div>
 )}
  
-        {/* ── LIBRARY ── */}
-        {screen==='library'&&(
-          <div className="screen-slide-up">
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
-            <div style={{display:'flex',gap:5,padding:'0 16px 12px',overflowX:'auto'}}>
-              {(['liked','playlists','artists','albums'] as const).map(tab=>(
-                <button key={tab} className={`tab-btn${libTab===tab?' tab-active':''}`} onPointerDown={()=>setLibTab(tab)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:libTab===tab?ACC:ACC_DIM,color:libTab===tab?BG:ACC,fontSize:12,fontWeight:libTab===tab?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
-                  {tab==='liked'?t('likedTracks'):tab==='playlists'?t('playlists'):tab==='artists'?t('favArtists'):t('albums')}
-                </button>
-              ))}
+{/* ── LIBRARY ── */}
+{screen==='library'&&(
+  <div className="screen-slide-up">
+    <div style={{padding:'18px 16px 6px'}}>
+      <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5,marginBottom:2}}>{t('library')}</div>
+      <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:16}}>{lang==='ru'?'Твоя музыкальная коллекция':lang==='uk'?'Твоя музична колекція':'Your music collection'}</div>
+      {/* Табы с иконками */}
+      <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto'}}>
+        {([
+          {id:'liked',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill={libTab==='liked'?BG:'none'} stroke={libTab==='liked'?BG:ACC} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,lbl:t('likedTracks')},
+          {id:'playlists',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='playlists'?BG:ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>,lbl:t('playlists')},
+          {id:'artists',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='artists'?BG:ACC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,lbl:t('favArtists')},
+          {id:'albums',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='albums'?BG:ACC} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>,lbl:t('albums')},
+        ] as const).map(tab=>(
+          <button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
+            style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':ACC+'33'}`,background:libTab===tab.id?ACC:ACC_DIM,color:libTab===tab.id?BG:ACC,fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
+            {tab.icon}{tab.lbl}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* PLAYLISTS TAB */}
+    {libTab==='playlists'&&(
+      <div style={{padding:'0 16px'}}>
+        {/* Кнопки создать и импорт */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+          <button onPointerDown={()=>setShowNewPl(true)}
+            style={{padding:'14px 16px',background:ACC,border:'none',borderRadius:16,color:BG,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'opacity 0.2s ease',...tap}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <div style={{textAlign:'left' as const}}>
+              <div style={{fontSize:13,fontWeight:700}}>{t('createPlaylist')}</div>
+              <div style={{fontSize:10,opacity:0.75,marginTop:1}}>{lang==='ru'?'Свой плейлист':lang==='uk'?'Свій плейлист':'Build your own'}</div>
             </div>
-            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>)}
-            {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
-            {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
-            {libTab==='playlists'&&(
-              <div style={{padding:'0 16px'}}>
-                <div style={{display:'flex',gap:7,marginBottom:9}}>
-                  <button onPointerDown={()=>setShowNewPl(true)} style={{flex:1,padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background 0.2s ease',...tap}}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{t('createPlaylist')}
-                  </button>
-                  <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}} style={{padding:'10px 13px',background:BG2,border:'1px solid #2a2a2a',borderRadius:11,color:TEXT_SEC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'background 0.2s ease',...tap}}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    {lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}
-                  </button>
-                </div>
-                {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
-                {playlists.map(pl=>(
-                  <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)} style={{background:BG2,border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#1e1e1e'}`,borderRadius:12,marginBottom:7,padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
-                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{getPlCovers(pl).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:5}}>
-                        {pl.name}
-                        {pinnedPlId===pl.id&&<span style={{fontSize:9,color:ACC,background:ACC_DIM,padding:'1px 5px',borderRadius:4}}>📌</span>}
-                      </div>
-                      <div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-                    </div>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                ))}              </div>
-            )}
+          </button>
+          <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}
+            style={{padding:'14px 16px',background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:16,color:TEXT_PRIMARY,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.2s ease',...tap}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style={{textAlign:'left' as const}}>
+              <div style={{fontSize:13,fontWeight:600}}>{lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}</div>
+              <div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{lang==='ru'?'Из файла или ссылки':lang==='uk'?'З файлу або посилання':'From file or link'}</div>
+            </div>
+          </button>
+        </div>
+        {showNewPl&&(
+          <div style={{background:BG2,border:'1px solid #242424',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+            <input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'10px 12px',fontSize:14,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            <div style={{display:'flex',gap:6}}>
+              <button onPointerDown={createPl} style={{flex:1,padding:'10px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>{t('create')}</button>
+              <button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'10px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>{t('cancel')}</button>
+            </div>
           </div>
         )}
+        {playlists.length>0&&(
+          <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:10,display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontWeight:600,color:TEXT_SEC}}>{lang==='ru'?'Мои плейлисты':lang==='uk'?'Мої плейлисти':'My Playlists'}</span>
+            <span>· {playlists.length} {lang==='ru'?'плейлист':lang==='uk'?'плейлист':'playlist'} · {playlists.reduce((s,p)=>s+p.tracks.length,0)} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</span>
+          </div>
+        )}
+        {playlists.map(pl=>(
+          <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)}
+            style={{background:'#141414',border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#222'}`,borderRadius:16,marginBottom:10,padding:'12px',cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'background 0.15s ease',...tap}}>
+            <div style={{width:64,height:64,borderRadius:12,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
+              {getPlCovers(pl).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={32} radius={0}/></div>)}
+              {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:ACC}}>🎵</div>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                {pl.name}
+                {pinnedPlId===pl.id&&<span style={{fontSize:9,color:ACC,background:ACC_DIM,padding:'1px 5px',borderRadius:4}}>📌</span>}
+              </div>
+              <div style={{fontSize:11,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+                {pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}
+              </div>
+            </div>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'#222',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        ))}
+        {playlists.length===0&&!showNewPl&&(
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:40,gap:12,animation:'fadeIn 0.3s ease'}}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Создай плейлисты для организации музыки':lang==='uk'?'Створи плейлисти для організації музики':'Create playlists to organize your music'}</div>
+            <button onPointerDown={()=>setShowNewPl(true)} style={{padding:'10px 24px',background:'#1a1a1a',border:`1px solid ${ACC}44`,borderRadius:12,color:ACC,fontSize:13,cursor:'pointer',...tap}}>+ {t('createPlaylist')}</button>
+          </div>
+        )}
+      </div>
+    )}
+    {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>)}
+    {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
+    {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
+  </div>
+)}
  
         {/* ── FOR YOU ── */}
         {screen==='trending'&&(
