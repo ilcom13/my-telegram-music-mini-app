@@ -3191,12 +3191,12 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
     <div style={{padding:'18px 16px 6px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:2}}>
   <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div>
-  <button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'#1a1a1a',border:'1px solid #282828',borderRadius:'50%',width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',...tap}}>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-  </button>
+<button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'none',border:'none',padding:4,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
+  <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block'}} fill="none" stroke={showLibSettings?ACC:'#666'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+</button>
 </div>
 {showLibSettings&&(
-  <div style={{background:'#141414',border:'1px solid #252525',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.2s ease both'}}>
+  <div style={{background:'#141414',border:'1px solid #252525',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
     <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Вкладка по умолчанию':lang==='uk'?'Вкладка за замовч.':'Default tab'}</div>
     <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
       {(['liked','playlists','artists','albums'] as const).map(tab=>(
@@ -3217,10 +3217,10 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           {id:'artists',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='artists'?BG:ACC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,lbl:t('favArtists')},
           {id:'albums',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='albums'?BG:ACC} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>,lbl:t('albums')},
         ] as const).map(tab=>(
-          <button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
-            style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
-            {tab.icon}{tab.lbl}
-          </button>
+<button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
+  style={{display:'flex',alignItems:'center',gap:5,padding:'7px 10px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',fontSize:11,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'background 0.25s ease,color 0.25s ease,border-color 0.25s ease',...tap}}>
+  {tab.icon}{tab.lbl}
+</button>
         ))}
       </div>
     </div>
