@@ -1084,6 +1084,7 @@ export default function App(){
   const[query,setQuery]=useState('');
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
+  const [recentSearches, setRecentSearches] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('rsrch47')||'[]');}catch{return [];}});
   const[results,setResults]=useState<Track[]>([]);
   const[loading,setLoading]=useState(false);
   const[error,setError]=useState('');
@@ -2315,6 +2316,7 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
 
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
+    setRecentSearches(prev=>{const n=[query.trim(),...prev.filter(q=>q!==query.trim())].slice(0,5);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});
     setLoading(true);setError('');setResults([]);
     try{
       if(searchSource==='audiomack'){
@@ -3102,41 +3104,75 @@ const goBack=useCallback(()=>{
           </div>
         )}
  
-        {/* ── SEARCH ── */}
-        {screen==='search'&&(
-          <div className="screen-slide-up">
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}>
-              <div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{t('search')}</div>
-              <div style={{display:'flex',gap:4,marginBottom:10,background:BG2,borderRadius:10,padding:3,width:'fit-content'}}>
-    {(['soundcloud','audiomack'] as const).map(src=>(
-    <button key={src} onPointerDown={()=>{setSearchSource(src);setResults([]);setError('');}}
-      style={{padding:'5px 14px',borderRadius:8,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:12,fontWeight:searchSource===src?600:400,cursor:'pointer',transition:'background 0.2s ease',...TAP}}>
-      {src==='soundcloud'?'SoundCloud':'Audiomack'}
-    </button>
-  ))}
-</div>
-              <div style={{display:'flex',gap:8}}>
-                <input className="search-input" type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
-                  style={{flex:1,padding:'11px 14px',fontSize:14,background:BG2,border:'1px solid #2a2a2a',borderRadius:12,color:TEXT_PRIMARY,outline:'none',width:'100%',boxSizing:'border-box' as const}}/>
-                <button onPointerDown={()=>doSearch()} disabled={loading} style={{padding:'11px 14px',background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:12,fontSize:13,fontWeight:600,cursor:loading?'not-allowed':'pointer',flexShrink:0,transition:'background 0.2s ease,transform 0.15s ease',...tap}}>{loading?'...':t('find')}</button>
-              </div>
-              {searchSource==='soundcloud'&&(
-              <div style={{display:'flex',gap:5,marginTop:9,overflowX:'auto'}}>
-                {(['sound','albums','covers','remix','artists'] as const).map(m=>(
-                  <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:searchMode===m?ACC:ACC_DIM,color:searchMode===m?BG:ACC,fontSize:12,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
-                    {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
-                  </button>
-                ))}
-              </div>
-            )}
-              {error&&<div style={{marginTop:8,padding:'8px 12px',background:'#1a0a0a',borderRadius:9,color:'#d06060',fontSize:12,animation:'fadeIn 0.2s ease'}}>{error}</div>}
-            </div>
-            <div style={{padding:'0 4px'}}>
-              {loading&&<div style={{textAlign:'center',paddingTop:36,color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
-              {results.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1})}/>)}
-            </div>
+{/* ── SEARCH ── */}
+{screen==='search'&&(
+  <div className="screen-slide-up">
+    <div style={{padding:'18px 16px 10px'}}>
+      {/* Заголовок */}
+      <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,marginBottom:4,letterSpacing:-0.5}}>{t('search')}</div>
+      <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:14}}>
+        {searchSource==='soundcloud'?'SC for remixes • Audiomack for official tracks':'Audiomack for official tracks • SC for remixes'}
+      </div>
+      {/* Переключатель платформы */}
+      <div style={{display:'flex',gap:0,marginBottom:14,background:'#1a1a1a',borderRadius:14,padding:4,border:'1px solid #252525'}}>
+        {(['soundcloud','audiomack'] as const).map(src=>(
+          <button key={src} onPointerDown={()=>{setSearchSource(src);setResults([]);setError('');}}
+            style={{flex:1,padding:'8px 0',borderRadius:10,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:13,fontWeight:searchSource===src?700:400,cursor:'pointer',transition:'all 0.2s ease',...TAP}}>
+            {src==='soundcloud'?'SoundCloud':'Audiomack'}
+          </button>
+        ))}
+      </div>
+      {/* Строка поиска */}
+      <div style={{display:'flex',gap:8,marginBottom:10}}>
+        <div style={{flex:1,position:'relative' as const,display:'flex',alignItems:'center'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{position:'absolute' as const,left:12,flexShrink:0}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input className="search-input" type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
+            style={{width:'100%',padding:'12px 14px 12px 36px',fontSize:14,background:'#1a1a1a',border:'1px solid #252525',borderRadius:14,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
+        </div>
+        <button onPointerDown={()=>doSearch()} disabled={loading}
+          style={{width:48,height:48,background:loading?BG3:ACC,color:loading?TEXT_MUTED:BG,border:'none',borderRadius:14,fontSize:18,cursor:loading?'not-allowed':'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'background 0.2s ease',...tap}}>
+          {loading?<div style={{width:16,height:16,borderRadius:'50%',border:`2px solid ${BG}`,borderTopColor:'transparent',animation:'spin 0.8s linear infinite'}}/>:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}
+        </button>
+      </div>
+      {/* Фильтры SoundCloud */}
+      {searchSource==='soundcloud'&&(
+        <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
+          {(['sound','albums','covers','remix','artists'] as const).map(m=>(
+            <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)}
+              style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC:'#252525'}`,background:searchMode===m?ACC:'transparent',color:searchMode===m?BG:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
+              {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
+            </button>
+          ))}
+        </div>
+      )}
+      {error&&<div style={{marginTop:8,padding:'8px 12px',background:'#1a0a0a',borderRadius:9,color:'#d06060',fontSize:12,animation:'fadeIn 0.2s ease'}}>{error}</div>}
+    </div>
+    {/* Последние поиски — показываем только если нет результатов */}
+    {!results.length&&!loading&&recentSearches.length>0&&(
+      <div style={{padding:'0 16px'}}>
+        <div style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:10}}>
+          {lang==='ru'?'Недавние поиски':lang==='uk'?'Нещодавні пошуки':'Recent searches'}
+        </div>
+        {recentSearches.map((q,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#141414',borderRadius:12,marginBottom:6,cursor:'pointer',border:'1px solid #1e1e1e',...tap}}
+            onPointerDown={()=>{setQuery(q);doSearch();}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC+'88'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 15 15"/></svg>
+            <span style={{flex:1,fontSize:13,color:TEXT_PRIMARY}}>{q}</span>
+            <button onPointerDown={e=>{e.stopPropagation();setRecentSearches(prev=>{const n=prev.filter((_,j)=>j!==i);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});}}
+              style={{background:'none',border:'none',cursor:'pointer',padding:4,color:TEXT_MUTED,...TAP}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-        )}
+        ))}
+      </div>
+    )}
+    {/* Результаты */}
+    <div style={{padding:'0 4px'}}>
+      {loading&&<div style={{textAlign:'center',paddingTop:36,color:TEXT_MUTED,fontSize:12}}>{t('loading')}</div>}
+      {results.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1})}/>)}
+    </div>
+  </div>
+)}
  
         {/* ── LIBRARY ── */}
         {screen==='library'&&(
