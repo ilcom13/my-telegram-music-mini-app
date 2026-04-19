@@ -3218,7 +3218,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           {id:'albums',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='albums'?BG:ACC} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>,lbl:t('albums')},
         ] as const).map(tab=>(
           <button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
-            style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',color:libTab===tab.id?BG:ACC,fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
+            style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',fontSize:12,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'all 0.2s ease',...tap}}>
             {tab.icon}{tab.lbl}
           </button>
         ))}
