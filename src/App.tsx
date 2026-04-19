@@ -617,20 +617,20 @@ lang: string;
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={onClose}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
+   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onClick={onClose}>
+  <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onClick={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0
           ? <div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
           : playlists.map(pl=>(
-              <div key={pl.id} onPointerDown={()=>onAdd(pl.id,track)}
+              <div key={pl.id} onClick={()=>onAdd(pl.id,track)}
                 style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span>
                 <span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span>
               </div>
             ))
         }
-        <button onPointerDown={onClose} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
+        <button onClick={onClose} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
       </div>
     </div>
   );
@@ -3057,7 +3057,7 @@ const goBack=useCallback(()=>{
               return(
               <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s ease both'}}>
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:8}}>📌 {lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген':lang==='pl'?'Przypięta playlista':'Pinned playlist'}</div>
-                <div onPointerDown={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
+                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
                   <div style={{width:52,height:52,borderRadius:9,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
                     {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
                     {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
@@ -3338,7 +3338,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
             ):(
               <div style={{padding:'0 4px 16px'}}>
 {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
+                  <TRow key={tr.id+'fy'} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
@@ -3890,7 +3890,7 @@ importSource={importSource} setImportSource={setImportSource}
         if(screen!=='library')return null;
         const isPinned=pinnedPlId===pl.id;
         const sortPl=(s:'default'|'az'|'za'|'artist'|'newest'|'oldest')=>{
-          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});
+          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}playlistsRef.current=n;setTimeout(()=>doFullSync(),100);return n;});
         };
         const curSort=pl.sort||'default';
         const sortedTracks=[...pl.tracks].sort((a,b)=>{
@@ -3941,7 +3941,7 @@ importSource={importSource} setImportSource={setImportSource}
               </div>
               {/* Action buttons */}
               <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
-                <button onPointerDown={()=>playPl(pl,sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
+                <button onPointerDown={()=>playPl(pl,curSort==='default'?pl.tracks:sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
                   <svg width="27" height="27" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
                   {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
                 </button>
