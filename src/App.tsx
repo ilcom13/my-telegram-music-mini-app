@@ -4031,7 +4031,7 @@ importSource={importSource} setImportSource={setImportSource}
  
             <button className="play-btn"
               onPointerDown={(e)=>{e.stopPropagation();togglePlay();}}
-             style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,marginTop:2,...tap}}
+style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,padding:0,boxShadow:`0 4px 16px ${ACC}44`,marginTop:2,...tap}}>
               <PP sz="sm" col={BG}/>
             </button>
           </div>
