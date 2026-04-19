@@ -3163,7 +3163,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#141414',borderRadius:12,marginBottom:6,cursor:'pointer',border:'1px solid #1e1e1e',...tap}}
             onPointerDown={()=>{setQuery(q);doSearch();}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC+'cc'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 15 15"/></svg>
-            <span style={{flex:1,fontSize:13,color:TEXT_PRIMARY}}>{q}</span>
+            <span style={{flex:1,fontSize:13,color:'#aaaaaa'}}>{q}</span>
             <button onPointerDown={e=>{e.stopPropagation();setRecentSearches(prev=>{const n=prev.filter((_,j)=>j!==i);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});}}
               style={{background:'none',border:'none',cursor:'pointer',padding:4,color:TEXT_MUTED,...TAP}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -3866,11 +3866,11 @@ importSource={importSource} setImportSource={setImportSource}
               {/* Action buttons */}
               <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
                 <button onPointerDown={()=>playPl(pl,sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  <svg width="27" height="27" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
                   {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
                 </button>
                 <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'13px 0',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:14,color:ACC,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                  <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
                   Shuffle
                 </button>
                 <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:52,height:52,borderRadius:14,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
