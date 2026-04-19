@@ -3110,9 +3110,15 @@ const goBack=useCallback(()=>{
     <div style={{padding:'18px 16px 10px'}}>
       {/* Заголовок */}
       <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,marginBottom:4,letterSpacing:-0.5}}>{t('search')}</div>
-      <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:14}}>
-        {searchSource==='soundcloud'?'SC for remixes • Audiomack for official tracks':'Audiomack for official tracks • SC for remixes'}
-      </div>
+<div style={{fontSize:11,color:'#686868',marginBottom:14,lineHeight:1.5}}>
+  {searchSource==='soundcloud'
+    ?(lang==='ru'?'SoundCloud — огромная библиотека и ремиксы. Audiomack — официальные треки в высоком качестве, есть то чего нет на SC'
+      :lang==='uk'?'SoundCloud — велика бібліотека та реміки. Audiomack — офіційні треки у високій якості'
+      :'SoundCloud — huge library & remixes. Audiomack — official tracks in high quality, has songs not on SC')
+    :(lang==='ru'?'Audiomack — официальные треки в высоком качестве. SoundCloud — больше ремиксов и редких треков'
+      :lang==='uk'?'Audiomack — офіційні треки у високій якості. SoundCloud — більше реміксів та рідкісних треків'
+      :'Audiomack — official tracks in high quality. SoundCloud — more remixes & rare tracks')}
+</div>
       {/* Переключатель платформы */}
       <div style={{display:'flex',gap:0,marginBottom:14,background:'#1a1a1a',borderRadius:14,padding:4,border:'1px solid #252525'}}>
         {(['soundcloud','audiomack'] as const).map(src=>(
@@ -3139,7 +3145,7 @@ const goBack=useCallback(()=>{
         <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
           {(['sound','albums','covers','remix','artists'] as const).map(m=>(
             <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)}
-              style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC:'#252525'}`,background:searchMode===m?ACC:'transparent',color:searchMode===m?BG:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
+             style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC+'66':'#222'}`,background:searchMode===m?ACC_DIM:'transparent',color:searchMode===m?ACC:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}
               {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
             </button>
           ))}
@@ -3156,7 +3162,7 @@ const goBack=useCallback(()=>{
         {recentSearches.map((q,i)=>(
           <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:'#141414',borderRadius:12,marginBottom:6,cursor:'pointer',border:'1px solid #1e1e1e',...tap}}
             onPointerDown={()=>{setQuery(q);doSearch();}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC+'88'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 15 15"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC+'cc'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 15 15"/></svg>
             <span style={{flex:1,fontSize:13,color:TEXT_PRIMARY}}>{q}</span>
             <button onPointerDown={e=>{e.stopPropagation();setRecentSearches(prev=>{const n=prev.filter((_,j)=>j!==i);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});}}
               style={{background:'none',border:'none',cursor:'pointer',padding:4,color:TEXT_MUTED,...TAP}}>
@@ -3230,7 +3236,7 @@ const goBack=useCallback(()=>{
                 </div>
               </div>
               <button onPointerDown={()=>loadForYou(true)} disabled={forYouLoading} style={{background:'none',border:'none',cursor:forYouLoading?'default':'pointer',padding:4,...tap,opacity:forYouLoading?0.5:1}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:forYouLoading?'spin 0.8s linear infinite':undefined}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:forYouLoading?'spin 0.8s linear infinite':undefined}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
               </button>
             </div>
             {forYouLoading&&forYouTracks.length===0?(
