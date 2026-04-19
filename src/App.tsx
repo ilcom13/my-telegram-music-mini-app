@@ -4045,7 +4045,7 @@ importSource={importSource} setImportSource={setImportSource}
  
       {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&screen!=='monthstats'&&(
-        <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(22,22,22,0.97)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:20,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
+        <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(12,12,12,0.98)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:20,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
           {NAV.map(item=>(
             <NavItem
               key={item.id}
