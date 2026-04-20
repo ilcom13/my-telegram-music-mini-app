@@ -2781,7 +2781,8 @@ const goBack=useCallback(()=>{
     </div>
   );
 
-  return(
+return(
+    <>
     {showOnboarding&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
@@ -4312,6 +4313,7 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
           ))}
         </div>
       )}
-    </div>
+</div>
+    </>
   );
 }
