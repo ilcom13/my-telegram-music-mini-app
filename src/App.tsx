@@ -1779,7 +1779,7 @@ a.addEventListener('volumechange',onVol);
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
 useEffect(()=>{
-  const endedGuard=setInterval(()=>{
+  const interval=setInterval(()=>{
     const a=audio.current;
     if(!a||!isPlayingRef.current)return;
     if(a.ended&&a.src){
@@ -1807,7 +1807,7 @@ useEffect(()=>{
       }
     }
   },2000);
-  return()=>clearInterval(endedGuard);
+  return()=>clearInterval(interval);
 },[]);
 
 useEffect(()=>{
@@ -2780,7 +2780,8 @@ const goBack=useCallback(()=>{
   );
 
 return(
-    <>
+    <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
+    <audio ref={audio}/>
     {showOnboarding&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
@@ -2909,8 +2910,8 @@ return(
     </div>
   </div>
 )}
-    <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
-      <audio ref={audio}/>
+    
+      
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -4356,6 +4357,5 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
         </div>
       )}
 </div>
-    </>
   );
 }
