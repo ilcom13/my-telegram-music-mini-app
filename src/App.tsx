@@ -2587,7 +2587,6 @@ const goBack=useCallback(()=>{
 
   if(fullPlayer&&current)return(
     <div style={{background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',transition:'background 0.8s ease',animation:'fadeIn 0.3s ease'}}>
-      <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
