@@ -2286,18 +2286,9 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
       const item=tracks[i];
       try{
         const q=`${item.sourceArtist} ${item.sourceTitle}`.trim();
-const r=await fetch(`${W}/search?q=${encodeURIComponent(q)}&limit=20&mode=sound`);
-const d=await r.json();
-const candidates=(d.tracks||[]).filter((tr:Track)=>{
-  const titleMatch=tr.title.toLowerCase().includes(item.sourceTitle.toLowerCase())||
-    item.sourceTitle.toLowerCase().includes(tr.title.toLowerCase().split('(')[0].trim());
-  const artistMatch=tr.artist.toLowerCase().includes(item.sourceArtist.toLowerCase().split(' ')[0])||
-    item.sourceArtist.toLowerCase().includes(tr.artist.toLowerCase().split(' ')[0]);
-  return titleMatch&&artistMatch;
-});
-const found:Track|null=candidates.length>0
-  ?candidates.reduce((best:Track,tr:Track)=>tr.plays>best.plays?tr:best,candidates[0])
-  :d.tracks?.[0]||null;
+        const r=await fetch(`${W}/search?q=${encodeURIComponent(q)}&limit=3&mode=sound`);
+        const d=await r.json();
+        const found:Track|null=d.tracks?.[0]||null;
         allResults.push({
           imported:{sourceTitle:item.sourceTitle,sourceArtist:item.sourceArtist},
           matched:found,
