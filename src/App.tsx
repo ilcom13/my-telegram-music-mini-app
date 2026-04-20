@@ -3935,7 +3935,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
 <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
   {/* Header с фоном */}
   <div style={{position:'relative',overflow:'hidden',minHeight:300}}>
-    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.35)',transform:'scale(1.15)'}} onError={()=>{}}/>}
+    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
     <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.7) 60%,'+BG+' 100%)'}}/>
     <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
       {/* Верхняя строка — назад + иконки действий */}
