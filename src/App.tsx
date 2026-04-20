@@ -1037,7 +1037,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
   return(
     <div
       ref={wrapRef}
-      draggable={curSort==='default'}
+      draggable={true}
       onDragStart={onDragStart}
       onDragOver={e=>e.preventDefault()}
       onDrop={onDrop}
@@ -2683,7 +2683,7 @@ const goBack=useCallback(()=>{
       )}
       <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
         <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
         <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>{t('nowPlaying')}</span>
@@ -3914,24 +3914,23 @@ importSource={importSource} setImportSource={setImportSource}
           setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}playlistsRef.current=n;setTimeout(()=>doFullSync(),100);return n;});
         };
         const curSort=pl.sort||'default';
-        const sortedTracks=[...pl.tracks].sort((a,b)=>{
-          if(curSort==='az')return a.title.localeCompare(b.title);
-          if(curSort==='za')return b.title.localeCompare(a.title);
-          if(curSort==='artist')return a.artist.localeCompare(b.artist);
-          if(curSort==='newest')return pl.tracks.indexOf(b)-pl.tracks.indexOf(a);
-          if(curSort==='oldest')return pl.tracks.indexOf(a)-pl.tracks.indexOf(b);
-          return 0;
-        });
+const sortedTracks=[...pl.tracks].sort((a,b)=>{
+  if(curSort==='az')return a.title.localeCompare(b.title);
+  if(curSort==='za')return b.title.localeCompare(a.title);
+  if(curSort==='artist')return a.artist.localeCompare(b.artist);
+  if(curSort==='newest')return pl.tracks.indexOf(b)-pl.tracks.indexOf(a);
+  if(curSort==='oldest')return pl.tracks.indexOf(a)-pl.tracks.indexOf(b);
+  return 0;
+});
         const coverSrc=sortedTracks[0]?.cover||'';
         const collageCovers=sortedTracks.slice(0,4);
-        const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
-          [lang==='ru'?'По умолчанию':lang==='uk'?'За замовч.':'Default','default'],
-          [lang==='ru'?'А → Я':lang==='uk'?'А → Я':'A → Z','az'],
-          [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
-          [lang==='ru'?'Артист':'Artist','artist'],
-          [lang==='ru'?'Новые':lang==='uk'?'Нові':'Newest','newest'],
-          [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
-        ];
+const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
+  [lang==='ru'?'Новые':lang==='uk'?'Нові':'Newest','newest'],
+  [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
+  [lang==='ru'?'Артист':'Artist','artist'],
+  [lang==='ru'?'А → Я':lang==='uk'?'А → Я':'A → Z','az'],
+  [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
+];
       return(
 <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
   {/* Header с фоном */}
@@ -3987,10 +3986,10 @@ importSource={importSource} setImportSource={setImportSource}
           Shuffle
         </button>
         <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:42,height:42,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
         <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:42,height:42,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
       </div>
       {/* Фильтры — только в режиме редактирования */}
@@ -4002,7 +4001,7 @@ importSource={importSource} setImportSource={setImportSource}
             ))}
           </div>
           <div style={{display:'flex',gap:8,marginBottom:8}}>
-            <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,tracks:sortedTracks}:p);playlistsRef.current=n;localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));return n;});setEditMode(false);doFullSync();}} style={{flex:1,padding:'9px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+            <button onPointerDown={()=>{const updated=playlists.map(p=>p.id===pl.id?{...p,sort:curSort}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setEditMode(false);setTimeout(()=>doFullSync(),100);}}
               {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
             </button>
             <button onPointerDown={()=>setEditMode(false)} style={{flex:1,padding:'9px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>
@@ -4080,7 +4079,7 @@ importSource={importSource} setImportSource={setImportSource}
                 onQueue={()=>smartAddQ(tr)}
                 onRemove={()=>removeFromPl(pl.id,tr.id)}
                 onMenu={()=>{setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
-                onDragStart={()=>{if(curSort==='default'){const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}}
+               onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}}
                 onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
               />
               );
