@@ -4084,7 +4084,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         <div style={{animation:'slideDown 0.2s ease both'}}>
           <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8,marginBottom:8}}>
             {SORTS.map(([label,val])=>(
-              <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:'1px solid #2a2a2a',background:'transparent',color:'#888',fontSize:11,fontWeight:400,cursor:'pointer',transition:'opacity 0.15s ease',active:{opacity:0.6},...tap}}
+<button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:'1px solid #2a2a2a',background:'transparent',color:'#888',fontSize:11,fontWeight:400,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}>{label}</button>
             ))}
           </div>
           <div style={{display:'flex',gap:8,marginBottom:8}}>
