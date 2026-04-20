@@ -2828,7 +2828,7 @@ return(
 :'Useful features'}</div>
           {[
   {icon:'👆',text:lang==='ru'?'Тапни на обложку в полноэкранном плеере — трек свернётся':lang==='uk'?'Торкнись обкладинки у плеєрі — трек згорнеться':lang==='kk'?'Толық экранда мұқабаны басыңыз — трек жиналады':lang==='pl'?'Dotknij okładkę w odtwarzaczu pełnoekranowym — zminimalizuje':lang==='tr'?'Tam ekran oynatıcıda kapağa dokun — küçülür':'Tap the cover in full player to minimize'},
-{icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':'lang==='kk'?'Плейлистті бас бетке бекіт':lang==='pl'?'Przypnij playlistę do strony głównej':lang==='tr'?'Çalma listesini ana sayfaya sabitle':'Pin a playlist to home screen for quick access'},
+{icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':lang==='kk'?'Плейлистті бас бетке бекіт':lang==='pl'?'Przypnij playlistę do strony głównej':lang==='tr'?'Çalma listesini ana sayfaya sabitle':'Pin a playlist to home screen for quick access'},
 {icon:'📊',text:lang==='ru'?'В профиле есть статистика — треки, время, стрик':lang==='uk'?'У профілі є статистика слухань':lang==='kk'?'Профильде тыңдау статистикасы бар':lang==='pl'?'W profilu znajdziesz statystyki słuchania':lang==='tr'?'Profilde dinleme istatistiklerinizi görebilirsiniz':'Check your listening stats in profile'},
 {icon:'❤️',text:lang==='ru'?'Свайп влево на треке — добавить в лайки':lang==='uk'?'Свайп вліво — додати в лайки':lang==='kk'?'Солға сырғытыңыз — лайктарға қосу':lang==='pl'?'Przesuń w lewo — dodaj do ulubionych':lang==='tr'?'Sola kaydır — beğenilere ekle':'Swipe left on a track to like it'},
           ].map((item,i)=>(
