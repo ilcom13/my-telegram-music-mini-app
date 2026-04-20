@@ -2788,7 +2788,7 @@ return(
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
       {onboardStep===0&&(
         <div style={{textAlign:'center' as const}}>
-          <div style={{fontSize:48,marginBottom:16}}>🎵</div>
+          <img src="https://i.ibb.co/JWJJ0Lp2/1.png" style={{width:80,height:80,borderRadius:'50%',marginBottom:16,objectFit:'cover' as const}} />
           <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,marginBottom:8,letterSpacing:-0.5}}>Forty7</div>
           <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>
             {lang==='ru'?'Добро пожаловать! Выбери язык интерфейса:'
