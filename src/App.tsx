@@ -1085,6 +1085,8 @@ export default function App(){
   const[query,setQuery]=useState('');
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
 const [showLibSettings,setShowLibSettings]=useState(false);
+  const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
+const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
   const [recentSearches, setRecentSearches] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('rsrch47')||'[]');}catch{return [];}});
@@ -2780,6 +2782,89 @@ const goBack=useCallback(()=>{
   );
 
   return(
+    {showOnboarding&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+      {onboardStep===0&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:48,marginBottom:16}}>🎵</div>
+          <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,marginBottom:8,letterSpacing:-0.5}}>Forty7</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>
+            {lang==='ru'?'Добро пожаловать! Выбери язык интерфейса:':lang==='uk'?'Ласкаво просимо! Обери мову:':'Welcome! Choose your language:'}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:24}}>
+            {(['ru','uk','en','kk','pl','tr'] as const).map(l=>(
+              <button key={l} onPointerDown={()=>chgLang(l)}
+                style={{padding:'10px 6px',borderRadius:12,border:`1px solid ${lang===l?ACC:'#2a2a2a'}`,background:lang===l?ACC_DIM:'#1a1a1a',color:lang===l?ACC:TEXT_SEC,fontSize:13,fontWeight:lang===l?700:400,cursor:'pointer',...tap}}>
+                {l==='ru'?'🇷🇺 Рус':l==='uk'?'🇺🇦 Укр':l==='en'?'🇬🇧 Eng':l==='kk'?'🇰🇿 Қаз':l==='pl'?'🇵🇱 Pol':'🇹🇷 Tur'}
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:20}}>{lang==='ru'?'Язык можно изменить в профиле в любое время':lang==='uk'?'Мову можна змінити в профілі':'You can change language anytime in profile'}</div>
+          <button onPointerDown={()=>setOnboardStep(1)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===1&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:44,marginBottom:16}}>💡</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Полезные функции':lang==='uk'?'Корисні функції':'Useful features'}</div>
+          {[
+            {icon:'👆',text:lang==='ru'?'Тапни на обложку в полноэкранном плеере — трек свернётся':lang==='uk'?'Торкнись обкладинки у плеєрі — трек згорнеться':'Tap the cover in full player to minimize'},
+            {icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':'Pin a playlist to home screen for quick access'},
+            {icon:'📊',text:lang==='ru'?'В профиле есть статистика — треки, время, стрик':lang==='uk'?'У профілі є статистика слухань':'Check your listening stats in profile'},
+            {icon:'❤️',text:lang==='ru'?'Свайп влево на треке — добавить в лайки':lang==='uk'?'Свайп вліво — додати в лайки':'Swipe left on a track to like it'},
+          ].map((item,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i<3?'1px solid #1e1e1e':'none',textAlign:'left' as const}}>
+              <div style={{fontSize:22,flexShrink:0,width:32,textAlign:'center' as const}}>{item.icon}</div>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.5}}>{item.text}</div>
+            </div>
+          ))}
+          <button onPointerDown={()=>setOnboardStep(2)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',marginTop:20,...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===2&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:44,marginBottom:16}}>🎧</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Два источника музыки':lang==='uk'?'Два джерела музики':'Two music sources'}</div>
+          <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
+            <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>☁️ SoundCloud</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Огромная библиотека, анрелизы, незацензуренные треки, ремиксы, спид-апы':lang==='uk'?'Величезна бібліотека, анреліз, нецензуровані треки, реміки':'Huge library, unreleased tracks, uncensored music, remixes, speed-ups'}</div>
+            </div>
+            <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>🎵 Audiomack</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Высокое качество звука, официальные релизы. Расширяет библиотеку если трек не найден на SC':lang==='uk'?'Висока якість звуку, офіційні релізи. Розширює бібліотеку':'High quality audio, official releases. Expands library when tracks not found on SC'}</div>
+            </div>
+          </div>
+          <button onPointerDown={()=>setOnboardStep(3)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===3&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:48,marginBottom:16}}>🚀</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{lang==='ru'?'Готово!':lang==='uk'?'Готово!':'Ready!'}</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>{lang==='ru'?'Послушай несколько треков — главная страница и статистика сформируются автоматически':lang==='uk'?'Послухай кілька треків — головна сторінка і статистика сформуються автоматично':'Listen to a few tracks and your home page and stats will be ready automatically'}</div>
+          <button onPointerDown={()=>{setShowOnboarding(false);try{localStorage.setItem('ob47','1');}catch{}setScreen('search');}}
+            style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'🎵 Начать слушать':lang==='uk'?'🎵 Почати слухати':'🎵 Start listening'}
+          </button>
+        </div>
+      )}
+      {/* Индикатор шагов */}
+      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:20}}>
+        {[0,1,2,3].map(s=>(
+          <div key={s} style={{width:s===onboardStep?20:6,height:6,borderRadius:3,background:s===onboardStep?ACC:'#333',transition:'all 0.3s ease'}}/>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
       <style>{`
@@ -3998,7 +4083,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         <div style={{animation:'slideDown 0.2s ease both'}}>
           <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8,marginBottom:8}}>
             {SORTS.map(([label,val])=>(
-              <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:`1px solid ${curSort===val?ACC:'#252525'}`,background:curSort===val?ACC_DIM:'transparent',color:curSort===val?ACC:TEXT_MUTED,fontSize:11,fontWeight:curSort===val?600:400,cursor:'pointer',transition:'all 0.15s ease',...tap}}>{label}</button>
+              <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:'1px solid #2a2a2a',background:'transparent',color:'#888',fontSize:11,fontWeight:400,cursor:'pointer',transition:'opacity 0.15s ease',active:{opacity:0.6},...tap}}
             ))}
           </div>
           <div style={{display:'flex',gap:8,marginBottom:8}}>
