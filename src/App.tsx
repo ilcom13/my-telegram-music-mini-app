@@ -1796,7 +1796,7 @@ useEffect(()=>{
       }
       return;
     }
-    if(a.paused&&!a.ended&&a.src&&!fullPlayer){
+    if(a.paused&&!a.ended&&a.src){
       if(a.readyState>=2){
         a.play().catch(()=>{});
       } else if(navigator.onLine&&a.readyState<2){
@@ -1806,9 +1806,9 @@ useEffect(()=>{
         a.play().catch(()=>{});
       }
     }
-  },1000);
+  },2000);
   return()=>clearInterval(endedGuard);
-},[current?.id,fullPlayer]);
+},[]);
 
 useEffect(()=>{
     const onOnline=()=>{
