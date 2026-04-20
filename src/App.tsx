@@ -2791,7 +2791,12 @@ return(
           <div style={{fontSize:48,marginBottom:16}}>🎵</div>
           <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,marginBottom:8,letterSpacing:-0.5}}>Forty7</div>
           <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>
-            {lang==='ru'?'Добро пожаловать! Выбери язык интерфейса:':lang==='uk'?'Ласкаво просимо! Обери мову:':'Welcome! Choose your language:'}
+            {lang==='ru'?'Добро пожаловать! Выбери язык интерфейса:'
+:lang==='uk'?'Ласкаво просимо! Обери мову:'
+:lang==='kk'?'Қош келдіңіз! Тілді таңдаңыз:'
+:lang==='pl'?'Witamy! Wybierz język interfejsu:'
+:lang==='tr'?'Hoş geldiniz! Arayüz dilini seçin:'
+:'Welcome! Choose your language:'}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:24}}>
             {(['ru','uk','en','kk','pl','tr'] as const).map(l=>(
@@ -2801,7 +2806,12 @@ return(
               </button>
             ))}
           </div>
-          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:20}}>{lang==='ru'?'Язык можно изменить в профиле в любое время':lang==='uk'?'Мову можна змінити в профілі':'You can change language anytime in profile'}</div>
+          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:20}}>{lang==='ru'?'Язык можно изменить в профиле в любое время'
+:lang==='uk'?'Мову можна змінити в профілі'
+:lang==='kk'?'Тілді профильде кез келген уақытта өзгертуге болады'
+:lang==='pl'?'Język można zmienić w profilu w dowolnym momencie'
+:lang==='tr'?'Dili profil sayfasından istediğiniz zaman değiştirebilirsiniz'
+:'You can change language anytime in profile'}</div>
           <button onPointerDown={()=>setOnboardStep(1)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
             {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
           </button>
@@ -2810,12 +2820,17 @@ return(
       {onboardStep===1&&(
         <div style={{textAlign:'center' as const}}>
           <div style={{fontSize:44,marginBottom:16}}>💡</div>
-          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Полезные функции':lang==='uk'?'Корисні функції':'Useful features'}</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Полезные функции'
+:lang==='uk'?'Корисні функції'
+:lang==='kk'?'Пайдалы мүмкіндіктер'
+:lang==='pl'?'Przydatne funkcje'
+:lang==='tr'?'Faydalı özellikler'
+:'Useful features'}</div>
           {[
-            {icon:'👆',text:lang==='ru'?'Тапни на обложку в полноэкранном плеере — трек свернётся':lang==='uk'?'Торкнись обкладинки у плеєрі — трек згорнеться':'Tap the cover in full player to minimize'},
-            {icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':'Pin a playlist to home screen for quick access'},
-            {icon:'📊',text:lang==='ru'?'В профиле есть статистика — треки, время, стрик':lang==='uk'?'У профілі є статистика слухань':'Check your listening stats in profile'},
-            {icon:'❤️',text:lang==='ru'?'Свайп влево на треке — добавить в лайки':lang==='uk'?'Свайп вліво — додати в лайки':'Swipe left on a track to like it'},
+  {icon:'👆',text:lang==='ru'?'Тапни на обложку в полноэкранном плеере — трек свернётся':lang==='uk'?'Торкнись обкладинки у плеєрі — трек згорнеться':lang==='kk'?'Толық экранда мұқабаны басыңыз — трек жиналады':lang==='pl'?'Dotknij okładkę w odtwarzaczu pełnoekranowym — zminimalizuje':lang==='tr'?'Tam ekran oynatıcıda kapağa dokun — küçülür':'Tap the cover in full player to minimize'},
+{icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':'lang==='kk'?'Плейлистті бас бетке бекіт':lang==='pl'?'Przypnij playlistę do strony głównej':lang==='tr'?'Çalma listesini ana sayfaya sabitle':'Pin a playlist to home screen for quick access'},
+{icon:'📊',text:lang==='ru'?'В профиле есть статистика — треки, время, стрик':lang==='uk'?'У профілі є статистика слухань':lang==='kk'?'Профильде тыңдау статистикасы бар':lang==='pl'?'W profilu znajdziesz statystyki słuchania':lang==='tr'?'Profilde dinleme istatistiklerinizi görebilirsiniz':'Check your listening stats in profile'},
+{icon:'❤️',text:lang==='ru'?'Свайп влево на треке — добавить в лайки':lang==='uk'?'Свайп вліво — додати в лайки':lang==='kk'?'Солға сырғытыңыз — лайктарға қосу':lang==='pl'?'Przesuń w lewo — dodaj do ulubionych':lang==='tr'?'Sola kaydır — beğenilere ekle':'Swipe left on a track to like it'},
           ].map((item,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i<3?'1px solid #1e1e1e':'none',textAlign:'left' as const}}>
               <div style={{fontSize:22,flexShrink:0,width:32,textAlign:'center' as const}}>{item.icon}</div>
@@ -2830,15 +2845,30 @@ return(
       {onboardStep===2&&(
         <div style={{textAlign:'center' as const}}>
           <div style={{fontSize:44,marginBottom:16}}>🎧</div>
-          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Два источника музыки':lang==='uk'?'Два джерела музики':'Two music sources'}</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Два источника музыки'
+:lang==='uk'?'Два джерела музики'
+:lang==='kk'?'Екі музыка көзі'
+:lang==='pl'?'Dwa źródła muzyki'
+:lang==='tr'?'İki müzik kaynağı'
+:'Two music sources'}</div>
           <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
             <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
               <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>☁️ SoundCloud</div>
-              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Огромная библиотека, анрелизы, незацензуренные треки, ремиксы, спид-апы':lang==='uk'?'Величезна бібліотека, анреліз, нецензуровані треки, реміки':'Huge library, unreleased tracks, uncensored music, remixes, speed-ups'}</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Огромная библиотека, анрелизы, незацензуренные треки, ремиксы, спид-апы'
+:lang==='uk'?'Величезна бібліотека, анреліз, нецензуровані треки, реміки'
+:lang==='kk'?'Үлкен кітапхана, анрелиздер, цензурасыз треклер, ремикстер'
+:lang==='pl'?'Ogromna biblioteka, niepublikowane utwory, nieocenzurowane tracki, remiksy'
+:lang==='tr'?'Dev kütüphane, yayınlanmamış parçalar, sansürsüz müzik, remixler'
+:'Huge library, unreleased tracks, uncensored music, remixes, speed-ups'}</div>
             </div>
             <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
               <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>🎵 Audiomack</div>
-              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Высокое качество звука, официальные релизы. Расширяет библиотеку если трек не найден на SC':lang==='uk'?'Висока якість звуку, офіційні релізи. Розширює бібліотеку':'High quality audio, official releases. Expands library when tracks not found on SC'}</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Высокое качество звука, официальные релизы. Расширяет библиотеку если трек не найден на SC'
+:lang==='uk'?'Висока якість звуку, офіційні релізи. Розширює бібліотеку'
+:lang==='kk'?'Жоғары сапалы дыбыс, ресми релиздер. SC-де табылмаса кітапхананы кеңейтеді'
+:lang==='pl'?'Wysoka jakość dźwięku, oficjalne wydania. Rozszerza bibliotekę gdy nie ma na SC'
+:lang==='tr'?'Yüksek ses kalitesi, resmi çıkışlar. SC\'de bulunamazsa kütüphaneyi genişletir'
+:'High quality audio, official releases. Expands library when tracks not found on SC'}</div>
             </div>
           </div>
           <button onPointerDown={()=>setOnboardStep(3)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
@@ -2849,11 +2879,26 @@ return(
       {onboardStep===3&&(
         <div style={{textAlign:'center' as const}}>
           <div style={{fontSize:48,marginBottom:16}}>🚀</div>
-          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{lang==='ru'?'Готово!':lang==='uk'?'Готово!':'Ready!'}</div>
-          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>{lang==='ru'?'Послушай несколько треков — главная страница и статистика сформируются автоматически':lang==='uk'?'Послухай кілька треків — головна сторінка і статистика сформуються автоматично':'Listen to a few tracks and your home page and stats will be ready automatically'}</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{lang==='ru'?'Готово!'
+:lang==='uk'?'Готово!'
+:lang==='kk'?'Дайын!'
+:lang==='pl'?'Gotowe!'
+:lang==='tr'?'Hazır!'
+:'Ready!'}</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>{lang==='ru'?'Послушай несколько треков — главная страница и статистика сформируются автоматически'
+:lang==='uk'?'Послухай кілька треків — головна сторінка і статистика сформуються автоматично'
+:lang==='kk'?'Бірнеше трек тыңда — бас бет пен статистика автоматты түрде қалыптасады'
+:lang==='pl'?'Posłuchaj kilku utworów — strona główna i statystyki sformują się automatycznie'
+:lang==='tr'?'Birkaç parça dinle — ana sayfa ve istatistikler otomatik oluşacak'
+:'Listen to a few tracks and your home page and stats will be ready automatically'}</div>
           <button onPointerDown={()=>{setShowOnboarding(false);try{localStorage.setItem('ob47','1');}catch{}setScreen('search');}}
             style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
-            {lang==='ru'?'🎵 Начать слушать':lang==='uk'?'🎵 Почати слухати':'🎵 Start listening'}
+            {lang==='ru'?'🎵 Начать слушать'
+:lang==='uk'?'🎵 Почати слухати'
+:lang==='kk'?'🎵 Тыңдауды бастау'
+:lang==='pl'?'🎵 Zacznij słuchać'
+:lang==='tr'?'🎵 Dinlemeye başla'
+:'🎵 Start listening'}
           </button>
         </div>
       )}
@@ -3122,7 +3167,6 @@ return(
             <div style={{position:'relative',zIndex:1}}>
             {history.length>0&&(
               <div style={{animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-                <SL text={t('recent')}/>
                 <div style={{display:'flex',gap:10,padding:'0 16px 12px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
                     <RecentCard
