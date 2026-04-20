@@ -617,20 +617,20 @@ lang: string;
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={onClose}>
-      <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onPointerDown={e=>e.stopPropagation()}>
+   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onClick={onClose}>
+  <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onClick={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0
           ? <div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
           : playlists.map(pl=>(
-              <div key={pl.id} onPointerDown={()=>onAdd(pl.id,track)}
+              <div key={pl.id} onClick={()=>onAdd(pl.id,track)}
                 style={{padding:'11px 12px',borderRadius:9,background:BG3,marginBottom:5,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span style={{color:'#d0d0d0',fontSize:13}}>{pl.name}</span>
                 <span style={{color:TEXT_MUTED,fontSize:11}}>{pl.tracks.length}</span>
               </div>
             ))
         }
-        <button onPointerDown={onClose} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
+        <button onClick={onClose} style={{width:'100%',padding:'10px',background:BG3,border:'none',borderRadius:9,color:TEXT_SEC,fontSize:12,cursor:'pointer',marginTop:4}}>{t('cancel')}</button>
       </div>
     </div>
   );
@@ -1020,9 +1020,10 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
 interface PlTrackRowProps {
   tr: Track; i: number; isActive: boolean; playing: boolean; isManualQ: boolean;
   curSort: string; onPlay:()=>void; onQueue:()=>void; onRemove:()=>void; onMenu:()=>void;
+  editMode?: boolean;
   onDragStart:()=>void; onDrop:()=>void;
 }
-const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:PlTrackRowProps){
+const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:PlTrackRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:onQueue,
     onLeft:onRemove,
@@ -1037,7 +1038,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
   return(
     <div
       ref={wrapRef}
-      draggable={curSort==='default'}
+      draggable={true}
       onDragStart={onDragStart}
       onDragOver={e=>e.preventDefault()}
       onDrop={onDrop}
@@ -1051,9 +1052,9 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
       </div>
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
-        {curSort==='default'
-          ?<div style={{color:'#333',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>
-          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+        {editMode
+          ?<div style={{color:'#555',fontSize:16,flexShrink:0,cursor:'grab',lineHeight:1,padding:'0 2px'}}>⠿</div>
+          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:20,textAlign:'right' as const,flexShrink:0,marginRight:4}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
           <div style={{position:'relative',flexShrink:0}}>
@@ -1082,6 +1083,10 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
+  const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
+const [showLibSettings,setShowLibSettings]=useState(false);
+  const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
+const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
   const [recentSearches, setRecentSearches] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('rsrch47')||'[]');}catch{return [];}});
@@ -1172,6 +1177,7 @@ export default function App(){
   const[openPlId,setOpenPlId]=useState<string|null>(null);
   const[plMenuId,setPlMenuId]=useState<string|null>(null);
   const[renamePlId,setRenamePlId]=useState<string|null>(null);
+  const [editMode, setEditMode] = useState(false);
   const[renamePlVal,setRenamePlVal]=useState('');
   const[pinnedPlId,setPinnedPlId]=useState<string|null>(()=>{try{return localStorage.getItem('pin47')||null;}catch{return null;}});
   const pinnedPlIdRef=useRef<string|null>(null);
@@ -1195,6 +1201,8 @@ export default function App(){
   const[forYouLoading,setForYouLoading]=useState(false);
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
+  const [censorNoticeShown, setCensorNoticeShown] = useState<boolean>(()=>{try{return localStorage.getItem('cns47')==='1';}catch{return false;}});
+const [showCensorNotice, setShowCensorNotice] = useState(false);
   const[importUrl,setImportUrl]=useState('');
 const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[importSource,setImportSource]=useState<'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz'>('none');
@@ -1205,7 +1213,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[importResults,setImportResults]=useState<{imported:{sourceTitle:string;sourceArtist:string};matched:Track|null;status:string}[]>([]);
   const[importProgress,setImportProgress]=useState(0);
 
-  const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>('liked');
+  const[libTab,setLibTab]=useState<'liked'|'playlists'|'artists'|'albums'>(libDefaultTab);
   const[showNewPl,setShowNewPl]=useState(false);
   const[newPlName,setNewPlName]=useState('');
   const[addToPl,setAddToPl]=useState<Track|null>(null);
@@ -1609,7 +1617,8 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
       if(d.tracks?.length){
-        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist));
+        const knownArtists=new Set(sortedArtists.map((a:string)=>a.toLowerCase()));
+const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownArtists.has(tr.artist.toLowerCase()));
         if(fresh.length>0){
           setRecs(fresh);
           try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
@@ -1769,57 +1778,53 @@ a.addEventListener('volumechange',onVol);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
-  useEffect(()=>{
+useEffect(()=>{
+  const endedGuard=setInterval(()=>{
+    const a=audio.current;
+    if(!a||!isPlayingRef.current)return;
+    if(a.ended&&a.src){
+      if(queueRef.current.length>0){
+        const nxt=queueRef.current[0];
+        setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
+        playDirect(nxt);
+      } else {
+        const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+        const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+        if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+        else setPlaying(false);
+      }
+      return;
+    }
+    if(a.paused&&!a.ended&&a.src&&!fullPlayer){
+      if(a.readyState>=2){
+        a.play().catch(()=>{});
+      } else if(navigator.onLine&&a.readyState<2){
+        const t=a.currentTime;
+        a.load();
+        a.currentTime=t;
+        a.play().catch(()=>{});
+      }
+    }
+  },1000);
+  return()=>clearInterval(endedGuard);
+},[current?.id,fullPlayer]);
+
+useEffect(()=>{
     const onOnline=()=>{
       const a=audio.current;
       if(!a||!isPlayingRef.current)return;
-if(a.paused&&a.src){
-  if(a.ended){
-    if(queueRef.current.length>0){
-      const nxt=queueRef.current[0];
-      setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
-      playDirect(nxt);
-    } else {
-      const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
-      const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
-      const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
-      if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
-    }
-    return;
-  }
-  if(a.readyState>=2){
-    a.play().catch(()=>{});
-  } else if(navigator.onLine&&a.readyState<2){
-    const t=a.currentTime;
-    a.load();
-    a.currentTime=t;
-    a.play().catch(()=>{});
-  }
-}
+      if(a.paused&&!a.ended&&a.src){
+        const t=a.currentTime;
+        a.load();
+        a.currentTime=t;
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
+      }
     };
     window.addEventListener('online',onOnline);
     return()=>window.removeEventListener('online',onOnline);
   },[]);
 
-  // Watchdog: если трек должен играть но остановился — перезапускаем
-  useEffect(()=>{
-const interval=setInterval(()=>{
-      const a=audio.current;
-      if(!a||!isPlayingRef.current)return;
-      if(a.paused&&!a.ended&&a.src){
-        if(a.readyState>=2){
-          a.play().catch(()=>{});
-        } else if(navigator.onLine&&a.readyState<2){
-          // Сеть есть но аудио завис — перезагружаем
-          const t=a.currentTime;
-          a.load();
-          a.currentTime=t;
-          a.play().catch(()=>{});
-        }
-      }
-    },2000);
-    return()=>clearInterval(interval);
-  },[]);
 
 const playDirect=async(track:Track)=>{
     let freshMp3=track.mp3;
@@ -2678,8 +2683,8 @@ const goBack=useCallback(()=>{
         </div>
       )}
       <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
-        <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
         <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>{t('nowPlaying')}</span>
@@ -2692,7 +2697,7 @@ const goBack=useCallback(()=>{
         <div
           className="full-player-cover"
           style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
-          onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
+          onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
         >
           <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.38, 380)} radius={0}/>
         </div>
@@ -2774,7 +2779,136 @@ const goBack=useCallback(()=>{
     </div>
   );
 
-  return(
+return(
+    <>
+    {showOnboarding&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+      {onboardStep===0&&(
+        <div style={{textAlign:'center' as const}}>
+          <img src="https://i.ibb.co/JWJJ0Lp2/1.png" style={{width:80,height:80,borderRadius:'50%',marginBottom:16,objectFit:'cover' as const}} />
+          <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,marginBottom:8,letterSpacing:-0.5}}>Forty7</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>
+            {lang==='ru'?'Добро пожаловать! Выбери язык интерфейса:'
+:lang==='uk'?'Ласкаво просимо! Обери мову:'
+:lang==='kk'?'Қош келдіңіз! Тілді таңдаңыз:'
+:lang==='pl'?'Witamy! Wybierz język interfejsu:'
+:lang==='tr'?'Hoş geldiniz! Arayüz dilini seçin:'
+:'Welcome! Choose your language:'}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:24}}>
+            {(['ru','uk','en','kk','pl','tr'] as const).map(l=>(
+              <button key={l} onPointerDown={()=>chgLang(l)}
+                style={{padding:'10px 6px',borderRadius:12,border:`1px solid ${lang===l?ACC:'#2a2a2a'}`,background:lang===l?ACC_DIM:'#1a1a1a',color:lang===l?ACC:TEXT_SEC,fontSize:13,fontWeight:lang===l?700:400,cursor:'pointer',...tap}}>
+                {l==='ru'?'🇷🇺 Рус':l==='uk'?'🇺🇦 Укр':l==='en'?'🇬🇧 Eng':l==='kk'?'🇰🇿 Қаз':l==='pl'?'🇵🇱 Pol':'🇹🇷 Tur'}
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:20}}>{lang==='ru'?'Язык можно изменить в профиле в любое время'
+:lang==='uk'?'Мову можна змінити в профілі'
+:lang==='kk'?'Тілді профильде кез келген уақытта өзгертуге болады'
+:lang==='pl'?'Język można zmienić w profilu w dowolnym momencie'
+:lang==='tr'?'Dili profil sayfasından istediğiniz zaman değiştirebilirsiniz'
+:'You can change language anytime in profile'}</div>
+          <button onPointerDown={()=>setOnboardStep(1)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===1&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:44,marginBottom:16}}>💡</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Полезные функции'
+:lang==='uk'?'Корисні функції'
+:lang==='kk'?'Пайдалы мүмкіндіктер'
+:lang==='pl'?'Przydatne funkcje'
+:lang==='tr'?'Faydalı özellikler'
+:'Useful features'}</div>
+          {[
+  {icon:'👆',text:lang==='ru'?'Тапни на обложку в полноэкранном плеере — трек свернётся':lang==='uk'?'Торкнись обкладинки у плеєрі — трек згорнеться':lang==='kk'?'Толық экранда мұқабаны басыңыз — трек жиналады':lang==='pl'?'Dotknij okładkę w odtwarzaczu pełnoekranowym — zminimalizuje':lang==='tr'?'Tam ekran oynatıcıda kapağa dokun — küçülür':'Tap the cover in full player to minimize'},
+{icon:'📌',text:lang==='ru'?'Закрепи плейлист на главной — быстрый доступ':lang==='uk'?'Закріпи плейлист на головній':lang==='kk'?'Плейлистті бас бетке бекіт':lang==='pl'?'Przypnij playlistę do strony głównej':lang==='tr'?'Çalma listesini ana sayfaya sabitle':'Pin a playlist to home screen for quick access'},
+{icon:'📊',text:lang==='ru'?'В профиле есть статистика — треки, время, стрик':lang==='uk'?'У профілі є статистика слухань':lang==='kk'?'Профильде тыңдау статистикасы бар':lang==='pl'?'W profilu znajdziesz statystyki słuchania':lang==='tr'?'Profilde dinleme istatistiklerinizi görebilirsiniz':'Check your listening stats in profile'},
+{icon:'❤️',text:lang==='ru'?'Свайп влево на треке — добавить в лайки':lang==='uk'?'Свайп вліво — додати в лайки':lang==='kk'?'Солға сырғытыңыз — лайктарға қосу':lang==='pl'?'Przesuń w lewo — dodaj do ulubionych':lang==='tr'?'Sola kaydır — beğenilere ekle':'Swipe left on a track to like it'},
+          ].map((item,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i<3?'1px solid #1e1e1e':'none',textAlign:'left' as const}}>
+              <div style={{fontSize:22,flexShrink:0,width:32,textAlign:'center' as const}}>{item.icon}</div>
+              <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.5}}>{item.text}</div>
+            </div>
+          ))}
+          <button onPointerDown={()=>setOnboardStep(2)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',marginTop:20,...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===2&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:44,marginBottom:16}}>🎧</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,letterSpacing:-0.5}}>{lang==='ru'?'Два источника музыки'
+:lang==='uk'?'Два джерела музики'
+:lang==='kk'?'Екі музыка көзі'
+:lang==='pl'?'Dwa źródła muzyki'
+:lang==='tr'?'İki müzik kaynağı'
+:'Two music sources'}</div>
+          <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
+            <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>☁️ SoundCloud</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Огромная библиотека, анрелизы, незацензуренные треки, ремиксы, спид-апы'
+:lang==='uk'?'Величезна бібліотека, анреліз, нецензуровані треки, реміки'
+:lang==='kk'?'Үлкен кітапхана, анрелиздер, цензурасыз треклер, ремикстер'
+:lang==='pl'?'Ogromna biblioteka, niepublikowane utwory, nieocenzurowane tracki, remiksy'
+:lang==='tr'?'Dev kütüphane, yayınlanmamış parçalar, sansürsüz müzik, remixler'
+:'Huge library, unreleased tracks, uncensored music, remixes, speed-ups'}</div>
+            </div>
+            <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>🎵 Audiomack</div>
+              <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Высокое качество звука, официальные релизы. Расширяет библиотеку если трек не найден на SC'
+:lang==='uk'?'Висока якість звуку, офіційні релізи. Розширює бібліотеку'
+:lang==='kk'?'Жоғары сапалы дыбыс, ресми релиздер. SC-де табылмаса кітапхананы кеңейтеді'
+:lang==='pl'?'Wysoka jakość dźwięku, oficjalne wydania. Rozszerza bibliotekę gdy nie ma na SC'
+:lang==='tr'?'Yüksek ses kalitesi, resmi çıkışlar. SC\'de bulunamazsa kütüphaneyi genişletir'
+:'High quality audio, official releases. Expands library when tracks not found on SC'}</div>
+            </div>
+          </div>
+          <button onPointerDown={()=>setOnboardStep(3)} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'Далее →':lang==='uk'?'Далі →':'Next →'}
+          </button>
+        </div>
+      )}
+      {onboardStep===3&&(
+        <div style={{textAlign:'center' as const}}>
+          <div style={{fontSize:48,marginBottom:16}}>🚀</div>
+          <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:12,letterSpacing:-0.5}}>{lang==='ru'?'Готово!'
+:lang==='uk'?'Готово!'
+:lang==='kk'?'Дайын!'
+:lang==='pl'?'Gotowe!'
+:lang==='tr'?'Hazır!'
+:'Ready!'}</div>
+          <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:24,lineHeight:1.6}}>{lang==='ru'?'Послушай несколько треков — главная страница и статистика сформируются автоматически'
+:lang==='uk'?'Послухай кілька треків — головна сторінка і статистика сформуються автоматично'
+:lang==='kk'?'Бірнеше трек тыңда — бас бет пен статистика автоматты түрде қалыптасады'
+:lang==='pl'?'Posłuchaj kilku utworów — strona główna i statystyki sformują się automatycznie'
+:lang==='tr'?'Birkaç parça dinle — ana sayfa ve istatistikler otomatik oluşacak'
+:'Listen to a few tracks and your home page and stats will be ready automatically'}</div>
+          <button onPointerDown={()=>{setShowOnboarding(false);try{localStorage.setItem('ob47','1');}catch{}setScreen('search');}}
+            style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',...tap}}>
+            {lang==='ru'?'🎵 Начать слушать'
+:lang==='uk'?'🎵 Почати слухати'
+:lang==='kk'?'🎵 Тыңдауды бастау'
+:lang==='pl'?'🎵 Zacznij słuchać'
+:lang==='tr'?'🎵 Dinlemeye başla'
+:'🎵 Start listening'}
+          </button>
+        </div>
+      )}
+      {/* Индикатор шагов */}
+      <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:20}}>
+        {[0,1,2,3].map(s=>(
+          <div key={s} style={{width:s===onboardStep?20:6,height:6,borderRadius:3,background:s===onboardStep?ACC:'#333',transition:'all 0.3s ease'}}/>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
       <audio ref={audio}/>
       <style>{`
@@ -3031,7 +3165,6 @@ const goBack=useCallback(()=>{
             <div style={{position:'relative',zIndex:1}}>
             {history.length>0&&(
               <div style={{animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-                <SL text={t('recent')}/>
                 <div style={{display:'flex',gap:10,padding:'0 16px 12px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
                     <RecentCard
@@ -3055,7 +3188,7 @@ const goBack=useCallback(()=>{
               return(
               <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s ease both'}}>
                 <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:8}}>📌 {lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген':lang==='pl'?'Przypięta playlista':'Pinned playlist'}</div>
-                <div onPointerDown={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
+                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
                   <div style={{width:52,height:52,borderRadius:9,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
                     {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
                     {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
@@ -3183,48 +3316,138 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
   </div>
 )}
  
-        {/* ── LIBRARY ── */}
-        {screen==='library'&&(
-          <div className="screen-slide-up">
-            <div style={{paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12}}><div style={{fontSize:22,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div></div>
-            <div style={{display:'flex',gap:5,padding:'0 16px 12px',overflowX:'auto'}}>
-              {(['liked','playlists','artists','albums'] as const).map(tab=>(
-                <button key={tab} className={`tab-btn${libTab===tab?' tab-active':''}`} onPointerDown={()=>setLibTab(tab)} style={{padding:'5px 13px',borderRadius:16,border:'none',background:libTab===tab?ACC:ACC_DIM,color:libTab===tab?BG:ACC,fontSize:12,fontWeight:libTab===tab?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
-                  {tab==='liked'?t('likedTracks'):tab==='playlists'?t('playlists'):tab==='artists'?t('favArtists'):t('albums')}
-                </button>
-              ))}
+{/* ── LIBRARY ── */}
+{screen==='library'&&(
+  <div className="screen-slide-up">
+    <div style={{padding:'18px 16px 6px'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:2}}>
+  <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div>
+<button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'none',border:'none',padding:4,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
+ <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block',transition:'stroke 0.2s ease'}} fill="none" stroke={showLibSettings?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+</button>
+</div>
+{showLibSettings&&(
+  <div style={{background:'#141414',border:'1px solid #252525',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+    <div style={{fontSize:11,color:TEXT_MUTED,marginBottom:8,fontWeight:600,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Вкладка по умолчанию':lang==='uk'?'Вкладка за замовч.':'Default tab'}</div>
+    <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
+      {(['liked','playlists','artists','albums'] as const).map(tab=>(
+        <button key={tab} onPointerDown={()=>{setLibDefaultTab(tab);try{localStorage.setItem('libdef47',tab);}catch{}setShowLibSettings(false);}}
+          style={{padding:'6px 12px',borderRadius:10,border:`1px solid ${libDefaultTab===tab?ACC:'#2a2a2a'}`,background:libDefaultTab===tab?ACC_DIM:'transparent',color:libDefaultTab===tab?ACC:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>
+          {tab==='liked'?t('likedTracks'):tab==='playlists'?t('playlists'):tab==='artists'?t('favArtists'):t('albums')}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+      <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:16}}>{lang==='ru'?'Твоя музыкальная коллекция':lang==='uk'?'Твоя музична колекція':'Your music collection'}</div>
+      {/* Табы с иконками */}
+      <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto'}}>
+        {([
+          {id:'liked',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill={libTab==='liked'?BG:'none'} stroke={libTab==='liked'?BG:ACC} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,lbl:t('likedTracks')},
+          {id:'playlists',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='playlists'?BG:ACC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>,lbl:t('playlists')},
+          {id:'artists',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='artists'?BG:ACC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,lbl:t('favArtists')},
+          {id:'albums',icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={libTab==='albums'?BG:ACC} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>,lbl:t('albums')},
+        ] as const).map(tab=>(
+<button key={tab.id} onPointerDown={()=>setLibTab(tab.id as any)}
+  style={{display:'flex',alignItems:'center',gap:5,padding:'7px 10px',borderRadius:20,border:`1px solid ${libTab===tab.id?'transparent':'#282828'}`,background:libTab===tab.id?ACC:'#181818',color:libTab===tab.id?BG:'#aaaaaa',fontSize:11,fontWeight:libTab===tab.id?700:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,transition:'background 0.25s ease,color 0.25s ease,border-color 0.25s ease',...tap}}>
+  {tab.icon}{tab.lbl}
+</button>
+        ))}
+      </div>
+    </div>
+
+    {/* PLAYLISTS TAB */}
+    {libTab==='playlists'&&(
+      <div style={{padding:'0 16px'}}>
+        {/* Кнопки создать и импорт */}
+        <div style={{display:'grid',gridTemplateColumns:'3fr 2fr',gap:10,marginBottom:20}}>
+          <button onPointerDown={()=>setShowNewPl(true)}
+            style={{padding:'14px 16px',background:ACC,border:'none',borderRadius:16,color:BG,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'opacity 0.2s ease',...tap}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <div style={{textAlign:'left' as const}}>
+              <div style={{fontSize:13,fontWeight:700}}>{t('createPlaylist')}</div>
+              <div style={{fontSize:10,opacity:0.75,marginTop:1}}>{lang==='ru'?'Свой плейлист':lang==='uk'?'Свій плейлист':'Build your own'}</div>
             </div>
-            {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>)}
-            {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
-            {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
-            {libTab==='playlists'&&(
-              <div style={{padding:'0 16px'}}>
-                <div style={{display:'flex',gap:7,marginBottom:9}}>
-                  <button onPointerDown={()=>setShowNewPl(true)} style={{flex:1,padding:'10px',background:ACC_DIM,border:`1px dashed ${ACC}44`,borderRadius:11,color:ACC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background 0.2s ease',...tap}}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{t('createPlaylist')}
-                  </button>
-                  <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}} style={{padding:'10px 13px',background:BG2,border:'1px solid #2a2a2a',borderRadius:11,color:TEXT_SEC,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'background 0.2s ease',...tap}}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    {lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}
-                  </button>
-                </div>
-                {showNewPl&&(<div style={{background:BG2,border:'1px solid #242424',borderRadius:11,padding:'11px',marginBottom:9,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}><input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'8px 11px',fontSize:13,background:BG,border:'1px solid #2a2a2a',borderRadius:7,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:4}}/><div style={{display:'flex',gap:6}}><button onPointerDown={createPl} style={{flex:1,padding:'8px',background:ACC,border:'none',borderRadius:7,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',transition:'transform 0.15s ease',...tap}}>{t('create')}</button><button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'8px',background:BG3,border:'none',borderRadius:7,color:TEXT_SEC,fontSize:12,cursor:'pointer',...tap}}>{t('cancel')}</button></div></div>)}
-                {playlists.map(pl=>(
-                  <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)} style={{background:BG2,border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#1e1e1e'}`,borderRadius:12,marginBottom:7,padding:'11px 13px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.15s ease',...tap}}>
-                    <div style={{width:46,height:46,borderRadius:7,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>{getPlCovers(pl).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={23} radius={0}/></div>)}{pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,color:ACC}}>🎵</div>}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:5}}>
-                        {pl.name}
-                        {pinnedPlId===pl.id&&<span style={{fontSize:9,color:ACC,background:ACC_DIM,padding:'1px 5px',borderRadius:4}}>📌</span>}
-                      </div>
-                      <div style={{fontSize:10,color:TEXT_SEC,marginTop:2}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-                    </div>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                ))}              </div>
-            )}
+          </button>
+          <button onPointerDown={()=>{if(!censorNoticeShown){setShowCensorNotice(true);}else{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}}
+            style={{padding:'14px 16px',background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:16,color:TEXT_PRIMARY,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.2s ease',...tap}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div style={{textAlign:'left' as const}}>
+              <div style={{fontSize:13,fontWeight:600}}>{lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}</div>
+              <div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{lang==='ru'?'Из файла или ссылки':lang==='uk'?'З файлу або посилання':'From file or link'}</div>
+            </div>
+          </button>
+        </div>
+        {showNewPl&&(
+          <div style={{background:BG2,border:'1px solid #242424',borderRadius:14,padding:'12px',marginBottom:12,animation:'slideDown 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+            <input autoFocus placeholder={t('playlistName')} value={newPlName} onChange={e=>setNewPlName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createPl()} style={{width:'100%',padding:'10px 12px',fontSize:14,background:BG,border:'1px solid #2a2a2a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const,marginBottom:8}}/>
+            <div style={{display:'flex',gap:6}}>
+              <button onPointerDown={createPl} style={{flex:1,padding:'10px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>{t('create')}</button>
+              <button onPointerDown={()=>{setShowNewPl(false);setNewPlName('');}} style={{flex:1,padding:'10px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>{t('cancel')}</button>
+            </div>
           </div>
         )}
+        {showCensorNotice&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}} onClick={()=>{setShowCensorNotice(false);setCensorNoticeShown(true);try{localStorage.setItem('cns47','1');}catch{}setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}>
+            <div style={{background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:18,padding:'24px 20px',maxWidth:340,animation:'scaleIn 0.2s ease both'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:24,marginBottom:12,textAlign:'center' as const}}>⚠️</div>
+              <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,marginBottom:10,textAlign:'center' as const}}>
+                {lang==='ru'?'Важно об импорте':'Important about import'}
+              </div>
+              <div style={{fontSize:13,color:'#aaa',lineHeight:1.6,marginBottom:18}}>
+                {lang==='ru'
+                  ?'С 1 марта российские треки на SoundCloud подверглись цензуре. При переносе плейлиста через сторонний сервис высока вероятность что попадут зацензуренные версии треков не от оригинальных артистов. Чтобы избежать этого — найди нужный трек через поиск вручную, самый популярный вариант обычно оригинальный.'
+                  :'Since March 1st, Russian tracks on SoundCloud have been censored. When transferring a playlist through a third-party service, there is a high chance of getting censored versions. To avoid this — find the track manually via search, the most popular version is usually the original.'}
+              </div>
+              <button onPointerDown={()=>{setShowCensorNotice(false);setCensorNoticeShown(true);try{localStorage.setItem('cns47','1');}catch{}setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}
+                style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>
+                {lang==='ru'?'Понятно, продолжить':'Got it, continue'}
+              </button>
+            </div>
+          </div>
+        )}
+        {playlists.length>0&&(
+          <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:10,display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontWeight:600,color:TEXT_SEC}}>{lang==='ru'?'Мои плейлисты':lang==='uk'?'Мої плейлисти':'My Playlists'}</span>
+            <span>· {playlists.length} {lang==='ru'?'плейлист':lang==='uk'?'плейлист':'playlist'} · {playlists.reduce((s,p)=>s+p.tracks.length,0)} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</span>
+          </div>
+        )}
+        {[...playlists].sort((a,b)=>a.id===pinnedPlId?-1:b.id===pinnedPlId?1:0).map(pl=>(
+          <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)}
+            style={{background:'#141414',border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#222'}`,borderRadius:16,marginBottom:10,padding:'12px',cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'background 0.15s ease',...tap}}>
+            <div style={{width:64,height:64,borderRadius:12,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
+              {getPlCovers(pl).map((tr,i)=><div key={i} style={{overflow:'hidden',width:'100%',height:'100%'}}><Img src={tr.cover} size={32} radius={0}/></div>)}
+              {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:ACC}}>🎵</div>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                {pl.name}
+                {pinnedPlId===pl.id&&<span style={{fontSize:9,color:ACC,background:ACC_DIM,padding:'1px 5px',borderRadius:4}}>📌</span>}
+              </div>
+              <div style={{fontSize:11,color:TEXT_MUTED,display:'flex',alignItems:'center',gap:4}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+                {pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}
+              </div>
+            </div>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'#222',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        ))}
+        {playlists.length===0&&!showNewPl&&(
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:40,gap:12,animation:'fadeIn 0.3s ease'}}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Создай плейлисты для организации музыки':lang==='uk'?'Створи плейлисти для організації музики':'Create playlists to organize your music'}</div>
+            <button onPointerDown={()=>setShowNewPl(true)} style={{padding:'10px 24px',background:'#1a1a1a',border:`1px solid ${ACC}44`,borderRadius:12,color:ACC,fontSize:13,cursor:'pointer',...tap}}>+ {t('createPlaylist')}</button>
+          </div>
+        )}
+      </div>
+    )}
+    {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>)}
+    {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
+    {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
+  </div>
+)}
  
         {/* ── FOR YOU ── */}
         {screen==='trending'&&(
@@ -3265,7 +3488,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
             ):(
               <div style={{padding:'0 4px 16px'}}>
 {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
+                  <TRow key={tr.id+'fy'} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
@@ -3817,80 +4040,107 @@ importSource={importSource} setImportSource={setImportSource}
         if(screen!=='library')return null;
         const isPinned=pinnedPlId===pl.id;
         const sortPl=(s:'default'|'az'|'za'|'artist'|'newest'|'oldest')=>{
-          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});
+          setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,sort:s}:p);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}playlistsRef.current=n;setTimeout(()=>doFullSync(),100);return n;});
         };
         const curSort=pl.sort||'default';
-        const sortedTracks=[...pl.tracks].sort((a,b)=>{
-          if(curSort==='az')return a.title.localeCompare(b.title);
-          if(curSort==='za')return b.title.localeCompare(a.title);
-          if(curSort==='artist')return a.artist.localeCompare(b.artist);
-          if(curSort==='newest')return pl.tracks.indexOf(b)-pl.tracks.indexOf(a);
-          if(curSort==='oldest')return pl.tracks.indexOf(a)-pl.tracks.indexOf(b);
-          return 0;
-        });
+const sortedTracks=[...pl.tracks].sort((a,b)=>{
+  if(curSort==='az')return a.title.localeCompare(b.title);
+  if(curSort==='za')return b.title.localeCompare(a.title);
+  if(curSort==='artist')return a.artist.localeCompare(b.artist);
+  if(curSort==='newest')return pl.tracks.indexOf(b)-pl.tracks.indexOf(a);
+  if(curSort==='oldest')return pl.tracks.indexOf(a)-pl.tracks.indexOf(b);
+  return 0;
+});
         const coverSrc=sortedTracks[0]?.cover||'';
         const collageCovers=sortedTracks.slice(0,4);
-        const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
-          [lang==='ru'?'По умолчанию':lang==='uk'?'За замовч.':'Default','default'],
-          [lang==='ru'?'А → Я':lang==='uk'?'А → Я':'A → Z','az'],
-          [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
-          [lang==='ru'?'Артист':'Artist','artist'],
-          [lang==='ru'?'Новые':lang==='uk'?'Нові':'Newest','newest'],
-          [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
-        ];
-        return(
-        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
-          {/* Header */}
-          <div style={{position:'relative',overflow:'hidden'}}>
-            {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(24px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>}
-            <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 0%,rgba(14,14,14,0.85) 70%,'+BG+' 100%)'}}/>
-            <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
-              <button onPointerDown={()=>setOpenPlPage(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,marginBottom:14,...tap}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
-              </button>
-              <div style={{display:'flex',gap:16,alignItems:'flex-end',marginBottom:18}}>
-                <div style={{width:100,height:100,borderRadius:14,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
-                  {collageCovers.map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={50} radius={0}/></div>)}
-                  {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,color:ACC}}>🎵</div>}
-                </div>
-                <div style={{flex:1,minWidth:0,paddingBottom:4}}>
-                  {renamePlId===pl.id?(
-                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                      <input autoFocus value={renamePlVal} onChange={e=>setRenamePlVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}if(e.key==='Escape')setRenamePlId(null);}} style={{flex:1,padding:'8px 12px',fontSize:15,background:'rgba(40,40,40,0.9)',border:'1px solid #3a3a3a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',fontWeight:700}}/>
-                      <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}} style={{padding:'8px 14px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>✓</button>
-                    </div>
-                  ):(
-                    <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}{isPinned&&<span style={{fontSize:14,marginLeft:8}}>📌</span>}</div>
-                  )}
-                  <div style={{fontSize:12,color:TEXT_SEC,marginTop:5}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-                </div>
-              </div>
-              {/* Action buttons */}
-              <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
-                <button onPointerDown={()=>playPl(pl,sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
-                  <svg width="27" height="27" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                  {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
-                </button>
-                <button onPointerDown={()=>shufflePl(pl)} style={{flex:1,padding:'13px 0',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:14,color:ACC,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
-                  <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-                  Shuffle
-                </button>
-                <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:52,height:52,borderRadius:14,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-                </button>
-                <button onPointerDown={e=>{e.stopPropagation();setPlMenuId(plMenuId===pl.id?null:pl.id);}} style={{width:52,height:52,borderRadius:14,background:BG3,border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.5" fill={TEXT_PRIMARY}/><circle cx="12" cy="12" r="2.5" fill={TEXT_PRIMARY}/><circle cx="12" cy="19" r="2.5" fill={TEXT_PRIMARY}/></svg>
-                </button>
-              </div>
-              {/* Sort tabs */}
-              <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:12,marginBottom:0}}>
-                {SORTS.map(([label,val])=>(
-                  <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:'none',background:curSort===val?ACC:BG3,color:curSort===val?BG:TEXT_SEC,fontSize:11,fontWeight:curSort===val?700:400,cursor:'pointer',transition:'all 0.15s ease',...tap}}>{label}</button>
-                ))}
-              </div>
+const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
+  [lang==='ru'?'Новые':lang==='uk'?'Нові':'Newest','newest'],
+  [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
+  [lang==='ru'?'Артист':'Artist','artist'],
+  [lang==='ru'?'А → Я':lang==='uk'?'А → Я':'A → Z','az'],
+  [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
+];
+      return(
+<div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+  {/* Header с фоном */}
+  <div style={{position:'relative',overflow:'hidden',minHeight:0}}>
+    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
+    <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.7) 60%,'+BG+' 100%)'}}/>
+    <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
+      {/* Верхняя строка — назад + иконки действий */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+        <button onPointerDown={()=>setOpenPlPage(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,...tap}}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
+        </button>
+        {/* Иконки закрепить/переименовать/удалить */}
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+          </button>
+          <button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button onPointerDown={()=>{if(window.confirm(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`)){deletePl(pl.id);setOpenPlPage(null);}}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+      {/* Обложка + название */}
+      <div style={{display:'flex',gap:16,alignItems:'flex-end',marginBottom:16}}>
+        <div style={{width:90,height:90,borderRadius:14,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
+          {collageCovers.map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={45} radius={0}/></div>)}
+          {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32,color:ACC}}>🎵</div>}
+        </div>
+        <div style={{flex:1,minWidth:0,paddingBottom:4}}>
+          {renamePlId===pl.id?(
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input autoFocus value={renamePlVal} onChange={e=>setRenamePlVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}if(e.key==='Escape')setRenamePlId(null);}} style={{flex:1,padding:'8px 12px',fontSize:15,background:'rgba(40,40,40,0.9)',border:'1px solid #3a3a3a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',fontWeight:700}}/>
+              <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}} style={{padding:'8px 14px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>✓</button>
             </div>
+          ):(
+            <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}</div>
+          )}
+          <div style={{fontSize:11,color:TEXT_SEC,marginTop:4}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+        </div>
+      </div>
+      {/* Кнопки действий — компактнее */}
+      <div style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+        <button onPointerDown={()=>playPl(pl,curSort==='default'?pl.tracks:sortedTracks)} style={{flex:2,padding:'10px 0',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
+        </button>
+        <button onPointerDown={()=>shufflePl(pl)} style={{flex:2,padding:'10px 0',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:12,color:ACC,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+          Shuffle
+        </button>
+        <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        </button>
+        <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+      </div>
+      {/* Фильтры — только в режиме редактирования */}
+      {editMode&&(
+        <div style={{animation:'slideDown 0.2s ease both'}}>
+          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8,marginBottom:8}}>
+            {SORTS.map(([label,val])=>(
+<button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:'1px solid #2a2a2a',background:'transparent',color:'#888',fontSize:11,fontWeight:400,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}>{label}</button>
+            ))}
           </div>
+          <div style={{display:'flex',gap:8,marginBottom:8}}>
+<button onPointerDown={()=>{const updated=playlists.map(p=>p.id===pl.id?{...p,sort:curSort}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setEditMode(false);setTimeout(()=>doFullSync(),100);}} style={{flex:1,padding:'9px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+  {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
+</button>
+            <button onPointerDown={()=>setEditMode(false)} style={{flex:1,padding:'9px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>
+              {lang==='ru'?'Отмена':lang==='uk'?'Скасувати':'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
           {/* 3-dot dropdown */}
           {plMenuId===pl.id&&(
             <>
@@ -3958,8 +4208,9 @@ importSource={importSource} setImportSource={setImportSource}
                 onQueue={()=>smartAddQ(tr)}
                 onRemove={()=>removeFromPl(pl.id,tr.id)}
                 onMenu={()=>{setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
-                onDragStart={()=>{if(curSort==='default'){const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}}
+               onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
                 onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
+                editMode={editMode}
               />
               );
             })}
@@ -4104,6 +4355,7 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
           ))}
         </div>
       )}
-    </div>
+</div>
+    </>
   );
 }
