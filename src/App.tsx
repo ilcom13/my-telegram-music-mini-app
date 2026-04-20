@@ -3934,8 +3934,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
       return(
 <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
   {/* Header с фоном */}
-  <div style={{position:'relative',overflow:'hidden',minHeight:220}}>
-    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
+  <div style={{position:'relative',overflow:'hidden',minHeight:300}}>
+    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.35)',transform:'scale(1.15)'}} onError={()=>{}}/>}
     <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.7) 60%,'+BG+' 100%)'}}/>
     <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
       {/* Верхняя строка — назад + иконки действий */}
@@ -3947,7 +3947,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         {/* Иконки закрепить/переименовать/удалить */}
         <div style={{display:'flex',alignItems:'center',gap:4}}>
           <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
-            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill={isPinned?ACC:'none'} stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           </button>
           <button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
