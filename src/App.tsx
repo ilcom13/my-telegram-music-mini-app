@@ -1054,7 +1054,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
         {editMode
           ?<div style={{color:'#555',fontSize:16,flexShrink:0,cursor:'grab',lineHeight:1,padding:'0 2px'}}>⠿</div>
-          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:14,textAlign:'right' as const,flexShrink:0,marginRight:-4}}>{i+1}</div>
+          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:20,textAlign:'right' as const,flexShrink:0,marginRight:4}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
           <div style={{position:'relative',flexShrink:0}}>
@@ -3935,7 +3935,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
       return(
 <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
   {/* Header с фоном */}
-  <div style={{position:'relative',overflow:'hidden',minHeight:300}}>
+  <div style={{position:'relative',overflow:'hidden',minHeight:0}}>
     {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
     <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.7) 60%,'+BG+' 100%)'}}/>
     <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
