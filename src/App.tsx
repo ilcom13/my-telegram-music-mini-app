@@ -2587,7 +2587,7 @@ const goBack=useCallback(()=>{
 
   if(fullPlayer&&current)return(
     <div style={{background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',transition:'background 0.8s ease',animation:'fadeIn 0.3s ease'}}>
-
+      <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -2685,7 +2685,7 @@ const goBack=useCallback(()=>{
         </div>
       )}
       <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
-        <button onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
+        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
@@ -2699,7 +2699,7 @@ const goBack=useCallback(()=>{
         <div
           className="full-player-cover"
           style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
-          onPointerDown={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
+          onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);}}
         >
           <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.38, 380)} radius={0}/>
         </div>
@@ -2912,7 +2912,7 @@ return(
   </div>
 )}
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
-      <audio ref={audio} key="main-audio"/>
+      <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
