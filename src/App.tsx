@@ -1054,7 +1054,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
         {editMode
           ?<div style={{color:'#555',fontSize:16,flexShrink:0,cursor:'grab',lineHeight:1,padding:'0 2px'}}>⠿</div>
-          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
+          :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:14,textAlign:'right' as const,flexShrink:0,marginRight:-4}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
           <div style={{position:'relative',flexShrink:0}}>
@@ -3977,7 +3977,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         </div>
       </div>
       {/* Кнопки действий — компактнее */}
-      <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
+      <div style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
         <button onPointerDown={()=>playPl(pl,curSort==='default'?pl.tracks:sortedTracks)} style={{flex:2,padding:'10px 0',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
           {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
