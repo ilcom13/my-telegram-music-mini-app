@@ -4001,9 +4001,9 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             ))}
           </div>
           <div style={{display:'flex',gap:8,marginBottom:8}}>
-            <button onPointerDown={()=>{const updated=playlists.map(p=>p.id===pl.id?{...p,sort:curSort}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setEditMode(false);setTimeout(()=>doFullSync(),100);}}
-              {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
-            </button>
+<button onPointerDown={()=>{const updated=playlists.map(p=>p.id===pl.id?{...p,sort:curSort}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setEditMode(false);setTimeout(()=>doFullSync(),100);}} style={{flex:1,padding:'9px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+  {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
+</button>
             <button onPointerDown={()=>setEditMode(false)} style={{flex:1,padding:'9px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>
               {lang==='ru'?'Отмена':lang==='uk'?'Скасувати':'Cancel'}
             </button>
