@@ -1197,6 +1197,8 @@ const [showLibSettings,setShowLibSettings]=useState(false);
   const[forYouLoading,setForYouLoading]=useState(false);
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
+  const [censorNoticeShown, setCensorNoticeShown] = useState<boolean>(()=>{try{return localStorage.getItem('cns47')==='1';}catch{return false;}});
+const [showCensorNotice, setShowCensorNotice] = useState(false);
   const[importUrl,setImportUrl]=useState('');
 const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[importSource,setImportSource]=useState<'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz'>('none');
@@ -3237,7 +3239,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
               <div style={{fontSize:10,opacity:0.75,marginTop:1}}>{lang==='ru'?'Свой плейлист':lang==='uk'?'Свій плейлист':'Build your own'}</div>
             </div>
           </button>
-          <button onPointerDown={()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}
+          <button onPointerDown={()=>{if(!censorNoticeShown){setShowCensorNotice(true);}else{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}}
             style={{padding:'14px 16px',background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:16,color:TEXT_PRIMARY,cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background 0.2s ease',...tap}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <div style={{textAlign:'left' as const}}>
@@ -3255,13 +3257,32 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
             </div>
           </div>
         )}
+        {showCensorNotice&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}} onClick={()=>{setShowCensorNotice(false);setCensorNoticeShown(true);try{localStorage.setItem('cns47','1');}catch{}setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}>
+            <div style={{background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:18,padding:'24px 20px',maxWidth:340,animation:'scaleIn 0.2s ease both'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:24,marginBottom:12,textAlign:'center' as const}}>⚠️</div>
+              <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,marginBottom:10,textAlign:'center' as const}}>
+                {lang==='ru'?'Важно об импорте':'Important about import'}
+              </div>
+              <div style={{fontSize:13,color:'#aaa',lineHeight:1.6,marginBottom:18}}>
+                {lang==='ru'
+                  ?'С 1 марта российские треки на SoundCloud подверглись цензуре. При переносе плейлиста через сторонний сервис высока вероятность что попадут зацензуренные версии треков не от оригинальных артистов. Чтобы избежать этого — найди нужный трек через поиск вручную, самый популярный вариант обычно оригинальный.'
+                  :'Since March 1st, Russian tracks on SoundCloud have been censored. When transferring a playlist through a third-party service, there is a high chance of getting censored versions. To avoid this — find the track manually via search, the most popular version is usually the original.'}
+              </div>
+              <button onPointerDown={()=>{setShowCensorNotice(false);setCensorNoticeShown(true);try{localStorage.setItem('cns47','1');}catch{}setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);}}
+                style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>
+                {lang==='ru'?'Понятно, продолжить':'Got it, continue'}
+              </button>
+            </div>
+          </div>
+        )}
         {playlists.length>0&&(
           <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:10,display:'flex',alignItems:'center',gap:6}}>
             <span style={{fontWeight:600,color:TEXT_SEC}}>{lang==='ru'?'Мои плейлисты':lang==='uk'?'Мої плейлисти':'My Playlists'}</span>
             <span>· {playlists.length} {lang==='ru'?'плейлист':lang==='uk'?'плейлист':'playlist'} · {playlists.reduce((s,p)=>s+p.tracks.length,0)} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</span>
           </div>
         )}
-        {playlists.map(pl=>(
+        {[...playlists].sort((a,b)=>a.id===pinnedPlId?-1:b.id===pinnedPlId?1:0).map(pl=>(
           <div key={pl.id} onPointerDown={()=>setOpenPlPage(pl.id)}
             style={{background:'#141414',border:`1px solid ${pinnedPlId===pl.id?ACC+'44':'#222'}`,borderRadius:16,marginBottom:10,padding:'12px',cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'background 0.15s ease',...tap}}>
             <div style={{width:64,height:64,borderRadius:12,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
