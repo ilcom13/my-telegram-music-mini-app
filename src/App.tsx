@@ -3931,34 +3931,87 @@ importSource={importSource} setImportSource={setImportSource}
           [lang==='ru'?'Новые':lang==='uk'?'Нові':'Newest','newest'],
           [lang==='ru'?'Старые':lang==='uk'?'Старі':'Oldest','oldest'],
         ];
-        return(
-        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
-          {/* Header */}
-          <div style={{position:'relative',overflow:'hidden'}}>
-            {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(24px) brightness(0.3)',transform:'scale(1.1)'}} onError={()=>{}}/>}
-            <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 0%,rgba(14,14,14,0.85) 70%,'+BG+' 100%)'}}/>
-            <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
-              <button onPointerDown={()=>setOpenPlPage(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,marginBottom:14,...tap}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
-              </button>
-              <div style={{display:'flex',gap:16,alignItems:'flex-end',marginBottom:18}}>
-                <div style={{width:100,height:100,borderRadius:14,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
-                  {collageCovers.map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={50} radius={0}/></div>)}
-                  {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,color:ACC}}>🎵</div>}
-                </div>
-                <div style={{flex:1,minWidth:0,paddingBottom:4}}>
-                  {renamePlId===pl.id?(
-                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                      <input autoFocus value={renamePlVal} onChange={e=>setRenamePlVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}if(e.key==='Escape')setRenamePlId(null);}} style={{flex:1,padding:'8px 12px',fontSize:15,background:'rgba(40,40,40,0.9)',border:'1px solid #3a3a3a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',fontWeight:700}}/>
-                      <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}} style={{padding:'8px 14px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>✓</button>
-                    </div>
-                  ):(
-                    <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}{isPinned&&<span style={{fontSize:14,marginLeft:8}}>📌</span>}</div>
-                  )}
-                  <div style={{fontSize:12,color:TEXT_SEC,marginTop:5}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-                </div>
-              </div>
+      return(
+<div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+  {/* Header с фоном */}
+  <div style={{position:'relative',overflow:'hidden',minHeight:220}}>
+    {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
+    <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.2) 0%,rgba(14,14,14,0.7) 60%,'+BG+' 100%)'}}/>
+    <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
+      {/* Верхняя строка — назад + иконки действий */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+        <button onPointerDown={()=>setOpenPlPage(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,...tap}}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
+        </button>
+        {/* Иконки закрепить/переименовать/удалить */}
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill={isPinned?ACC:'none'} stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </button>
+          <button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button onPointerDown={()=>{if(window.confirm(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`)){deletePl(pl.id);setOpenPlPage(null);}}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+      {/* Обложка + название */}
+      <div style={{display:'flex',gap:16,alignItems:'flex-end',marginBottom:16}}>
+        <div style={{width:90,height:90,borderRadius:14,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
+          {collageCovers.map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={45} radius={0}/></div>)}
+          {pl.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32,color:ACC}}>🎵</div>}
+        </div>
+        <div style={{flex:1,minWidth:0,paddingBottom:4}}>
+          {renamePlId===pl.id?(
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <input autoFocus value={renamePlVal} onChange={e=>setRenamePlVal(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}if(e.key==='Escape')setRenamePlId(null);}} style={{flex:1,padding:'8px 12px',fontSize:15,background:'rgba(40,40,40,0.9)',border:'1px solid #3a3a3a',borderRadius:10,color:TEXT_PRIMARY,outline:'none',fontWeight:700}}/>
+              <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,name:renamePlVal.trim()||p.name}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});setRenamePlId(null);}} style={{padding:'8px 14px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>✓</button>
+            </div>
+          ):(
+            <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}</div>
+          )}
+          <div style={{fontSize:11,color:TEXT_SEC,marginTop:4}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+        </div>
+      </div>
+      {/* Кнопки действий — компактнее */}
+      <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
+        <button onPointerDown={()=>playPl(pl,curSort==='default'?pl.tracks:sortedTracks)} style={{flex:2,padding:'10px 0',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
+        </button>
+        <button onPointerDown={()=>shufflePl(pl)} style={{flex:2,padding:'10px 0',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:12,color:ACC,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+          Shuffle
+        </button>
+        <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:42,height:42,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        </button>
+        <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:42,height:42,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+      </div>
+      {/* Фильтры — только в режиме редактирования */}
+      {editMode&&(
+        <div style={{animation:'slideDown 0.2s ease both'}}>
+          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:8,marginBottom:8}}>
+            {SORTS.map(([label,val])=>(
+              <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:`1px solid ${curSort===val?ACC:'#252525'}`,background:curSort===val?ACC_DIM:'transparent',color:curSort===val?ACC:TEXT_MUTED,fontSize:11,fontWeight:curSort===val?600:400,cursor:'pointer',transition:'all 0.15s ease',...tap}}>{label}</button>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:8,marginBottom:8}}>
+            <button onPointerDown={()=>{setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,tracks:sortedTracks}:p);playlistsRef.current=n;localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));return n;});setEditMode(false);doFullSync();}} style={{flex:1,padding:'9px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+              {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
+            </button>
+            <button onPointerDown={()=>setEditMode(false)} style={{flex:1,padding:'9px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>
+              {lang==='ru'?'Отмена':lang==='uk'?'Скасувати':'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
               {/* Action buttons */}
               <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
                 <button onPointerDown={()=>playPl(pl,curSort==='default'?pl.tracks:sortedTracks)} style={{flex:1,padding:'13px 0',background:ACC,border:'none',borderRadius:14,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,...tap}}>
