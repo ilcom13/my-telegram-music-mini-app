@@ -1020,9 +1020,10 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
 interface PlTrackRowProps {
   tr: Track; i: number; isActive: boolean; playing: boolean; isManualQ: boolean;
   curSort: string; onPlay:()=>void; onQueue:()=>void; onRemove:()=>void; onMenu:()=>void;
+  editMode?: boolean;
   onDragStart:()=>void; onDrop:()=>void;
 }
-const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:PlTrackRowProps){
+const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:PlTrackRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:onQueue,
     onLeft:onRemove,
@@ -1051,8 +1052,8 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
       </div>
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
-        {curSort==='default'
-          ?<div style={{color:'#333',fontSize:14,flexShrink:0,cursor:'grab'}}>⠿</div>
+        {editMode
+          ?<div style={{color:'#555',fontSize:16,flexShrink:0,cursor:'grab',lineHeight:1,padding:'0 2px'}}>⠿</div>
           :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
@@ -3947,7 +3948,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         {/* Иконки закрепить/переименовать/удалить */}
         <div style={{display:'flex',alignItems:'center',gap:4}}>
           <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
-            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
           </button>
           <button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -3985,10 +3986,10 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
           Shuffle
         </button>
-        <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:42,height:42,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+        <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
-        <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:42,height:42,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+        <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
       </div>
@@ -4081,6 +4082,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                 onMenu={()=>{setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
                onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
                 onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
+                editMode={editMode}
               />
               );
             })}
