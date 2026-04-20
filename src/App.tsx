@@ -1174,6 +1174,7 @@ const [showLibSettings,setShowLibSettings]=useState(false);
   const[openPlId,setOpenPlId]=useState<string|null>(null);
   const[plMenuId,setPlMenuId]=useState<string|null>(null);
   const[renamePlId,setRenamePlId]=useState<string|null>(null);
+  const [editMode, setEditMode] = useState(false);
   const[renamePlVal,setRenamePlVal]=useState('');
   const[pinnedPlId,setPinnedPlId]=useState<string|null>(()=>{try{return localStorage.getItem('pin47')||null;}catch{return null;}});
   const pinnedPlIdRef=useRef<string|null>(null);
