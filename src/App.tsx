@@ -1734,8 +1734,19 @@ else{
         else setPlaying(false);
       }
     };
-    a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
-    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
+    const onPlay=()=>setPlaying(true);
+const onPause=()=>{if(!audio.current?.ended)setPlaying(false);};
+a.addEventListener('timeupdate',onT);
+a.addEventListener('ended',onE);
+a.addEventListener('play',onPlay);
+a.addEventListener('pause',onPause);
+return()=>{
+  a.removeEventListener('timeupdate',onT);
+  a.removeEventListener('ended',onE);
+  a.removeEventListener('play',onPlay);
+  a.removeEventListener('pause',onPause);
+};
+    
   },[current,loop]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
