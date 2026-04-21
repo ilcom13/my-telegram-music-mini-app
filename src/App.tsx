@@ -2820,7 +2820,7 @@ return(
               </div>
               <div style={{fontSize:12,color:TEXT_MUTED,marginTop:3}}>{p.crypto} · {p.stars}</div>
             </div>
-            <a href="https://t.me/forty7paybot" target="_blank" rel="noreferrer"
+            <a href="https://t.me/forty7paymentbot" target="_blank" rel="noreferrer"
               style={{padding:'8px 16px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textDecoration:'none',flexShrink:0,...tap}}
               onClick={e=>e.stopPropagation()}>
               {lang==='ru'?'Купить':'Buy'}
