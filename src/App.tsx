@@ -3489,7 +3489,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
             ):(
               <div style={{padding:'0 4px 16px'}}>
 {forYouTracks.map((tr,i)=>(
-                  <TRow key={tr.id+'fy'} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
+                  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}}/>
                 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
