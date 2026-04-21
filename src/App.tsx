@@ -3217,9 +3217,8 @@ return(
             <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
 <div>
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
-                  <div style={{fontSize:12,color:ACC,letterSpacing:1.5,fontWeight:600}}>FORTY7</div>
-                  <button onPointerDown={()=>setShowPremium(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:14,background:'rgba(30,30,30,0.7)',backdropFilter:'blur(12px)',border:`1px solid ${subActive?ACC+'55':'#333'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
+<div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+  <button onPointerDown={()=>setShowPremium(true)}
                     <svg viewBox="0 0 24 24" style={{width:11,height:11,display:'block',flexShrink:0}} fill={subActive?ACC:'none'} stroke={subActive?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span style={{fontSize:10,color:subActive?ACC:'#888',fontWeight:subActive?600:400,whiteSpace:'nowrap' as const}}>{subActive?'Premium':'Upgrade'}</span>
                   </button>
