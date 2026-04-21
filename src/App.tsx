@@ -3620,7 +3620,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
  
       {/* Глобальное контекстное меню треков */}
       {menuId&&menuAnchor&&(()=>{
-        const tr=results.find(t=>t.id===menuId)||history.find(t=>t.id===menuId)||recs.find(t=>t.id===menuId)||liked.find(t=>t.id===menuId)||(albumPage?.tracks||[]).find(t=>t.id===menuId)||(artistPage?.tracks||[]).find(t=>t.id===menuId)||(artistTracks||[]).find(t=>t.id===menuId);
+        const tr=results.find(t=>t.id===menuId)||history.find(t=>t.id===menuId)||recs.find(t=>t.id===menuId)||liked.find(t=>t.id===menuId)||forYouTracks.find(t=>t.id===menuId)||(albumPage?.tracks||[]).find(t=>t.id===menuId)||(artistPage?.tracks||[]).find(t=>t.id===menuId)||(artistTracks||[]).find(t=>t.id===menuId);
         if(!tr)return null;
         const isLiked=isLk(menuId);
         return(
