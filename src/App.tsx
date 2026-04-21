@@ -1763,11 +1763,15 @@ a.addEventListener('volumechange',onVol);
   },[]);
 
   useEffect(()=>{
-    const onFocus=()=>{
-      if(audioCtx.current?.state==='suspended'){
-        audioCtx.current.resume().catch(()=>{});
-      }
-    };
+const onFocus=()=>{
+  if(audioCtx.current?.state==='suspended'){
+    audioCtx.current.resume().catch(()=>{});
+  }
+  // Синхронизируем playing state при возврате в апп
+  if(audio.current&&!audio.current.paused&&!isPlayingRef.current){
+    setPlaying(true);
+  }
+};
     window.addEventListener('focus',onFocus);
     document.addEventListener('visibilitychange',onFocus);
     return()=>{
