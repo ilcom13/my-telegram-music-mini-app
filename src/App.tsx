@@ -1085,6 +1085,8 @@ export default function App(){
   const[query,setQuery]=useState('');
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
 const [showLibSettings,setShowLibSettings]=useState(false);
+  const [showPremium, setShowPremium] = useState(false);
+const [subActive, setSubActive] = useState(false);
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
 const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
@@ -1464,6 +1466,13 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
     }).catch(()=>{});
   },30000); // каждые 30 секунд
   return()=>clearInterval(interval);
+},[uid]);
+
+  useEffect(()=>{
+  if(uid==='anon')return;
+  fetch(`${W}/sub/check?uid=${uid}`).then(r=>r.json()).then(d=>{
+    if(d.active)setSubActive(true);
+  }).catch(()=>{});
 },[uid]);
   
   useEffect(()=>{
@@ -2786,6 +2795,45 @@ const goBack=useCallback(()=>{
 return(
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
     <audio ref={audio}/>
+      {showPremium&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowPremium(false)}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onClick={e=>e.stopPropagation()}>
+      <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 24px'}}/>
+      <div style={{textAlign:'center' as const,marginBottom:24}}>
+        <div style={{fontSize:32,marginBottom:8}}>⭐</div>
+        <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:6}}>Forty7 Premium</div>
+        <div style={{fontSize:13,color:TEXT_MUTED}}>
+          {lang==='ru'?'Поддержи проект и получи бонусы':'Support the project and get bonuses'}
+        </div>
+      </div>
+      {/* Тарифы */}
+      <div style={{display:'flex',flexDirection:'column' as const,gap:10,marginBottom:20}}>
+        {[
+          {label:lang==='ru'?'1 месяц':'1 month',crypto:'1.59 USDT',stars:'100 ⭐',plan:'month'},
+          {label:lang==='ru'?'1 год':'1 year',crypto:'12.99 USDT',stars:'750 ⭐',badge:lang==='ru'?'Выгодно':'Best value',plan:'year'},
+        ].map(p=>(
+          <div key={p.plan} style={{background:'#1a1a1a',border:`1px solid ${p.badge?ACC+'44':'#252525'}`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,display:'flex',alignItems:'center',gap:8}}>
+                {p.label}
+                {p.badge&&<span style={{fontSize:10,background:ACC_DIM,color:ACC,padding:'2px 7px',borderRadius:6,fontWeight:600}}>{p.badge}</span>}
+              </div>
+              <div style={{fontSize:12,color:TEXT_MUTED,marginTop:3}}>{p.crypto} · {p.stars}</div>
+            </div>
+            <a href="https://t.me/forty7paybot" target="_blank" rel="noreferrer"
+              style={{padding:'8px 16px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textDecoration:'none',flexShrink:0,...tap}}
+              onClick={e=>e.stopPropagation()}>
+              {lang==='ru'?'Купить':'Buy'}
+            </a>
+          </div>
+        ))}
+      </div>
+      <button onPointerDown={()=>setShowPremium(false)} style={{width:'100%',padding:'13px',background:'#1a1a1a',border:'1px solid #252525',borderRadius:12,color:TEXT_MUTED,fontSize:14,cursor:'pointer',...tap}}>
+        {lang==='ru'?'Закрыть':'Close'}
+      </button>
+    </div>
+  </div>
+)}
     {showOnboarding&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
@@ -3159,6 +3207,9 @@ return(
                 <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
                 <div style={{fontSize:12,color:ACC,marginTop:3,letterSpacing:1.5,fontWeight:600}}>FORTY7</div>
               </div>
+              <button onPointerDown={()=>setShowPremium(true)} style={{background:'none',border:'none',cursor:'pointer',padding:'5px 8px',display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
+  <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block'}} fill={subActive?ACC:'none'} stroke={subActive?ACC:'#666'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+</button>
               <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 11px',borderRadius:18,background:BG2,border:`1px solid #2a2a2a`,cursor:'pointer',flexShrink:0,maxWidth:140,transition:'background 0.2s ease',...tap}}>
                 {tg?.photo_url
                   ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
