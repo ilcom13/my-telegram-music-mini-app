@@ -2916,7 +2916,7 @@ return(
 :'Two music sources'}</div>
           <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
             <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>☁️ SoundCloud</div>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>☁️ Library A</div>
               <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Огромная библиотека, анрелизы, незацензуренные треки, ремиксы, спид-апы'
 :lang==='uk'?'Величезна бібліотека, анреліз, нецензуровані треки, реміки'
 :lang==='kk'?'Үлкен кітапхана, анрелиздер, цензурасыз треклер, ремикстер'
@@ -2925,7 +2925,7 @@ return(
 :'Huge library, unreleased tracks, uncensored music, remixes, speed-ups'}</div>
             </div>
             <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px',textAlign:'left' as const}}>
-              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>🎵 Audiomack</div>
+              <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:6}}>🎵 Library B</div>
               <div style={{fontSize:12,color:TEXT_SEC,lineHeight:1.55}}>{lang==='ru'?'Высокое качество звука, официальные релизы. Расширяет библиотеку если трек не найден на SC'
 :lang==='uk'?'Висока якість звуку, офіційні релізи. Розширює бібліотеку'
 :lang==='kk'?'Жоғары сапалы дыбыс, ресми релиздер. SC-де табылмаса кітапхананы кеңейтеді'
@@ -3315,20 +3315,26 @@ return(
       {/* Заголовок */}
       <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,marginBottom:4,letterSpacing:-0.5}}>{t('search')}</div>
 <div style={{fontSize:11,color:'#686868',marginBottom:14,lineHeight:1.5}}>
-  {searchSource==='soundcloud'
-    ?(lang==='ru'?'SoundCloud — огромная библиотека и ремиксы. Audiomack — официальные треки в высоком качестве, есть то чего нет на SC'
-      :lang==='uk'?'SoundCloud — велика бібліотека та реміки. Audiomack — офіційні треки у високій якості'
-      :'SoundCloud — huge library & remixes. Audiomack — official tracks in high quality, has songs not on SC')
-    :(lang==='ru'?'Audiomack — официальные треки в высоком качестве. SoundCloud — больше ремиксов и редких треков'
-      :lang==='uk'?'Audiomack — офіційні треки у високій якості. SoundCloud — більше реміксів та рідкісних треків'
-      :'Audiomack — official tracks in high quality. SoundCloud — more remixes & rare tracks')}
+{searchSource==='soundcloud'
+  ?(lang==='ru'?'Library A — расширенный каталог, ремиксы, анрелизы и редкие треки'
+    :lang==='uk'?'Library A — розширений каталог, реміки, анреліз та рідкісні треки'
+    :lang==='kk'?'Library A — кеңейтілген каталог, ремикстер, сирек треклер'
+    :lang==='pl'?'Library A — rozszerzony katalog, remiksy, niepublikowane i rzadkie utwory'
+    :lang==='tr'?'Library A — geniş katalog, remixler, yayınlanmamış ve nadir parçalar'
+    :'Library A — extended catalog, remixes, unreleased & rare tracks')
+  :(lang==='ru'?'Library B — официальные релизы в высоком качестве, расширяет Library A'
+    :lang==='uk'?'Library B — офіційні релізи у високій якості, розширює Library A'
+    :lang==='kk'?'Library B — жоғары сапалы ресми релиздер, Library A-ны кеңейтеді'
+    :lang==='pl'?'Library B — oficjalne wydania w wysokiej jakości, rozszerza Library A'
+    :lang==='tr'?'Library B — yüksek kaliteli resmi çıkışlar, Library A\'yı genişletir'
+    :'Library B — official releases in high quality, expands Library A')}
 </div>
       {/* Переключатель платформы */}
       <div style={{display:'flex',gap:0,marginBottom:14,background:'#1a1a1a',borderRadius:14,padding:4,border:'1px solid #252525'}}>
         {(['soundcloud','audiomack'] as const).map(src=>(
           <button key={src} onPointerDown={()=>{setSearchSource(src);setResults([]);setError('');}}
             style={{flex:1,padding:'8px 0',borderRadius:10,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:13,fontWeight:searchSource===src?700:400,cursor:'pointer',transition:'all 0.2s ease',...TAP}}>
-            {src==='soundcloud'?'SoundCloud':'Audiomack'}
+            {src==='soundcloud'?'Library A':'Library B'}
           </button>
         ))}
       </div>
