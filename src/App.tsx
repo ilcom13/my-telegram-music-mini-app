@@ -1734,15 +1734,8 @@ else{
         else setPlaying(false);
       }
     };
-const onPlay=()=>setPlaying(true);
-a.addEventListener('timeupdate',onT);
-a.addEventListener('ended',onE);
-a.addEventListener('play',onPlay);
-return()=>{
-  a.removeEventListener('timeupdate',onT);
-  a.removeEventListener('ended',onE);
-  a.removeEventListener('play',onPlay);
-};
+    a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
+    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
