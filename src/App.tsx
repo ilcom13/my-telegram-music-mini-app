@@ -3225,10 +3225,7 @@ return(
                   </button>
                 </div>
               </div>
-<button onPointerDown={()=>setShowPremium(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 12px',borderRadius:18,background:'rgba(30,30,30,0.7)',backdropFilter:'blur(12px)',border:`1px solid ${subActive?ACC+'55':'#333'}`,cursor:'pointer',flexShrink:0,transition:'all 0.2s ease',...tap}}>
-  <svg viewBox="0 0 24 24" style={{width:14,height:14,display:'block',flexShrink:0}} fill={subActive?ACC:'none'} stroke={subActive?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-  <span style={{fontSize:11,color:subActive?ACC:'#888',fontWeight:subActive?600:400,whiteSpace:'nowrap' as const}}>{subActive?'Premium':'Upgrade'}</span>
-</button>
+              
               <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 11px',borderRadius:18,background:BG2,border:`1px solid #2a2a2a`,cursor:'pointer',flexShrink:0,maxWidth:140,transition:'background 0.2s ease',...tap}}>
                 {tg?.photo_url
                   ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
