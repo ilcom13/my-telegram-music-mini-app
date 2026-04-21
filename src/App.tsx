@@ -1544,7 +1544,7 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
-    navigator.mediaSession.playbackState=playing?'playing':(current?'paused':'none');
+    navigator.mediaSession.playbackState=playing?'playing':'paused';
     navigator.mediaSession.setActionHandler('play',()=>{
       if(audio.current){
         if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
@@ -1734,8 +1734,7 @@ else{
         else setPlaying(false);
       }
     };
-    const onPlay=()=>setPlaying(true);
-a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
+    a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
     return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop]);
   
