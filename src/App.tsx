@@ -1544,7 +1544,7 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
-    navigator.mediaSession.playbackState=playing?'playing':'paused';
+    navigator.mediaSession.playbackState=playing?'playing':(current?'paused':'none');
     navigator.mediaSession.setActionHandler('play',()=>{
       if(audio.current){
         if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
@@ -1735,7 +1735,9 @@ else{
       }
     };
     const onPlay=()=>setPlaying(true);
-const onPause=()=>{if(!audio.current?.ended)setPlaying(false);};
+const onPause=()=>{
+  if(!audio.current?.ended&&!audio.current?.seeking)setPlaying(false);
+};
 a.addEventListener('timeupdate',onT);
 a.addEventListener('ended',onE);
 a.addEventListener('play',onPlay);
