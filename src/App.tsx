@@ -1229,6 +1229,10 @@ const [onboardStep,setOnboardStep]=useState(0);
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
   const audio=useRef<HTMLAudioElement|null>(null);
   const audioCtx=useRef<AudioContext|null>(null);
+  const audioSourceNode=useRef<MediaElementAudioSourceNode|null>(null);
+  const gainNode=useRef<GainNode|null>(null);
+  const delayNode=useRef<DelayNode|null>(null);
+  const eqNodes=useRef<{[freq:number]:BiquadFilterNode}>({});
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -1753,7 +1757,59 @@ else{
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
+  // Инициализация Web Audio API цепочки
+useEffect(()=>{
+  const a=audio.current;
+  if(!a)return;
+  const initAudio=()=>{
+    if(audioSourceNode.current)return;
+    try{
+      const ctx=new AudioContext();
+      audioCtx.current=ctx;
+      const source=ctx.createMediaElementSource(a);
+      audioSourceNode.current=source;
+      // Gain node для громкости/реверба
+      const gain=ctx.createGain();
+      gainNode.current=gain;
+      // Delay для реверба
+      const delay=ctx.createDelay(3.0);
+      delay.delayTime.value=0;
+      delayNode.current=delay;
+      const feedbackGain=ctx.createGain();
+      feedbackGain.gain.value=0;
+      // EQ nodes
+      const freqs=[60,250,1000,4000,12000];
+      let prev:AudioNode=source;
+      freqs.forEach(freq=>{
+        const filter=ctx.createBiquadFilter();
+        filter.type='peaking';
+        filter.frequency.value=freq;
+        filter.Q.value=1;
+        filter.gain.value=0;
+        eqNodes.current[freq]=filter;
+        prev.connect(filter);
+        prev=filter;
+      });
+      prev.connect(gain);
+      gain.connect(delay);
+      delay.connect(feedbackGain);
+      feedbackGain.connect(delay);
+      feedbackGain.connect(ctx.destination);
+      gain.connect(ctx.destination);
+    }catch(e){console.warn('Web Audio init failed:',e);}
+  };
+  a.addEventListener('play',initAudio,{once:true});
+  return()=>a.removeEventListener('play',initAudio);
+},[]);
+
   useEffect(()=>{if(audio.current)audio.current.playbackRate=playbackSpeed;},[playbackSpeed]);
+
+  useEffect(()=>{
+  if(!delayNode.current||!audioCtx.current)return;
+  const amount=reverbAmount/100;
+  delayNode.current.delayTime.value=amount*0.3;
+  // feedback gain через замыкание не меняем напрямую — используем существующий
+},[reverbAmount]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
@@ -2751,7 +2807,7 @@ const goBack=useCallback(()=>{
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       {showFxPanel&&(
-  <div style={{width:'100%',background:'rgba(20,20,20,0.95)',borderRadius:16,padding:'16px',marginBottom:8,border:'1px solid #252525',animation:'slideDown 0.2s ease both',position:'relative'}}>
+  <div style={{width:'100%',background:'rgba(20,20,20,0.98)',borderRadius:16,padding:'16px',marginBottom:8,border:'1px solid #252525',animation:'slideUp 0.2s ease both',position:'relative',maxHeight:'70vh',overflowY:'auto' as const}}>
     {!subActive&&(
       <div style={{position:'absolute',inset:0,background:'rgba(14,14,14,0.85)',borderRadius:16,zIndex:10,display:'flex',flexDirection:'column' as const,alignItems:'center',justifyContent:'center',gap:8,padding:16}}>
         <div style={{fontSize:20}}>⭐</div>
@@ -2771,7 +2827,7 @@ const goBack=useCallback(()=>{
     <div style={{display:'flex',gap:8,marginBottom:14}}>
       {[
         {label:'Slowed + Reverb',speed:0.8,reverb:40},
-        {label:'Nightcore',speed:1.2,reverb:0},
+        {label:'Nightcore',speed:1.3,reverb:0},
       ].map(p=>(
         <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);}}
           style={{flex:1,padding:'7px 4px',borderRadius:10,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:11,cursor:'pointer',...tap}}>
