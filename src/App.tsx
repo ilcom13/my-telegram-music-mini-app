@@ -2800,14 +2800,14 @@ const goBack=useCallback(()=>{
       <div style={{marginBottom:showEqPanel?20:0}}>
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
           <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
-<input type="range" min="-12" max="12" step="1" defaultValue="0"
-  onChange={()=>{}}
-  disabled
+          <input type="range" min="-12" max="12" step="1" defaultValue="0"
+            onChange={()=>{}}
+            disabled
           <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
         </div>
-<input type="range" min="0" max="100" step="1" value={reverbAmount}
-  onChange={()=>{}}
-  disabled
+        <input type="range" min="0" max="100" step="1" value={reverbAmount}
+          onChange={()=>{}}
+          disabled
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
           <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
