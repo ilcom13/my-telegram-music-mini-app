@@ -2798,22 +2798,22 @@ const goBack=useCallback(()=>{
         </div>
       </div>
       <div style={{marginBottom:showEqPanel?20:0}}>
-        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-          <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
-          <input type="range" min="-12" max="12" step="1" defaultValue="0"
-            onChange={()=>{}}
-            disabled
-          <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
-        </div>
-        <input type="range" min="0" max="100" step="1" value={reverbAmount}
-          onChange={()=>{}}
-          disabled
-          style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
-        <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
-          <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
-          <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
-        </div>
-      </div>
+  <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+    <div style={{display:'flex',alignItems:'center',gap:6}}>
+      <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
+      <span style={{fontSize:10,background:'#252525',color:TEXT_MUTED,padding:'2px 7px',borderRadius:6}}>Soon</span>
+    </div>
+    <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
+  </div>
+  <input type="range" min="0" max="100" step="1" value={reverbAmount}
+    onChange={()=>{}}
+    disabled
+    style={{width:'100%',accentColor:ACC,cursor:'not-allowed',height:4,opacity:0.4}}/>
+  <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
+  </div>
+</div>
       {showEqPanel&&(
         <div style={{borderTop:'1px solid #252525',paddingTop:20}}>
           <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:16}}>Equalizer</div>
