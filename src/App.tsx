@@ -2754,83 +2754,83 @@ const goBack=useCallback(()=>{
         </div>
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
-      {showFxPanel&&(
-  <div style={{width:'100%',background:'rgba(20,20,20,0.98)',borderRadius:16,padding:'16px',marginBottom:8,border:'1px solid #252525',animation:'slideUp 0.2s ease both',position:'relative',maxHeight:'70vh',overflowY:'auto' as const}}>
-    {!subActive&&(
-      <div style={{position:'absolute',inset:0,background:'rgba(14,14,14,0.85)',borderRadius:16,zIndex:10,display:'flex',flexDirection:'column' as const,alignItems:'center',justifyContent:'center',gap:8,padding:16}}>
-        <div style={{fontSize:20}}>⭐</div>
-        <div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY,textAlign:'center' as const}}>Premium only</div>
-        <div style={{fontSize:11,color:TEXT_MUTED,textAlign:'center' as const}}>Subscribe to unlock FX controls</div>
-        <button onPointerDown={()=>{setShowFxPanel(false);setShowPremium(true);}} style={{padding:'8px 20px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:12,fontWeight:700,cursor:'pointer',...tap}}>Upgrade</button>
-      </div>
-    )}
-    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-      <div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
-      <button onPointerDown={()=>setShowEqPanel(v=>!v)} style={{background:showEqPanel?ACC_DIM:'none',border:`1px solid ${showEqPanel?ACC:'#333'}`,borderRadius:8,padding:'4px 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,...tap}}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showEqPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        <span style={{fontSize:11,color:showEqPanel?ACC:'#888'}}>EQ</span>
-      </button>
-    </div>
-    {/* Пресеты */}
-    <div style={{display:'flex',gap:8,marginBottom:14}}>
-      {[
-        {label:'Slowed + Reverb',speed:0.8,reverb:40},
-        {label:'Nightcore',speed:1.3,reverb:0},
-      ].map(p=>(
-        <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);}}
-          style={{flex:1,padding:'7px 4px',borderRadius:10,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:11,cursor:'pointer',...tap}}>
-          {p.label}
+{showFxPanel&&(
+  <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end'}} onPointerDown={()=>setShowFxPanel(false)}>
+    <div style={{background:'#141414',borderRadius:'24px 24px 0 0',padding:'20px 20px 40px',width:'100%',maxHeight:'85vh',overflowY:'auto' as const,border:'1px solid #252525'}} onPointerDown={e=>e.stopPropagation()}>
+      <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 20px'}}/>
+      {!subActive&&(
+        <div style={{background:'rgba(14,14,14,0.95)',borderRadius:16,padding:'20px',marginBottom:16,display:'flex',flexDirection:'column' as const,alignItems:'center',gap:8,border:'1px solid #252525'}}>
+          <div style={{fontSize:24}}>⭐</div>
+          <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,textAlign:'center' as const}}>Premium only</div>
+          <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const}}>Subscribe to unlock FX controls</div>
+          <button onPointerDown={e=>{e.stopPropagation();setShowFxPanel(false);setShowPremium(true);}} style={{padding:'10px 24px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>Upgrade</button>
+        </div>
+      )}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
+        <button onPointerDown={()=>setShowEqPanel(v=>!v)} style={{background:showEqPanel?ACC_DIM:'#1a1a1a',border:`1px solid ${showEqPanel?ACC:'#333'}`,borderRadius:10,padding:'6px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:6,...tap}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={showEqPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style={{fontSize:12,color:showEqPanel?ACC:'#888'}}>EQ</span>
         </button>
-      ))}
-    </div>
-    {/* Скорость */}
-    <div style={{marginBottom:12}}>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-        <span style={{fontSize:11,color:TEXT_MUTED}}>Speed</span>
-        <span style={{fontSize:11,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
       </div>
-      <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
-        onChange={e=>subActive&&setPlaybackSpeed(parseFloat(e.target.value))}
-        style={{width:'100%',accentColor:ACC,cursor:'pointer'}}/>
-    </div>
-    {/* Реверб */}
-    <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-        <span style={{fontSize:11,color:TEXT_MUTED}}>Reverb</span>
-        <span style={{fontSize:11,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
-      </div>
-      <input type="range" min="0" max="100" step="1" value={reverbAmount}
-        onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
-        style={{width:'100%',accentColor:ACC,cursor:'pointer'}}/>
-    </div>
-    {/* EQ Panel */}
-    {showEqPanel&&(
-      <div style={{marginTop:14,borderTop:'1px solid #252525',paddingTop:14}}>
-        <div style={{fontSize:12,fontWeight:700,color:TEXT_PRIMARY,marginBottom:12}}>Equalizer</div>
+      <div style={{display:'flex',gap:10,marginBottom:20}}>
         {[
-          {label:'60Hz',freq:60},
-          {label:'250Hz',freq:250},
-          {label:'1kHz',freq:1000},
-          {label:'4kHz',freq:4000},
-          {label:'12kHz',freq:12000},
-        ].map(band=>(
-          <div key={band.freq} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-            <span style={{fontSize:10,color:TEXT_MUTED,width:36,flexShrink:0}}>{band.label}</span>
-            <input type="range" min="-12" max="12" step="1" defaultValue="0"
-              onChange={e=>{
-                if(!subActive)return;
-                if(!audioCtx.current)return;
-                const gainVal=parseInt(e.target.value);
-                // применяем EQ через Web Audio API
-                const source=(audio.current as any)._eqNodes?.[band.freq];
-                if(source)source.gain.value=gainVal;
-              }}
-              style={{flex:1,accentColor:ACC,cursor:'pointer'}}/>
-            <span style={{fontSize:10,color:TEXT_MUTED,width:28,textAlign:'right' as const}}>0dB</span>
-          </div>
+          {label:'Slowed + Reverb',speed:0.8,reverb:40},
+          {label:'Nightcore',speed:1.3,reverb:0},
+        ].map(p=>(
+          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);}}
+            style={{flex:1,padding:'10px 4px',borderRadius:12,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:12,fontWeight:500,cursor:'pointer',opacity:subActive?1:0.4,...tap}}>
+            {p.label}
+          </button>
         ))}
       </div>
-    )}
+      <div style={{marginBottom:20}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+          <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Speed</span>
+          <span style={{fontSize:13,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
+        </div>
+        <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
+          onChange={e=>subActive&&setPlaybackSpeed(parseFloat(e.target.value))}
+          style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+          <span style={{fontSize:10,color:TEXT_MUTED}}>0.5x</span>
+          <span style={{fontSize:10,color:TEXT_MUTED}}>2x</span>
+        </div>
+      </div>
+      <div style={{marginBottom:showEqPanel?20:0}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+          <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
+          <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
+        </div>
+        <input type="range" min="0" max="100" step="1" value={reverbAmount}
+          onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
+          style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+          <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
+          <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
+        </div>
+      </div>
+      {showEqPanel&&(
+        <div style={{borderTop:'1px solid #252525',paddingTop:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:16}}>Equalizer</div>
+          {[
+            {label:'60 Hz',freq:60},
+            {label:'250 Hz',freq:250},
+            {label:'1 kHz',freq:1000},
+            {label:'4 kHz',freq:4000},
+            {label:'12 kHz',freq:12000},
+          ].map(band=>(
+            <div key={band.freq} style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
+              <span style={{fontSize:11,color:TEXT_MUTED,width:44,flexShrink:0}}>{band.label}</span>
+              <input type="range" min="-12" max="12" step="1" defaultValue="0"
+                onChange={e=>{if(!subActive)return;}}
+                style={{flex:1,accentColor:ACC,cursor:'pointer',opacity:subActive?1:0.4}}/>
+              <span style={{fontSize:11,color:TEXT_MUTED,width:32,textAlign:'right' as const}}>0 dB</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 )}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
