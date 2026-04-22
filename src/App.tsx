@@ -1168,6 +1168,7 @@ const [onboardStep,setOnboardStep]=useState(0);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
   const [showFxPanel, setShowFxPanel] = useState(false);
+  const [fxLoading, setFxLoading] = useState(false);
   const [showEqPanel, setShowEqPanel] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [reverbAmount, setReverbAmount] = useState(0);
@@ -1987,6 +1988,40 @@ if(d.hls||d.mp3){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
+const applyFxPreset = async (preset: string) => {
+  const a = audio.current;
+  if (!a || !a.src) return;
+  setFxLoading(true);
+  try {
+    // Скачиваем трек в браузере
+    const resp = await fetch(a.src);
+    const blob = await resp.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64Audio = btoa(binary);
+    // Отправляем на Railway
+    const fxResp = await fetch(`https://eq-production.up.railway.app/fx-base64?preset=${preset}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audio: base64Audio })
+    });
+    if (!fxResp.ok) throw new Error('FX error');
+    const processed = await fxResp.blob();
+    const url = URL.createObjectURL(processed);
+    const currentTime = a.currentTime;
+    a.src = url;
+    a.currentTime = currentTime;
+    a.play();
+  } catch(e) {
+    console.error('FX error:', e);
+  } finally {
+    setFxLoading(false);
+  }
+};
+
+  
 const playPrev=()=>{
     if(playHistory.length>0){
       const prev=playHistory[0];
@@ -2778,9 +2813,9 @@ const goBack=useCallback(()=>{
           {label:'Slowed + Reverb',speed:0.8,reverb:40},
           {label:'Nightcore',speed:1.3,reverb:0},
         ].map(p=>(
-          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);}}
+          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);applyFxPreset(p.label==='Slowed + Reverb'?'slowed':'nightcore');}}
             style={{flex:1,padding:'10px 4px',borderRadius:12,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:12,fontWeight:500,cursor:'pointer',opacity:subActive?1:0.4,...tap}}>
-            {p.label}
+            {fxLoading?'Processing...':p.label}
           </button>
         ))}
       </div>
