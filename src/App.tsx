@@ -1757,59 +1757,7 @@ else{
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
-  // Инициализация Web Audio API цепочки
-useEffect(()=>{
-  const a=audio.current;
-  if(!a)return;
-  const initAudio=()=>{
-    if(audioSourceNode.current)return;
-    try{
-      const ctx=new AudioContext();
-      audioCtx.current=ctx;
-      const source=ctx.createMediaElementSource(a);
-      audioSourceNode.current=source;
-      // Gain node для громкости/реверба
-      const gain=ctx.createGain();
-      gainNode.current=gain;
-      // Delay для реверба
-      const delay=ctx.createDelay(3.0);
-      delay.delayTime.value=0;
-      delayNode.current=delay;
-      const feedbackGain=ctx.createGain();
-      feedbackGain.gain.value=0;
-      // EQ nodes
-      const freqs=[60,250,1000,4000,12000];
-      let prev:AudioNode=source;
-      freqs.forEach(freq=>{
-        const filter=ctx.createBiquadFilter();
-        filter.type='peaking';
-        filter.frequency.value=freq;
-        filter.Q.value=1;
-        filter.gain.value=0;
-        eqNodes.current[freq]=filter;
-        prev.connect(filter);
-        prev=filter;
-      });
-      prev.connect(gain);
-      gain.connect(delay);
-      delay.connect(feedbackGain);
-      feedbackGain.connect(delay);
-      feedbackGain.connect(ctx.destination);
-      gain.connect(ctx.destination);
-    }catch(e){console.warn('Web Audio init failed:',e);}
-  };
-  a.addEventListener('play',initAudio,{once:true});
-  return()=>a.removeEventListener('play',initAudio);
-},[]);
-
   useEffect(()=>{if(audio.current)audio.current.playbackRate=playbackSpeed;},[playbackSpeed]);
-
-  useEffect(()=>{
-  if(!delayNode.current||!audioCtx.current)return;
-  const amount=reverbAmount/100;
-  delayNode.current.delayTime.value=amount*0.3;
-  // feedback gain через замыкание не меняем напрямую — используем существующий
-},[reverbAmount]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
