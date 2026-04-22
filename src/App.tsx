@@ -617,7 +617,7 @@ lang: string;
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
   return (
-   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onClick={onClose}>
+   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={onClose}>
   <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onClick={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0
@@ -2800,10 +2800,14 @@ const goBack=useCallback(()=>{
       <div style={{marginBottom:showEqPanel?20:0}}>
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
           <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
+<input type="range" min="-12" max="12" step="1" defaultValue="0"
+  onChange={()=>{}}
+  disabled
           <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
         </div>
-        <input type="range" min="0" max="100" step="1" value={reverbAmount}
-          onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
+<input type="range" min="0" max="100" step="1" value={reverbAmount}
+  onChange={()=>{}}
+  disabled
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
           <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
@@ -2890,8 +2894,8 @@ return(
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
     <audio ref={audio}/>
 {showPremium&&(
-  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowPremium(false)}>
-    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onClick={e=>e.stopPropagation()}>
+<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremium(false)}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
       <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 24px'}}/>
       {subActive?(
         <div style={{textAlign:'center' as const}}>
