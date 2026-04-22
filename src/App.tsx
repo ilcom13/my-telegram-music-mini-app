@@ -1229,9 +1229,6 @@ const [onboardStep,setOnboardStep]=useState(0);
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
   const audio=useRef<HTMLAudioElement|null>(null);
   const audioCtx=useRef<AudioContext|null>(null);
-  const tonePlayer=useRef<any>(null);
-  const toneReverb=useRef<any>(null);
-  const toneEq=useRef<any>(null);
   const audioSourceNode=useRef<MediaElementAudioSourceNode|null>(null);
   const gainNode=useRef<GainNode|null>(null);
   const delayNode=useRef<DelayNode|null>(null);
@@ -1760,53 +1757,7 @@ else{
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
-  useEffect(()=>{
-  const a=audio.current;
-  if(!a)return;
-  const init=async()=>{
-    try{
-      const Tone=(window as any).Tone;
-      if(!Tone)return;
-      await Tone.start();
-      if(tonePlayer.current)return;
-      // Создаём EQ
-      const eq=new Tone.EQ3({low:0,mid:0,high:0});
-      toneEq.current=eq;
-      // Создаём реверб
-      const reverb=new Tone.Reverb({decay:2.5,wet:0});
-      await reverb.generate();
-      toneReverb.current=reverb;
-      // Подключаем цепочку через MediaElementSource
-      const ctx=Tone.getContext().rawContext;
-      const source=ctx.createMediaElementSource(a);
-      const toneCtx=Tone.getContext();
-      // Подключаем source → eq → reverb → destination
-      const eqNode=eq.input;
-      source.connect(eqNode);
-      eq.connect(reverb);
-      reverb.connect(Tone.getDestination());
-    }catch(e){
-      console.warn('Tone.js init error:',e);
-    }
-  };
-  a.addEventListener('play',init,{once:true});
-  return()=>a.removeEventListener('play',init);
-},[]);
-
-  useEffect(()=>{
-  if(!toneReverb.current)return;
-  toneReverb.current.wet.value=reverbAmount/100;
-},[reverbAmount]);
-
-  useEffect(()=>{
-  if(tonePlayer.current){
-    tonePlayer.current.playbackRate=playbackSpeed;
-  } else {
-    if(audio.current)audio.current.playbackRate=playbackSpeed;
-  }
-},[playbackSpeed]);
-
-  
+  useEffect(()=>{if(audio.current)audio.current.playbackRate=playbackSpeed;},[playbackSpeed]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
@@ -2842,7 +2793,6 @@ const goBack=useCallback(()=>{
           onChange={e=>subActive&&setPlaybackSpeed(parseFloat(e.target.value))}
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
-          
           <span style={{fontSize:10,color:TEXT_MUTED}}>0.5x</span>
           <span style={{fontSize:10,color:TEXT_MUTED}}>2x</span>
         </div>
@@ -2873,14 +2823,7 @@ const goBack=useCallback(()=>{
             <div key={band.freq} style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
               <span style={{fontSize:11,color:TEXT_MUTED,width:44,flexShrink:0}}>{band.label}</span>
               <input type="range" min="-12" max="12" step="1" defaultValue="0"
-                onChange={e=>{
-                  if(!subActive)return;
-                  const val=parseInt(e.target.value);
-                  if(!toneEq.current)return;
-                  if(band.freq<=100)toneEq.current.low.value=val;
-                  else if(band.freq<=1000)toneEq.current.mid.value=val;
-                  else toneEq.current.high.value=val;
-                }}
+                onChange={e=>{if(!subActive)return;}}
                 style={{flex:1,accentColor:ACC,cursor:'pointer',opacity:subActive?1:0.4}}/>
               <span style={{fontSize:11,color:TEXT_MUTED,width:32,textAlign:'right' as const}}>0 dB</span>
             </div>
