@@ -1167,6 +1167,10 @@ const [onboardStep,setOnboardStep]=useState(0);
   const miniTimeRef=useRef<HTMLSpanElement>(null);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
+  const [showFxPanel, setShowFxPanel] = useState(false);
+  const [showEqPanel, setShowEqPanel] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [reverbAmount, setReverbAmount] = useState(0);
   const[fullPlayer,setFullPlayer]=useState(false);
   const[showQueue,setShowQueue]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
@@ -1204,9 +1208,9 @@ const [onboardStep,setOnboardStep]=useState(0);
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
   const [censorNoticeShown, setCensorNoticeShown] = useState<boolean>(()=>{try{return localStorage.getItem('cns47')==='1';}catch{return false;}});
-const [showCensorNotice, setShowCensorNotice] = useState(false);
+  const [showCensorNotice, setShowCensorNotice] = useState(false);
   const[importUrl,setImportUrl]=useState('');
-const[importTab,setImportTab]=useState<'main'|'other'>('main');
+  const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const[importSource,setImportSource]=useState<'none'|'sc'|'spotify'|'youtube'|'yandex'|'apple'|'soundiiz'>('none');
   const[importSizeQ,setImportSizeQ]=useState<'none'|'spotify'|'youtube'>('none');
   const[importStep,setImportStep]=useState<'idle'|'fetching'|'preview'|'matching'|'done'|'error'>('idle');
@@ -1224,7 +1228,7 @@ const[importTab,setImportTab]=useState<'main'|'other'>('main');
   const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
   const audio=useRef<HTMLAudioElement|null>(null);
-const audioCtx=useRef<AudioContext|null>(null);
+  const audioCtx=useRef<AudioContext|null>(null);
   const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playCountRef=useRef(0);
   const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -1749,6 +1753,8 @@ else{
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
+  useEffect(()=>{if(audio.current)audio.current.playbackRate=playbackSpeed;},[playbackSpeed]);
+
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
     if(uid==='anon'||!Object.keys(trackPlays).length)return;
@@ -1887,6 +1893,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     });
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
+    setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);
     progressRef.current=0;curTimeRef.current='0:00';
     if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
     if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
@@ -1998,6 +2005,7 @@ const playPrev=()=>{
       }
       setCurrent(prev);
       setCurrent(prev);
+      setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);
       progressRef.current=0;curTimeRef.current='0:00';
       if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
       if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
@@ -2730,6 +2738,9 @@ const goBack=useCallback(()=>{
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center'}}>
+          <button onPointerDown={()=>setShowFxPanel(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showFxPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </button>
           <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           </button>
@@ -2739,6 +2750,85 @@ const goBack=useCallback(()=>{
         </div>
       </div>
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
+      {showFxPanel&&(
+  <div style={{width:'100%',background:'rgba(20,20,20,0.95)',borderRadius:16,padding:'16px',marginBottom:8,border:'1px solid #252525',animation:'slideDown 0.2s ease both',position:'relative'}}>
+    {!subActive&&(
+      <div style={{position:'absolute',inset:0,background:'rgba(14,14,14,0.85)',borderRadius:16,zIndex:10,display:'flex',flexDirection:'column' as const,alignItems:'center',justifyContent:'center',gap:8,padding:16}}>
+        <div style={{fontSize:20}}>⭐</div>
+        <div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY,textAlign:'center' as const}}>Premium only</div>
+        <div style={{fontSize:11,color:TEXT_MUTED,textAlign:'center' as const}}>Subscribe to unlock FX controls</div>
+        <button onPointerDown={()=>{setShowFxPanel(false);setShowPremium(true);}} style={{padding:'8px 20px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:12,fontWeight:700,cursor:'pointer',...tap}}>Upgrade</button>
+      </div>
+    )}
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+      <div style={{fontSize:13,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
+      <button onPointerDown={()=>setShowEqPanel(v=>!v)} style={{background:showEqPanel?ACC_DIM:'none',border:`1px solid ${showEqPanel?ACC:'#333'}`,borderRadius:8,padding:'4px 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,...tap}}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={showEqPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span style={{fontSize:11,color:showEqPanel?ACC:'#888'}}>EQ</span>
+      </button>
+    </div>
+    {/* Пресеты */}
+    <div style={{display:'flex',gap:8,marginBottom:14}}>
+      {[
+        {label:'Slowed + Reverb',speed:0.8,reverb:40},
+        {label:'Nightcore',speed:1.2,reverb:0},
+      ].map(p=>(
+        <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);}}
+          style={{flex:1,padding:'7px 4px',borderRadius:10,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:11,cursor:'pointer',...tap}}>
+          {p.label}
+        </button>
+      ))}
+    </div>
+    {/* Скорость */}
+    <div style={{marginBottom:12}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+        <span style={{fontSize:11,color:TEXT_MUTED}}>Speed</span>
+        <span style={{fontSize:11,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
+      </div>
+      <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
+        onChange={e=>subActive&&setPlaybackSpeed(parseFloat(e.target.value))}
+        style={{width:'100%',accentColor:ACC,cursor:'pointer'}}/>
+    </div>
+    {/* Реверб */}
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+        <span style={{fontSize:11,color:TEXT_MUTED}}>Reverb</span>
+        <span style={{fontSize:11,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
+      </div>
+      <input type="range" min="0" max="100" step="1" value={reverbAmount}
+        onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
+        style={{width:'100%',accentColor:ACC,cursor:'pointer'}}/>
+    </div>
+    {/* EQ Panel */}
+    {showEqPanel&&(
+      <div style={{marginTop:14,borderTop:'1px solid #252525',paddingTop:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:TEXT_PRIMARY,marginBottom:12}}>Equalizer</div>
+        {[
+          {label:'60Hz',freq:60},
+          {label:'250Hz',freq:250},
+          {label:'1kHz',freq:1000},
+          {label:'4kHz',freq:4000},
+          {label:'12kHz',freq:12000},
+        ].map(band=>(
+          <div key={band.freq} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+            <span style={{fontSize:10,color:TEXT_MUTED,width:36,flexShrink:0}}>{band.label}</span>
+            <input type="range" min="-12" max="12" step="1" defaultValue="0"
+              onChange={e=>{
+                if(!subActive)return;
+                if(!audioCtx.current)return;
+                const gainVal=parseInt(e.target.value);
+                // применяем EQ через Web Audio API
+                const source=(audio.current as any)._eqNodes?.[band.freq];
+                if(source)source.gain.value=gainVal;
+              }}
+              style={{flex:1,accentColor:ACC,cursor:'pointer'}}/>
+            <span style={{fontSize:10,color:TEXT_MUTED,width:28,textAlign:'right' as const}}>0dB</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
       <div style={{width:'100%',flexShrink:0,marginBottom:2,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.15s both'}}>
         {/* Прогресс-бар полного плеера — управляется через DOM refs */}
         <div style={{width:'100%',position:'relative',padding:'8px 0',margin:'-8px 0',cursor:'pointer',touchAction:'none'}}
