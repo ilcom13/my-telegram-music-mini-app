@@ -2839,10 +2839,9 @@ const goBack=useCallback(()=>{
     </div>
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
   </div>
-  <input type="range" min="0" max="100" step="1" value={reverbAmount}
-    onChange={()=>{}}
-    disabled
-    style={{width:'100%',accentColor:ACC,cursor:'not-allowed',height:4,opacity:0.4}}/>
+<input type="range" min="0" max="100" step="1" value={reverbAmount}
+  onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
+  style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
     <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
