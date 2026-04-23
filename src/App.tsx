@@ -1988,12 +1988,11 @@ if(d.hls||d.mp3){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-const applyFxPreset = async (preset: string) => {
+const applyFxPreset = async (preset: string, customSpeed?: number, customReverb?: number) => {
   const a = audio.current;
   if (!a || !a.src) return;
   setFxLoading(true);
   try {
-    // Скачиваем трек в браузере
     const resp = await fetch(a.src);
     const blob = await resp.blob();
     const arrayBuffer = await blob.arrayBuffer();
@@ -2001,12 +2000,18 @@ const applyFxPreset = async (preset: string) => {
     let binary = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     const base64Audio = btoa(binary);
-    // Отправляем на Railway
-    const fxResp = await fetch(`https://eq-production.up.railway.app/fx-base64?preset=${preset}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio: base64Audio })
-    });
+    
+    const speed = customSpeed ?? playbackSpeed;
+    const reverb = customReverb ?? reverbAmount;
+    
+    const fxResp = await fetch(
+      `https://eq-production.up.railway.app/fx-base64?preset=${preset}&speed=${speed}&reverb=${reverb}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio })
+      }
+    );
     if (!fxResp.ok) throw new Error('FX error');
     const processed = await fxResp.blob();
     const url = URL.createObjectURL(processed);
@@ -2847,6 +2852,10 @@ const goBack=useCallback(()=>{
     <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
   </div>
 </div>
+      <button onPointerDown={()=>{if(!subActive)return;applyFxPreset('custom');}}
+  style={{width:'100%',padding:'11px',background:fxLoading?'#333':ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:12,opacity:fxLoading?0.7:1,...tap}}>
+  {fxLoading?'Processing...':'Apply'}
+</button>
       {showEqPanel&&(
         <div style={{borderTop:'1px solid #252525',paddingTop:20}}>
           <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:16}}>Equalizer</div>
