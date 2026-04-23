@@ -1085,6 +1085,7 @@ export default function App(){
   const[query,setQuery]=useState('');
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
   const [showLibSettings,setShowLibSettings]=useState(false);
+  
   const [showPremium, setShowPremium] = useState(false);
   const [showPremiumBenefits, setShowPremiumBenefits] = useState(false);
   const [subActive, setSubActive] = useState(false);
@@ -1171,6 +1172,7 @@ export default function App(){
   const [showFxPanel, setShowFxPanel] = useState(false);
   const originalSrcRef = useRef<string>('');
   const [fxLoading, setFxLoading] = useState(false);
+  const [fxRemaining, setFxRemaining] = useState<number>(7);
   const [showEqPanel, setShowEqPanel] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [reverbAmount, setReverbAmount] = useState(0);
@@ -1487,6 +1489,14 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
     if(d.active)setSubActive(true);
   }).catch(()=>{});
 },[uid]);
+
+  useEffect(()=>{
+  if(uid==='anon'||!subActive)return;
+  fetch(`${W}/fx/check?uid=${uid}`).then(r=>r.json()).then(d=>{
+    setFxRemaining(d.remaining??7);
+  }).catch(()=>{});
+},[uid,subActive]);
+
   
   useEffect(()=>{
     const onKey=(e:KeyboardEvent)=>{
@@ -2001,6 +2011,10 @@ if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
   originalSrcRef.current = a.src;
 }
 const srcToProcess = originalSrcRef.current;
+  if(fxRemaining<=0){
+  alert(lang==='ru'?'Лимит обработок на сегодня исчерпан (7/7)':lang==='uk'?'Ліміт обробок вичерпано (7/7)':'Daily FX limit reached (7/7)');
+  return;
+}
   setFxLoading(true);
   try {
     const resp = await fetch(srcToProcess)
@@ -2029,6 +2043,9 @@ const srcToProcess = originalSrcRef.current;
     a.src = url;
     a.currentTime = currentTime;
     a.play();
+    fetch(`${W}/fx/use?uid=${uid}`).then(r=>r.json()).then(d=>{
+  setFxRemaining(d.remaining??0);
+}).catch(()=>{});
   } catch(e) {
     console.error('FX error:', e);
   } finally {
@@ -2817,7 +2834,12 @@ const goBack=useCallback(()=>{
         </div>
       )}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-        <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+  <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
+  {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060'}}>
+    {fxRemaining}/7 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
+  </div>}
+</div>
 
       </div>
       <div style={{display:'flex',gap:10,marginBottom:20}}>
