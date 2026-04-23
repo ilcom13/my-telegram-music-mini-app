@@ -2836,7 +2836,6 @@ const goBack=useCallback(()=>{
   <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
     <div style={{display:'flex',alignItems:'center',gap:6}}>
       <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Reverb</span>
-      <span style={{fontSize:10,background:'#252525',color:TEXT_MUTED,padding:'2px 7px',borderRadius:6}}>Soon</span>
     </div>
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
   </div>
