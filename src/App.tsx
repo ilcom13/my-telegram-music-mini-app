@@ -2824,10 +2824,10 @@ const goBack=useCallback(()=>{
       </div>
       <div style={{display:'flex',gap:10,marginBottom:20}}>
         {[
-          {label:'Slowed + Reverb',speed:0.8,reverb:40},
-          {label:'Nightcore',speed:1.3,reverb:0},
+          {label:'Slowed + Reverb',speed:0.85,reverb:35,pitch:0.9},
+          {label:'Speed Up',speed:1.15,reverb:0,pitch:1.1},
         ].map(p=>(
-          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);applyFxPreset(p.label==='Slowed + Reverb'?'slowed':'nightcore');}}
+          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);setPitchAmount(p.pitch);applyFxPreset('custom');}}
             style={{flex:1,padding:'10px 4px',borderRadius:12,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:12,fontWeight:500,cursor:'pointer',opacity:subActive?1:0.4,...tap}}>
             {fxLoading?'Processing...':p.label}
           </button>
@@ -3002,7 +3002,12 @@ return(
           <div style={{textAlign:'center' as const,marginBottom:24}}>
             <div style={{fontSize:32,marginBottom:8}}>⭐</div>
             <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:6}}>Forty7 Premium</div>
-            <div style={{fontSize:13,color:TEXT_MUTED}}>Support the project and get bonuses</div>
+            <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:4}}>Support the project and get bonuses</div>
+<button onPointerDown={()=>setShowPremiumBenefits(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,...tap}}>
+  <span style={{fontSize:12,color:ACC,textDecoration:'underline'}}>
+    {lang==='ru'?'Узнать что даёт Premium':lang==='uk'?'Дізнатись що дає Premium':lang==='kk'?'Premium не береді':lang==='pl'?'Co daje Premium?':lang==='tr'?'Premium ne sağlar?':'What does Premium include?'}
+  </span>
+</button>
           </div>
           <div style={{display:'flex',flexDirection:'column' as const,gap:10,marginBottom:20}}>
             {[
