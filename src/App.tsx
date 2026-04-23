@@ -2980,6 +2980,35 @@ const goBack=useCallback(()=>{
 return(
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
     <audio ref={audio}/>
+      {showPremiumBenefits&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:510,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremiumBenefits(false)}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
+      <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 20px'}}/>
+      <div style={{fontSize:18,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,textAlign:'center' as const}}>
+        ⭐ {lang==='ru'?'Возможности Premium':lang==='uk'?'Можливості Premium':lang==='kk'?'Premium мүмкіндіктері':lang==='pl'?'Funkcje Premium':lang==='tr'?'Premium özellikleri':'Premium Features'}
+      </div>
+      <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
+        <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'flex-start',gap:12}}>
+          <div style={{fontSize:22,flexShrink:0}}>🎚️</div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:4}}>
+              {lang==='ru'?'FX — эффекты для треков':lang==='uk'?'FX — ефекти для треків':lang==='kk'?'FX — трек эффекттері':lang==='pl'?'FX — efekty dla utworów':lang==='tr'?'FX — parça efektleri':'FX — Track Effects'}
+            </div>
+            <div style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
+              {lang==='ru'?'Slowed+Reverb, Speed Up, Bass Boost — эквализация любого трека. До 7 обработок в день.':lang==='uk'?'Slowed+Reverb, Speed Up, Bass Boost — еквалізація будь-якого треку. До 7 обробок на день.':lang==='kk'?'Slowed+Reverb, Speed Up, Bass Boost. Күніне 7 өңдеуге дейін.':lang==='pl'?'Slowed+Reverb, Speed Up, Bass Boost. Do 7 przetworzeń dziennie.':lang==='tr'?'Slowed+Reverb, Speed Up, Bass Boost. Günde 7 işleme kadar.':'Slowed+Reverb, Speed Up, Bass Boost — equalize any track. Up to 7 uses per day.'}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{fontSize:11,color:TEXT_MUTED,textAlign:'center' as const,marginBottom:16}}>
+        {lang==='ru'?'✨ Больше функций скоро':lang==='uk'?'✨ Більше функцій незабаром':lang==='kk'?'✨ Жақында көбірек мүмкіндіктер':lang==='pl'?'✨ Więcej funkcji wkrótce':lang==='tr'?'✨ Yakında daha fazla özellik':'✨ More features coming soon'}
+      </div>
+      <button onPointerDown={()=>setShowPremiumBenefits(false)} style={{width:'100%',padding:'13px',background:'#1a1a1a',border:'1px solid #252525',borderRadius:12,color:TEXT_MUTED,fontSize:14,cursor:'pointer',...tap}}>
+        {lang==='ru'?'Закрыть':lang==='uk'?'Закрити':lang==='kk'?'Жабу':lang==='pl'?'Zamknij':lang==='tr'?'Kapat':'Close'}
+      </button>
+    </div>
+  </div>
+)}
 {showPremium&&(
 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremium(false)}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
