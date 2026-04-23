@@ -2834,9 +2834,9 @@ const goBack=useCallback(()=>{
         </div>
       )}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
   <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
-  {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060'}}>
+  {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12}}>
     {fxRemaining}/7 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
   </div>}
 </div>
