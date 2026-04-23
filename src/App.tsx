@@ -2012,7 +2012,7 @@ if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
 }
 const srcToProcess = originalSrcRef.current;
   if(fxRemaining<=0){
-  alert(lang==='ru'?'Лимит обработок на сегодня исчерпан (7/7)':lang==='uk'?'Ліміт обробок вичерпано (7/7)':'Daily FX limit reached (7/7)');
+  alert(lang==='ru'?'Лимит обработок на сегодня исчерпан (3/3)':lang==='uk'?'Ліміт обробок вичерпано (3/3)':lang==='kk'?'Бүгінгі өңдеу лимиті таусылды (3/3)':lang==='pl'?'Dzienny limit przetwarzania wyczerpany (3/3)':lang==='tr'?'Günlük işleme limiti doldu (3/3)':'Daily FX limit reached (3/3)');
   return;
 }
   setFxLoading(true);
@@ -2859,7 +2859,7 @@ const goBack=useCallback(()=>{
           <span style={{fontSize:13,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
         </div>
         <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
-          onChange={e=>subActive&&setPlaybackSpeed(parseFloat(e.target.value))}
+          onChange={e=>{if(!subActive||fxRemaining<=0)return;setPlaybackSpeed(parseFloat(e.target.value));}}
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
           <span style={{fontSize:10,color:TEXT_MUTED}}>0.5x</span>
@@ -2874,7 +2874,7 @@ const goBack=useCallback(()=>{
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
   </div>
 <input type="range" min="0" max="100" step="1" value={reverbAmount}
-  onChange={e=>subActive&&setReverbAmount(parseInt(e.target.value))}
+  onChange={e=>{if(!subActive||fxRemaining<=0)return;setReverbAmount(parseInt(e.target.value));}}
   style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
@@ -2888,7 +2888,7 @@ const goBack=useCallback(()=>{
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{pitchAmount.toFixed(2)}x</span>
   </div>
   <input type="range" min="0.5" max="2" step="0.05" value={pitchAmount}
-    onChange={e=>subActive&&setPitchAmount(parseFloat(e.target.value))}
+    onChange={e=>{if(!subActive||fxRemaining<=0)return;setPitchAmount(parseFloat(e.target.value));}}
     style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>Lower</span>
@@ -2902,7 +2902,7 @@ const goBack=useCallback(()=>{
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{bassAmount > 0 ? `+${bassAmount}` : bassAmount}dB</span>
   </div>
   <input type="range" min="0" max="12" step="1" value={bassAmount}
-    onChange={e=>subActive&&setBassAmount(parseInt(e.target.value))}
+    onChange={e=>{if(!subActive||fxRemaining<=0)return;setBassAmount(parseInt(e.target.value));}}
     style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0</span>
