@@ -1085,7 +1085,7 @@ export default function App(){
   const[query,setQuery]=useState('');
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
 const [showLibSettings,setShowLibSettings]=useState(false);
-  const [showPremium, setShowPremium] = useState(false);
+  const [showPremiumBenefits, setShowPremiumBenefits] = useState(false);
 const [subActive, setSubActive] = useState(false);
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
 const [onboardStep,setOnboardStep]=useState(0);
