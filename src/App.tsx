@@ -1088,6 +1088,8 @@ export default function App(){
   
   const [showPremium, setShowPremium] = useState(false);
   const [showPremiumBenefits, setShowPremiumBenefits] = useState(false);
+  const [showStatsNotif, setShowStatsNotif] = useState(false);
+  const [showStatsLocked, setShowStatsLocked] = useState(false);
   const [subActive, setSubActive] = useState(false);
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
   const [onboardStep,setOnboardStep]=useState(0);
@@ -1489,6 +1491,20 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
     if(d.active)setSubActive(true);
   }).catch(()=>{});
 },[uid]);
+
+  useEffect(()=>{
+  try{
+    const today=new Date();
+    const day=today.getDate();
+    const monthKey=today.toISOString().slice(0,7);
+    const notifKey=`statsnotif_${monthKey}`;
+    const shown=localStorage.getItem(notifKey);
+    if(day>=23&&!shown){
+      setShowStatsNotif(true);
+      localStorage.setItem(notifKey,'1');
+    }
+  }catch{}
+},[]);
 
   useEffect(()=>{
   if(uid==='anon'||!subActive)return;
@@ -3031,6 +3047,46 @@ return(
     </div>
   </div>
 )}
+
+
+      {showStatsLocked&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}} onPointerDown={()=>setShowStatsLocked(false)}>
+    <div style={{background:'#141414',border:'1px solid #252525',borderRadius:20,padding:'28px 20px',width:'100%',maxWidth:360,animation:'scaleIn 0.2s ease both',textAlign:'center' as const}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
+      <div style={{fontSize:36,marginBottom:12}}>📊</div>
+      <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,marginBottom:8}}>
+        {lang==='ru'?'Статистика собирается':lang==='uk'?'Статистика збирається':lang==='kk'?'Статистика жиналуда':lang==='pl'?'Statystyki są zbierane':lang==='tr'?'İstatistikler toplanıyor':'Stats are being collected'}
+      </div>
+      <div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.6,marginBottom:20}}>
+        {lang==='ru'?'Дождитесь 23 числа текущего месяца — тогда откроется статистика за месяц':lang==='uk'?'Зачекайте 23 числа поточного місяця — тоді відкриється статистика за місяць':lang==='kk'?'Ағымдағы айдың 23-ін күтіңіз — айлық статистика ашылады':lang==='pl'?'Poczekaj do 23. dnia miesiąca — wtedy otworzy się statystyka miesięczna':lang==='tr'?'Ayın 23\'ünü bekleyin — aylık istatistikler açılacak':'Wait until the 23rd — monthly stats will be available then'}
+      </div>
+      <button onPointerDown={()=>setShowStatsLocked(false)} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>
+        OK
+      </button>
+    </div>
+  </div>
+)}
+{showStatsNotif&&(
+  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 20px'}} onPointerDown={()=>setShowStatsNotif(false)}>
+    <div style={{background:'#141414',border:`1px solid ${ACC}44`,borderRadius:20,padding:'28px 20px',width:'100%',maxWidth:360,animation:'scaleIn 0.2s ease both',textAlign:'center' as const}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
+      <div style={{fontSize:36,marginBottom:12}}>🎉</div>
+      <div style={{fontSize:16,fontWeight:700,color:ACC,marginBottom:8}}>
+        {lang==='ru'?'Статистика за месяц готова!':lang==='uk'?'Статистика за місяць готова!':lang==='kk'?'Айлық статистика дайын!':lang==='pl'?'Statystyki miesięczne gotowe!':lang==='tr'?'Aylık istatistikler hazır!':'Monthly stats are ready!'}
+      </div>
+      <div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.6,marginBottom:20}}>
+        {lang==='ru'?'Вы можете посмотреть свою статистику за месяц в профиле':lang==='uk'?'Ви можете переглянути свою статистику за місяць у профілі':lang==='kk'?'Айлық статистикаңызды профильде көре аласыз':lang==='pl'?'Możesz zobaczyć swoje miesięczne statystyki w profilu':lang==='tr'?'Aylık istatistiklerinizi profilde görebilirsiniz':'You can view your monthly stats in your profile'}
+      </div>
+      <div style={{display:'flex',gap:8}}>
+        <button onPointerDown={()=>setShowStatsNotif(false)} style={{flex:1,padding:'12px',background:'#1a1a1a',border:'1px solid #333',borderRadius:12,color:TEXT_MUTED,fontSize:13,cursor:'pointer',...tap}}>
+          {lang==='ru'?'Позже':lang==='uk'?'Пізніше':lang==='kk'?'Кейінірек':lang==='pl'?'Później':lang==='tr'?'Sonra':'Later'}
+        </button>
+        <button onPointerDown={()=>{setShowStatsNotif(false);setScreen('profile');}} style={{flex:1,padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+          {lang==='ru'?'Открыть':lang==='uk'?'Відкрити':lang==='kk'?'Ашу':lang==='pl'?'Otwórz':lang==='tr'?'Aç':'Open'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      
 {showPremium&&(
 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremium(false)}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
@@ -3883,7 +3939,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                   {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
                   {(()=>{const _today=new Date();const _showPrev=_today.getDate()<25&&!!monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);const mStat=_showPrev?monthStats.prev!:monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
-                  <button onPointerDown={()=>setScreen('monthstats')} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
+                  <button onPointerDown={()=>{const d=new Date().getDate();if(d>=23){setScreen('monthstats');}else{setShowStatsLocked(true);}}} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
                     <div style={{fontSize:26,flexShrink:0}}>📊</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly Stats'}</div>
