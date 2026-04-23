@@ -1173,6 +1173,8 @@ const [onboardStep,setOnboardStep]=useState(0);
   const [showEqPanel, setShowEqPanel] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [reverbAmount, setReverbAmount] = useState(0);
+  const [pitchAmount, setPitchAmount] = useState(1);
+  const [bassAmount, setBassAmount] = useState(0);
   const[fullPlayer,setFullPlayer]=useState(false);
   const[showQueue,setShowQueue]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
@@ -1899,7 +1901,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     });
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
-    setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
+    setPlaybackSpeed(1);setReverbAmount(0);setPitchAmount(1);setBassAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
     progressRef.current=0;curTimeRef.current='0:00';
     if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
     if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
@@ -2012,7 +2014,7 @@ const srcToProcess = originalSrcRef.current;
     const reverb = customReverb ?? reverbAmount;
     
     const fxResp = await fetch(
-      `https://eq-production.up.railway.app/fx-base64?preset=${preset}&speed=${speed}&reverb=${reverb}`,
+      `https://eq-production.up.railway.app/fx-base64?preset=${preset}&speed=${speed}&reverb=${reverb}&pitch=${pitchAmount}&bass=${bassAmount}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2857,6 +2859,34 @@ const goBack=useCallback(()=>{
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
     <span style={{fontSize:10,color:TEXT_MUTED}}>100%</span>
+  </div>
+</div>
+      {/* Pitch */}
+<div style={{marginBottom:16}}>
+  <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+    <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Pitch</span>
+    <span style={{fontSize:13,color:ACC,fontWeight:600}}>{pitchAmount.toFixed(2)}x</span>
+  </div>
+  <input type="range" min="0.5" max="2" step="0.05" value={pitchAmount}
+    onChange={e=>subActive&&setPitchAmount(parseFloat(e.target.value))}
+    style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
+  <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>Lower</span>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>Higher</span>
+  </div>
+</div>
+{/* Bass */}
+<div style={{marginBottom:16}}>
+  <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+    <span style={{fontSize:13,color:TEXT_SEC,fontWeight:500}}>Bass Boost</span>
+    <span style={{fontSize:13,color:ACC,fontWeight:600}}>{bassAmount > 0 ? `+${bassAmount}` : bassAmount}dB</span>
+  </div>
+  <input type="range" min="0" max="12" step="1" value={bassAmount}
+    onChange={e=>subActive&&setBassAmount(parseInt(e.target.value))}
+    style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
+  <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>0</span>
+    <span style={{fontSize:10,color:TEXT_MUTED}}>+12dB</span>
   </div>
 </div>
       <button onPointerDown={()=>{if(!subActive)return;applyFxPreset('custom');}}
