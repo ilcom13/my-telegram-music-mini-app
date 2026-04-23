@@ -2889,22 +2889,21 @@ const goBack=useCallback(()=>{
     <span style={{fontSize:10,color:TEXT_MUTED}}>+12dB</span>
   </div>
 </div>
-      <button onPointerDown={()=>{if(!subActive)return;applyFxPreset('custom');}}
-        <button onPointerDown={()=>{
+<button onPointerDown={()=>{if(!subActive)return;applyFxPreset('custom');}}
+  style={{width:'100%',padding:'11px',background:fxLoading?'#333':ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:12,opacity:fxLoading?0.7:1,...tap}}>
+  {fxLoading?'Processing...':'Apply'}
+</button>
+<button onPointerDown={()=>{
   if(!subActive)return;
   const orig=originalSrcRef.current;
   setPlaybackSpeed(1);setReverbAmount(0);setPitchAmount(1);setBassAmount(0);
   originalSrcRef.current='';
   const a=audio.current;
   if(a&&orig){a.src=orig;a.play();}
-}}
-  style={{width:'100%',padding:'11px',background:'#1a1a1a',border:'1px solid #333',borderRadius:12,color:TEXT_MUTED,fontSize:13,cursor:'pointer',marginTop:8,...tap}}>
+}} style={{width:'100%',padding:'11px',background:'#1a1a1a',border:'1px solid #333',borderRadius:12,color:TEXT_MUTED,fontSize:13,cursor:'pointer',marginTop:8,...tap}}>
   Reset
 </button>
-  style={{width:'100%',padding:'11px',background:fxLoading?'#333':ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:12,opacity:fxLoading?0.7:1,...tap}}>
-  {fxLoading?'Processing...':'Apply'}
-</button>
-      {showEqPanel&&(
+{showEqPanel&&(
         <div style={{borderTop:'1px solid #252525',paddingTop:20}}>
           <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:16}}>Equalizer</div>
           {[
