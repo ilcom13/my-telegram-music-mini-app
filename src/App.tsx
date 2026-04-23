@@ -1168,6 +1168,7 @@ const [onboardStep,setOnboardStep]=useState(0);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
   const [showFxPanel, setShowFxPanel] = useState(false);
+  const originalSrcRef = useRef<string>('');
   const [fxLoading, setFxLoading] = useState(false);
   const [showEqPanel, setShowEqPanel] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -1898,7 +1899,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     });
     if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
-    setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);
+    setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
     progressRef.current=0;curTimeRef.current='0:00';
     if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
     if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
@@ -1989,11 +1990,17 @@ if(d.hls||d.mp3){
   },[]);
 
 const applyFxPreset = async (preset: string, customSpeed?: number, customReverb?: number) => {
-  const a = audio.current;
-  if (!a || !a.src) return;
+const a = audio.current;
+if (!a || !a.src) return;
+
+// Сохраняем оригинальный URL при первом применении
+if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
+  originalSrcRef.current = a.src;
+}
+const srcToProcess = originalSrcRef.current;
   setFxLoading(true);
   try {
-    const resp = await fetch(a.src);
+    const resp = await fetch(srcToProcess)
     const blob = await resp.blob();
     const arrayBuffer = await blob.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
@@ -2049,7 +2056,7 @@ const playPrev=()=>{
       }
       setCurrent(prev);
       setCurrent(prev);
-      setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);
+      setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
       progressRef.current=0;curTimeRef.current='0:00';
       if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
       if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
