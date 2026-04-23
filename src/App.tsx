@@ -1172,7 +1172,7 @@ export default function App(){
   const [showFxPanel, setShowFxPanel] = useState(false);
   const originalSrcRef = useRef<string>('');
   const [fxLoading, setFxLoading] = useState(false);
-  const [fxRemaining, setFxRemaining] = useState<number>(7);
+  const [fxRemaining, setFxRemaining] = useState<number>(3);
   const [showEqPanel, setShowEqPanel] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [reverbAmount, setReverbAmount] = useState(0);
@@ -2837,7 +2837,7 @@ const goBack=useCallback(()=>{
 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
   <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
   {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12}}>
-    {fxRemaining}/7 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
+    {fxRemaining}/3 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
   </div>}
 </div>
 
