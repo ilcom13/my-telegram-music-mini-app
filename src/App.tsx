@@ -2818,10 +2818,7 @@ const goBack=useCallback(()=>{
       )}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
         <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
-        <button onPointerDown={()=>setShowEqPanel(v=>!v)} style={{background:showEqPanel?ACC_DIM:'#1a1a1a',border:`1px solid ${showEqPanel?ACC:'#333'}`,borderRadius:10,padding:'6px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:6,...tap}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={showEqPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <span style={{fontSize:12,color:showEqPanel?ACC:'#888'}}>EQ</span>
-        </button>
+
       </div>
       <div style={{display:'flex',gap:10,marginBottom:20}}>
         {[
@@ -3004,7 +3001,7 @@ return(
             <div style={{fontSize:32,marginBottom:8}}>⭐</div>
             <div style={{fontSize:20,fontWeight:800,color:TEXT_PRIMARY,marginBottom:6}}>Forty7 Premium</div>
             <div style={{fontSize:13,color:TEXT_MUTED,marginBottom:4}}>Support the project and get bonuses</div>
-<button onPointerDown={()=>setShowPremiumBenefits(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,...tap}}>
+<button onPointerDown={e=>{e.stopPropagation();setShowPremiumBenefits(true);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,...tap}}>
   <span style={{fontSize:12,color:ACC,textDecoration:'underline'}}>
     {lang==='ru'?'Узнать что даёт Premium':lang==='uk'?'Дізнатись що дає Premium':lang==='kk'?'Premium не береді':lang==='pl'?'Co daje Premium?':lang==='tr'?'Premium ne sağlar?':'What does Premium include?'}
   </span>
