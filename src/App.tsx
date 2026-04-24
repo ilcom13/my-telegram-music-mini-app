@@ -1509,7 +1509,7 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
   useEffect(()=>{
   if(uid==='anon'||!subActive)return;
   fetch(`${W}/fx/check?uid=${uid}`).then(r=>r.json()).then(d=>{
-    setFxRemaining(d.remaining??7);
+    setFxRemaining(d.remaining??3);
   }).catch(()=>{});
 },[uid,subActive]);
 
