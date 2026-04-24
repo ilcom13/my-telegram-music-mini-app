@@ -1812,23 +1812,27 @@ a.addEventListener('volumechange',onVol);
     return()=>a.removeEventListener('volumechange',onVol);
   },[]);
 
-  useEffect(()=>{
-const onFocus=()=>{
-  if(audioCtx.current?.state==='suspended'){
-    audioCtx.current.resume().catch(()=>{});
-  }
-  // Синхронизируем playing state при возврате в апп
-  if(audio.current&&!audio.current.paused&&!isPlayingRef.current){
-    setPlaying(true);
-  }
-};
-    window.addEventListener('focus',onFocus);
-    document.addEventListener('visibilitychange',onFocus);
-    return()=>{
-      window.removeEventListener('focus',onFocus);
-      document.removeEventListener('visibilitychange',onFocus);
-    };
-  },[]);
+ useEffect(()=>{
+  const onFocus=()=>{
+    if(document.visibilityState!=='visible')return;
+    if(audioCtx.current?.state==='suspended'){
+      audioCtx.current.resume().catch(()=>{});
+    }
+    // Синхронизируем состояние только если аудио реально играет
+    const a=audio.current;
+    if(a&&!a.paused&&!isPlayingRef.current){
+      setPlaying(true);
+    }
+    // Если должен играть но встал — пробуем через 500мс
+    if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0){
+      setTimeout(()=>{
+        if(a.paused&&isPlayingRef.current)a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
+      },500);
+    }
+  };
+  document.addEventListener('visibilitychange',onFocus);
+  return()=>document.removeEventListener('visibilitychange',onFocus);
+},[]);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
 
@@ -1836,6 +1840,8 @@ useEffect(()=>{
   const interval=setInterval(()=>{
     const a=audio.current;
     if(!a||!isPlayingRef.current)return;
+    // Не трогаем если вкладка невидима — браузер сам управляет
+    if(document.visibilityState==='hidden')return;
     if(a.ended&&a.src){
       if(queueRef.current.length>0){
         const nxt=queueRef.current[0];
@@ -1850,17 +1856,12 @@ useEffect(()=>{
       }
       return;
     }
-    if(a.paused&&!a.ended&&a.src){
-      if(a.readyState>=2){
-        a.play().catch(()=>{});
-      } else if(navigator.onLine&&a.readyState<2){
-        const t=a.currentTime;
-        a.load();
-        a.currentTime=t;
-        a.play().catch(()=>{});
-      }
+    // Пробуем возобновить ТОЛЬКО если readyState достаточен
+    // и прошло не более 5 сек с момента последнего play
+    if(a.paused&&!a.ended&&a.src&&a.readyState>=3&&a.currentTime>0){
+      a.play().catch(()=>{});
     }
-  },2000);
+  },3000);
   return()=>clearInterval(interval);
 },[]);
 
