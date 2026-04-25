@@ -1168,6 +1168,7 @@ export default function App(){
   const curTimeDisplayRef=useRef<HTMLSpanElement>(null);
   const miniBarFillRef=useRef<HTMLDivElement>(null);
   const miniBarThumbRef=useRef<HTMLDivElement>(null);
+  const durDisplayRef=useRef<HTMLSpanElement>(null);
   const miniTimeRef=useRef<HTMLSpanElement>(null);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
@@ -1756,6 +1757,7 @@ const onVisible=()=>{
         if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct}%`;
         if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct}%`;
         if(miniTimeRef.current)miniTimeRef.current.textContent=timeStr;
+        if(durDisplayRef.current){const dm=Math.floor(a.duration/60),ds=Math.floor(a.duration%60);durDisplayRef.current.textContent=`${dm}:${ds.toString().padStart(2,'0')}`;}
         try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
             const now2=Date.now();
@@ -3002,7 +3004,7 @@ const goBack=useCallback(()=>{
         </div>
         <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}>
           <span ref={curTimeDisplayRef}>0:00</span>
-          <span>{current.duration}</span>
+          <span ref={durDisplayRef}>{current.duration}</span>
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(20px,7vw,36px)',flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
@@ -4716,7 +4718,7 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
                 <div ref={miniBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:11,height:11,background:ACC,borderRadius:'50%',pointerEvents:'none'}}/>
               </div>
             </div>
-            <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0,pointerEvents:'none' as const}}>{current.duration}</span>
+            <span style={{fontSize:10,color:'#555',minWidth:28,flexShrink:0,pointerEvents:'none' as const}} ref={durDisplayRef}>{current.duration}</span>
           </div>
         </div>
       )}
