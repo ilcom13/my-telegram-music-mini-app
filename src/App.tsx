@@ -2054,12 +2054,18 @@ const srcToProcess = originalSrcRef.current;
         body: JSON.stringify({ audio: base64Audio })
       }
     );
-    if (!fxResp.ok) throw new Error('FX error');
+if (!fxResp.ok) throw new Error('FX error');
     const processed = await fxResp.blob();
     const url = URL.createObjectURL(processed);
-    const currentTime = a.currentTime;
+    const oldTime = a.currentTime;
+    const oldDuration = a.duration || 1;
     a.src = url;
-    a.currentTime = currentTime;
+    a.onloadedmetadata = () => {
+      const newDuration = a.duration || 1;
+      const ratio = oldTime / oldDuration;
+      a.currentTime = ratio * newDuration;
+      a.onloadedmetadata = null;
+    };
     a.play();
     fetch(`${W}/fx/use?uid=${uid}`).then(r=>r.json()).then(d=>{
   setFxRemaining(d.remaining??0);
