@@ -2019,11 +2019,10 @@ if(d.hls||d.mp3){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-const applyFxPreset = async (preset: string, customSpeed?: number, customReverb?: number) => {
+const applyFxPreset = async (preset: string, customSpeed?: number, customReverb?: number, customPitch?: number, customBass?: number) => {
 const a = audio.current;
 if (!a || !a.src) return;
 
-// Сохраняем оригинальный URL при первом применении
 if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
   originalSrcRef.current = a.src;
 }
@@ -2044,9 +2043,11 @@ const srcToProcess = originalSrcRef.current;
     
     const speed = customSpeed ?? playbackSpeed;
     const reverb = customReverb ?? reverbAmount;
+    const pitch = customPitch ?? pitchAmount;
+    const bass = customBass ?? bassAmount;
     
     const fxResp = await fetch(
-      `https://eq-production.up.railway.app/fx-base64?preset=${preset}&speed=${speed}&reverb=${reverb}&pitch=${pitchAmount}&bass=${bassAmount}`,
+      `https://eq-production.up.railway.app/fx-base64?preset=${preset}&speed=${speed}&reverb=${reverb}&pitch=${pitch}&bass=${bass}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2864,7 +2865,7 @@ const goBack=useCallback(()=>{
           {label:'Slowed + Reverb',speed:0.85,reverb:35,pitch:0.9},
           {label:'Speed Up',speed:1.15,reverb:0,pitch:1.1},
         ].map(p=>(
-          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);setPitchAmount(p.pitch);applyFxPreset('custom');}}
+          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);setPitchAmount(p.pitch);applyFxPreset('custom',p.speed,p.reverb,p.pitch,p.label==='Slowed + Reverb'?0:bassAmount);}}
             style={{flex:1,padding:'10px 4px',borderRadius:12,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:12,fontWeight:500,cursor:'pointer',opacity:subActive?1:0.4,...tap}}>
             {fxLoading?'Processing...':p.label}
           </button>
