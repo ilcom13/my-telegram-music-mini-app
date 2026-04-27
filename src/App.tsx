@@ -1021,10 +1021,11 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
 interface PlTrackRowProps {
   tr: Track; i: number; isActive: boolean; playing: boolean; isManualQ: boolean;
   curSort: string; onPlay:()=>void; onQueue:()=>void; onRemove:()=>void; onMenu:()=>void;
-  editMode?: boolean;
+editMode?: boolean;
   onDragStart:()=>void; onDrop:()=>void;
+  onMoveUp?:()=>void; onMoveDown?:()=>void;
 }
-const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop}:PlTrackRowProps){
+const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop,onMoveUp,onMoveDown}:PlTrackRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:onQueue,
     onLeft:onRemove,
@@ -1053,8 +1054,11 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
       </div>
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
-        {editMode
-          ?<div style={{color:'#555',fontSize:16,flexShrink:0,cursor:'grab',lineHeight:1,padding:'0 2px'}}>⠿</div>
+{editMode
+          ?<div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
+            <button onPointerDown={e=>{e.stopPropagation();onMoveUp?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:'#888',fontSize:10}}>▲</button>
+            <button onPointerDown={e=>{e.stopPropagation();onMoveDown?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:'#888',fontSize:10}}>▼</button>
+          </div>
           :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:20,textAlign:'right' as const,flexShrink:0,marginRight:4}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
@@ -4601,6 +4605,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
                 onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
                 editMode={editMode}
+                onMoveUp={()=>{const idx=pl.tracks.indexOf(tr);if(idx>0)moveTrackInPl(pl.id,idx,idx-1);}}
+                onMoveDown={()=>{const idx=pl.tracks.indexOf(tr);if(idx<pl.tracks.length-1)moveTrackInPl(pl.id,idx,idx+1);}}
               />
               );
             })}
