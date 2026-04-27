@@ -116,6 +116,54 @@ const SwipeManager = (() => {
   };
 })();
 
+function useTouchReorder(items:any[],onReorder:(from:number,to:number)=>void){
+  const[dragI,setDragI]=useState<number|null>(null);
+  const[overI,setOverI]=useState<number|null>(null);
+  const holdTimer=useRef<any>(null);
+  const startY=useRef(0);
+  const isDragging=useRef(false);
+
+  const onPointerDown=(i:number,e:React.PointerEvent)=>{
+    startY.current=e.clientY;
+    isDragging.current=false;
+    holdTimer.current=setTimeout(()=>{
+      isDragging.current=true;
+      setDragI(i);
+      if(navigator.vibrate)navigator.vibrate(30);
+    },300);
+  };
+
+  const onPointerMove=(i:number,e:React.PointerEvent)=>{
+    if(!isDragging.current&&holdTimer.current){
+      if(Math.abs(e.clientY-startY.current)>10){
+        clearTimeout(holdTimer.current);
+        holdTimer.current=null;
+      }
+      return;
+    }
+    if(isDragging.current)setOverI(i);
+  };
+
+  const onPointerUp=()=>{
+    if(holdTimer.current){clearTimeout(holdTimer.current);holdTimer.current=null;}
+    if(isDragging.current&&dragI!==null&&overI!==null&&dragI!==overI){
+      onReorder(dragI,overI);
+    }
+    isDragging.current=false;
+    setDragI(null);
+    setOverI(null);
+  };
+
+  const getHandlers=(i:number)=>({
+    onPointerDown:(e:React.PointerEvent)=>onPointerDown(i,e),
+    onPointerMove:(e:React.PointerEvent)=>onPointerMove(i,e),
+    onPointerUp,
+    onPointerCancel:()=>{if(holdTimer.current)clearTimeout(holdTimer.current);isDragging.current=false;setDragI(null);setOverI(null);},
+  });
+
+  return{getHandlers,dragI,overI};
+}
+
 // Хук для регистрации свайп-строки
 function useSwipeRow(opts: {
   onRight: () => void;
@@ -1188,6 +1236,7 @@ export default function App(){
   const[manualQIds,setManualQIds]=useState<Set<string>>(new Set());
   const[playHistory,setPlayHistory]=useState<Track[]>([]);
   const[dragIdx,setDragIdx]=useState<number|null>(null);
+  const queueReorder=useTouchReorder(queue,(from,to)=>moveQ(from,to));
   const[liked,setLiked]=useState<Track[]>([]);
   const[playlists,setPlaylists]=useState<Playlist[]>([]);
   const[openPlId,setOpenPlId]=useState<string|null>(null);
@@ -2783,7 +2832,7 @@ const goBack=useCallback(()=>{
             </div>
             {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
-                <div key={tr.id+i} draggable onDragStart={()=>setDragIdx(i)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(dragIdx!==null&&dragIdx!==i)moveQ(dragIdx,i);setDragIdx(null);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab',transition:'background 0.15s ease'}}>
+                <div key={tr.id+i} {...queueReorder.getHandlers(i)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab',transition:'background 0.15s ease,opacity 0.15s ease',opacity:queueReorder.dragI===i?0.4:1,background:queueReorder.overI===i?'rgba(239,191,127,0.1)':'transparent',touchAction:'none',userSelect:'none' as const}}>
                   <div style={{color:'#444',fontSize:15,padding:'0 3px'}}>⠿</div>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
