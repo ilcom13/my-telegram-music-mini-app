@@ -2796,20 +2796,20 @@ const goBack=useCallback(()=>{
             </div>
 {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
-                <div key={tr.id+i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',transition:'background 0.15s ease'}}>
-                  <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
-                    <button onPointerDown={()=>{if(i>0)moveQ(i,i-1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:i>0?'#888':'#333',fontSize:10,...tap}}>▲</button>
-                    <button onPointerDown={()=>{if(i<queue.length-1)moveQ(i,i+1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:i<queue.length-1?'#888':'#333',fontSize:10,...tap}}>▼</button>
-                  </div>
+                <div key={tr.id+i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:'1px solid #2a2a2a',transition:'background 0.15s ease'}}>
+                  <button onPointerDown={()=>rmQ(i)} style={{background:'none',border:'none',cursor:'pointer',color:'#666',fontSize:14,padding:'0 4px',lineHeight:1,flexShrink:0,...tap}}>✕</button>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
                     <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{tr.artist}</div>
                   </div>
-                  <button onPointerDown={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3,...tap}}>
+                  <button onPointerDown={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3,flexShrink:0,...tap}}>
                     <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${ACC}`,marginLeft:1}}/>
                   </button>
-                  <button onPointerDown={()=>rmQ(i)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:16,padding:'0 3px',lineHeight:1,...tap}}>×</button>
+                  <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
+                    <button onPointerDown={()=>{if(i>0)moveQ(i,i-1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',color:'#888',fontSize:13,...tap}}>▲</button>
+                    <button onPointerDown={()=>{if(i<queue.length-1)moveQ(i,i+1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',color:'#888',fontSize:13,...tap}}>▼</button>
+                  </div>
                 </div>
               ))
             }
