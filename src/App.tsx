@@ -4152,7 +4152,7 @@ importSource={importSource} setImportSource={setImportSource}
                 {lang==='ru'?'🎵 Топ-5 треков':lang==='uk'?'🎵 Топ-5 треків':lang==='kk'?'🎵 Топ-5 трек':lang==='pl'?'🎵 Top 5 utworów':lang==='tr'?'🎵 Top 5 parça':'🎵 Top 5 Tracks'}
               </div>
               {topTracks.slice(0,5).map(([id,v],i)=>(
-                <div key={id} onPointerUp={(e)=>{if(!(e.target as HTMLElement).closest('[data-scrolling]'))playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null});}} onPointerDown={(e)=>{const el=e.currentTarget;el.dataset.startY=String(e.clientY);}} onPointerMove={(e)=>{const el=e.currentTarget;const startY=Number(el.dataset.startY||0);if(Math.abs(e.clientY-startY)>10)el.setAttribute('data-scrolling','1');}} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
+                <div key={id} onPointerDown={(e)=>{const el=e.currentTarget;el.dataset.startY=String(e.clientY);el.dataset.scrolling='0';}} onPointerMove={(e)=>{const el=e.currentTarget;const startY=Number(el.dataset.startY||0);if(Math.abs(e.clientY-startY)>10)el.dataset.scrolling='1';}} onPointerUp={(e)=>{const el=e.currentTarget;if(el.dataset.scrolling==='0')playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null});}} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
                   <div style={{fontSize:13,fontWeight:800,color:i===0?ACC:'#444',width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
                   <Img src={v.cover||''} size={38} radius={7}/>
                   <div style={{flex:1,minWidth:0}}>
