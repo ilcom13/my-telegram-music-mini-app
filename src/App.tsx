@@ -1189,7 +1189,6 @@ export default function App(){
   const[manualQIds,setManualQIds]=useState<Set<string>>(new Set());
   const[playHistory,setPlayHistory]=useState<Track[]>([]);
   const[dragIdx,setDragIdx]=useState<number|null>(null);
-  const queueReorder=useTouchReorder(queue,(from,to)=>moveQ(from,to));
   const[liked,setLiked]=useState<Track[]>([]);
   const[playlists,setPlaylists]=useState<Playlist[]>([]);
   const[openPlId,setOpenPlId]=useState<string|null>(null);
