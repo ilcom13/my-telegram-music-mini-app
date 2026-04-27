@@ -1055,10 +1055,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
       </div>
       <div ref={innerRef} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px 10px 14px',willChange:'transform'}}>
 {editMode
-          ?<div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
-            <button onPointerDown={e=>{e.stopPropagation();onMoveUp?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:'#888',fontSize:10}}>▲</button>
-            <button onPointerDown={e=>{e.stopPropagation();onMoveDown?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:'#888',fontSize:10}}>▼</button>
-          </div>
+          ?<div style={{fontSize:11,color:TEXT_MUTED,width:20,textAlign:'right' as const,flexShrink:0,marginRight:4}}>{i+1}</div>
           :<div style={{fontSize:11,color:isActive?ACC:TEXT_MUTED,width:20,textAlign:'right' as const,flexShrink:0,marginRight:4}}>{i+1}</div>
         }
         <div style={{display:'flex',alignItems:'center',gap:11,flex:1,minWidth:0}}>
@@ -1072,12 +1069,21 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
           </div>
           <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
         </div>
-        <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
-        <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
-        </button>
+        {editMode?(
+          <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+            <button onPointerDown={e=>{e.stopPropagation();onMoveUp?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 8px',color:'#888',fontSize:14}}>▲</button>
+            <button onPointerDown={e=>{e.stopPropagation();onMoveDown?.();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 8px',color:'#888',fontSize:14}}>▼</button>
+          </div>
+        ):(
+          <>
+            <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+            <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
