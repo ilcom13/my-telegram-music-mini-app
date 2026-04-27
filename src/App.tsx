@@ -122,6 +122,9 @@ function useTouchReorder(items:any[],onReorder:(from:number,to:number)=>void){
   const holdTimer=useRef<any>(null);
   const startY=useRef(0);
   const isDragging=useRef(false);
+  const listRef=useRef<HTMLDivElement|null>(null);
+
+  const stopScroll=(e:TouchEvent)=>{e.preventDefault();};
 
   const onPointerDown=(i:number,e:React.PointerEvent)=>{
     startY.current=e.clientY;
@@ -130,6 +133,10 @@ function useTouchReorder(items:any[],onReorder:(from:number,to:number)=>void){
       isDragging.current=true;
       setDragI(i);
       if(navigator.vibrate)navigator.vibrate(30);
+      // Блокируем скролл Telegram и браузера
+      document.body.style.overflow='hidden';
+      document.body.style.touchAction='none';
+      document.addEventListener('touchmove',stopScroll,{passive:false});
     },300);
   };
 
@@ -141,27 +148,37 @@ function useTouchReorder(items:any[],onReorder:(from:number,to:number)=>void){
       }
       return;
     }
-    if(isDragging.current)setOverI(i);
+    if(isDragging.current){
+      e.preventDefault();
+      setOverI(i);
+    }
   };
 
-  const onPointerUp=()=>{
+  const cleanup=()=>{
     if(holdTimer.current){clearTimeout(holdTimer.current);holdTimer.current=null;}
-    if(isDragging.current&&dragI!==null&&overI!==null&&dragI!==overI){
-      onReorder(dragI,overI);
-    }
     isDragging.current=false;
     setDragI(null);
     setOverI(null);
+    document.body.style.overflow='';
+    document.body.style.touchAction='';
+    document.removeEventListener('touchmove',stopScroll);
+  };
+
+  const onPointerUp=()=>{
+    if(isDragging.current&&dragI!==null&&overI!==null&&dragI!==overI){
+      onReorder(dragI,overI);
+    }
+    cleanup();
   };
 
   const getHandlers=(i:number)=>({
     onPointerDown:(e:React.PointerEvent)=>onPointerDown(i,e),
     onPointerMove:(e:React.PointerEvent)=>onPointerMove(i,e),
     onPointerUp,
-    onPointerCancel:()=>{if(holdTimer.current)clearTimeout(holdTimer.current);isDragging.current=false;setDragI(null);setOverI(null);},
+    onPointerCancel:cleanup,
   });
 
-  return{getHandlers,dragI,overI};
+  return{getHandlers,dragI,overI,listRef};
 }
 
 // Хук для регистрации свайп-строки
