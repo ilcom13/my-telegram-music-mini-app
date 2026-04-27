@@ -4611,8 +4611,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
                 onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
                 editMode={editMode}
-                onMoveUp={()=>{const idx=pl.tracks.indexOf(tr);if(idx>0)moveTrackInPl(pl.id,idx,idx-1);}}
-                onMoveDown={()=>{const idx=pl.tracks.indexOf(tr);if(idx<pl.tracks.length-1)moveTrackInPl(pl.id,idx,idx+1);}}
+                onMoveUp={()=>{const idx=pl.tracks.indexOf(tr);if(idx<pl.tracks.length-1)moveTrackInPl(pl.id,idx,idx+1);}}
+                onMoveDown={()=>{const idx=pl.tracks.indexOf(tr);if(idx>0)moveTrackInPl(pl.id,idx,idx-1);}}
               />
               );
             })}
