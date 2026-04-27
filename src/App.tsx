@@ -116,70 +116,6 @@ const SwipeManager = (() => {
   };
 })();
 
-function useTouchReorder(items:any[],onReorder:(from:number,to:number)=>void){
-  const[dragI,setDragI]=useState<number|null>(null);
-  const[overI,setOverI]=useState<number|null>(null);
-  const holdTimer=useRef<any>(null);
-  const startY=useRef(0);
-  const isDragging=useRef(false);
-  const listRef=useRef<HTMLDivElement|null>(null);
-
-  const stopScroll=(e:TouchEvent)=>{e.preventDefault();};
-
-  const onPointerDown=(i:number,e:React.PointerEvent)=>{
-    startY.current=e.clientY;
-    isDragging.current=false;
-    holdTimer.current=setTimeout(()=>{
-      isDragging.current=true;
-      setDragI(i);
-      if(navigator.vibrate)navigator.vibrate(30);
-      // Блокируем скролл Telegram и браузера
-      document.body.style.overflow='hidden';
-      document.body.style.touchAction='none';
-      document.addEventListener('touchmove',stopScroll,{passive:false});
-    },300);
-  };
-
-  const onPointerMove=(i:number,e:React.PointerEvent)=>{
-    if(!isDragging.current&&holdTimer.current){
-      if(Math.abs(e.clientY-startY.current)>10){
-        clearTimeout(holdTimer.current);
-        holdTimer.current=null;
-      }
-      return;
-    }
-    if(isDragging.current){
-      e.preventDefault();
-      setOverI(i);
-    }
-  };
-
-  const cleanup=()=>{
-    if(holdTimer.current){clearTimeout(holdTimer.current);holdTimer.current=null;}
-    isDragging.current=false;
-    setDragI(null);
-    setOverI(null);
-    document.body.style.overflow='';
-    document.body.style.touchAction='';
-    document.removeEventListener('touchmove',stopScroll);
-  };
-
-  const onPointerUp=()=>{
-    if(isDragging.current&&dragI!==null&&overI!==null&&dragI!==overI){
-      onReorder(dragI,overI);
-    }
-    cleanup();
-  };
-
-  const getHandlers=(i:number)=>({
-    onPointerDown:(e:React.PointerEvent)=>onPointerDown(i,e),
-    onPointerMove:(e:React.PointerEvent)=>onPointerMove(i,e),
-    onPointerUp,
-    onPointerCancel:cleanup,
-  });
-
-  return{getHandlers,dragI,overI,listRef};
-}
 
 // Хук для регистрации свайп-строки
 function useSwipeRow(opts: {
@@ -2849,10 +2785,13 @@ const goBack=useCallback(()=>{
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
               <button onPointerDown={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC,...tap}}>{lang==='ru'?'Очистить':'Clear'}</button>
             </div>
-            {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
+{queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
-                <div key={tr.id+i} {...queueReorder.getHandlers(i)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',cursor:'grab',transition:'background 0.15s ease,opacity 0.15s ease',opacity:queueReorder.dragI===i?0.4:1,background:queueReorder.overI===i?'rgba(239,191,127,0.1)':'transparent',touchAction:'none',userSelect:'none' as const}}>
-                  <div style={{color:'#444',fontSize:15,padding:'0 3px'}}>⠿</div>
+                <div key={tr.id+i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #2a2a2a',transition:'background 0.15s ease'}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
+                    <button onPointerDown={()=>{if(i>0)moveQ(i,i-1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:i>0?'#888':'#333',fontSize:10,...tap}}>▲</button>
+                    <button onPointerDown={()=>{if(i<queue.length-1)moveQ(i,i+1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',color:i<queue.length-1?'#888':'#333',fontSize:10,...tap}}>▼</button>
+                  </div>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
