@@ -1963,16 +1963,16 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
       if(listenSec.current===40){
         const tid=listenTrackId.current;
         setListenedIds(prev=>{if(prev.includes(tid))return prev;const n=[...prev,tid];try{localStorage.setItem('lst47',JSON.stringify(n));}catch{}return n;});
-        setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
+        setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0,source:track.source||'soundcloud',amId:track.amId||''};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1,source:track.source||entry.source||'soundcloud',amId:track.amId||entry.amId||''}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
         // Monthly stats: record track play
         setMonthStats(prev=>{
           const now=new Date().toISOString().slice(0,7);
           if(prev.current.month!==now)return prev;
           const cur=prev.current;
-          const entry=cur.trackPlays[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0};
+          const entry=cur.trackPlays[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0,source:track.source||'soundcloud',amId:track.amId||''};
           const newListenedIds=cur.listenedIds.includes(tid)?cur.listenedIds:[...cur.listenedIds,tid];
           const next={...prev,current:{...cur,
-            trackPlays:{...cur.trackPlays,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1}},
+            trackPlays:{...cur.trackPlays,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1,source:track.source||entry.source||'soundcloud',amId:track.amId||entry.amId||''}},
             listenedIds:newListenedIds,
           }};
           try{localStorage.setItem('mst47',JSON.stringify(next));}catch{}
