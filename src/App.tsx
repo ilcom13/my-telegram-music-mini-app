@@ -2764,6 +2764,8 @@ const goBack=useCallback(()=>{
         @keyframes popIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
         @keyframes dotPulse{0%,100%{opacity:0.4;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
         .track-row{transition:background 0.15s ease}
+        * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        input, textarea { -webkit-user-select: text; user-select: text; }
         
         .mini-player{transition:opacity 0.25s ease,transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
         .mini-cover{transition:transform 0.2s ease}
