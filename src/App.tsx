@@ -1123,12 +1123,12 @@ export default function App(){
   const[totalSec,setTotalSec]=useState(0);
   const[exploredIds,setExploredIds]=useState<string[]>([]);
   const[listenedIds,setListenedIds]=useState<string[]>([]);
-  const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
+  const[trackPlays,setTrackPlays]=useState<Record<string,{title:string;artist:string;cover:string;count:number;source?:string;amId?:string}>>({});
   const[streakDays,setStreakDays]=useState<string[]>([]);
   const[maxStreak,setMaxStreak]=useState(0);
 
   // Monthly stats: current month accumulator + last completed month archive
-  type MonthTrackEntry={title:string;artist:string;cover:string;count:number};
+  type MonthTrackEntry={title:string;artist:string;cover:string;count:number;source?:string;amId?:string};
   type MonthData={month:string;totalSec:number;trackPlays:Record<string,MonthTrackEntry>;listenedIds:string[]};
   const[monthStats,setMonthStats]=useState<{current:MonthData;prev:MonthData|null;firstEverMonth:string|null}>(()=>{
     try{const s=localStorage.getItem('mst47');if(s)return JSON.parse(s);}catch{}
@@ -1143,7 +1143,7 @@ export default function App(){
   const totalSecRef=useRef(0);
   const exploredIdsRef=useRef<string[]>([]);
   const listenedIdsRef=useRef<string[]>([]);
-  const trackPlaysRef=useRef<Record<string,{title:string;artist:string;cover:string;count:number}>>({});
+  const trackPlaysRef=useRef<Record<string,{title:string;artist:string;cover:string;count:number;source?:string;amId?:string}>>({});
   const streakDaysRef=useRef<string[]>([]);
   const maxStreakRef=useRef(0);
   const likedRef=useRef<Track[]>([]);
