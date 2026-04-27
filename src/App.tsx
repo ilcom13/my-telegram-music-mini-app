@@ -3008,11 +3008,11 @@ const goBack=useCallback(()=>{
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(20px,7vw,36px)',flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
-        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:playHistory.length>0?1:0.35,...tap}}>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:fxLoading?0.2:playHistory.length>0?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
         </button>
         <button className="play-btn" onPointerDown={togglePlay} style={{width:'clamp(52px,14vw,70px)',height:'clamp(52px,14vw,70px)',borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 20px ${ACC}55`,...tap}}><PP sz="lg"/></button>
-        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:fxLoading?0.2:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
         </button>
       </div>
@@ -4152,7 +4152,7 @@ importSource={importSource} setImportSource={setImportSource}
                 {lang==='ru'?'🎵 Топ-5 треков':lang==='uk'?'🎵 Топ-5 треків':lang==='kk'?'🎵 Топ-5 трек':lang==='pl'?'🎵 Top 5 utworów':lang==='tr'?'🎵 Top 5 parça':'🎵 Top 5 Tracks'}
               </div>
               {topTracks.slice(0,5).map(([id,v],i)=>(
-                <div key={id} onPointerDown={()=>playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null})} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
+                <div key={id} onPointerUp={(e)=>{if(!(e.target as HTMLElement).closest('[data-scrolling]'))playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null});}} onPointerDown={(e)=>{const el=e.currentTarget;el.dataset.startY=String(e.clientY);}} onPointerMove={(e)=>{const el=e.currentTarget;const startY=Number(el.dataset.startY||0);if(Math.abs(e.clientY-startY)>10)el.setAttribute('data-scrolling','1');}} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
                   <div style={{fontSize:13,fontWeight:800,color:i===0?ACC:'#444',width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
                   <Img src={v.cover||''} size={38} radius={7}/>
                   <div style={{flex:1,minWidth:0}}>
