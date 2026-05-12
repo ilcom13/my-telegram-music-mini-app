@@ -2164,6 +2164,19 @@ const playNext=()=>{
       setManualQIds(prev=>{const n=new Set(prev);n.delete(nxt.id);return n;});
       setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
       playDirect(nxt);
+    } else if(playingPlIdRef.current){
+      const pl=playlistsRef.current.find(p=>p.id===playingPlIdRef.current);
+      if(pl&&pl.repeat&&pl.tracks.length>0){
+        const isShuffled=(pl as any)._shuffled;
+        const ordered=isShuffled?[...pl.tracks].sort(()=>Math.random()-.5):[...pl.tracks];
+        playDirect(ordered[0]);
+        setQueue(ordered.slice(1));
+      } else {
+        const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
+        const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
+        const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+        if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+      }
     } else {
       const pool=recs.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
       const fallbackPool=history.filter(tr=>tr.mp3&&!blockedArtists.includes(tr.artist));
@@ -2633,7 +2646,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
  const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();};
 const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
-  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(sh[0]);setQueue(sh.slice(1));};
+  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playDirect(sh[0]);setQueue(sh.slice(1));const updated=playlistsRef.current.map(p=>p.id===pl.id?{...p,_shuffled:true}:p);playlistsRef.current=updated;};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
   const smartAddQ=(track:Track)=>{
