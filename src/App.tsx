@@ -1096,6 +1096,28 @@ export default function App(){
   const[query,setQuery]=useState('');
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
   const [showLibSettings,setShowLibSettings]=useState(false);
+
+  const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,TEXT_MUTED,TEXT_PRIMARY,ACC}:any){
+  const[likedQ,setLikedQ]=React.useState('');
+  const[likedSearch,setLikedSearch]=React.useState(false);
+  const filteredLiked=likedQ.trim()?liked.filter((tr:any)=>tr.title.toLowerCase().includes(likedQ.toLowerCase())||tr.artist.toLowerCase().includes(likedQ.toLowerCase())):liked;
+  return(
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
+        <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+        <button onPointerDown={()=>{setLikedSearch((s:boolean)=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+      {likedSearch&&<div style={{padding:'0 16px',marginBottom:8,animation:'slideDown 0.2s ease both'}}>
+        <input autoFocus placeholder={lang==='ru'?'Поиск в лайках...':lang==='uk'?'Пошук у лайках...':'Search liked...'} value={likedQ} onChange={(e:any)=>setLikedQ(e.target.value)}
+          style={{width:'100%',padding:'10px 14px',fontSize:13,background:'#1a1a1a',border:`1px solid ${ACC}44`,borderRadius:12,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
+      </div>}
+      <div style={{padding:'0 4px'}}>{filteredLiked.map((tr:any,i:number)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>
+      {likedSearch&&filteredLiked.length===0&&<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:13}}>{t('notFound')}</div>}
+    </div>
+  );
+});
   
   const [showPremium, setShowPremium] = useState(false);
   const [showPremiumBenefits, setShowPremiumBenefits] = useState(false);
@@ -3910,27 +3932,10 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
         )}
       </div>
     )}
-    {libTab==='liked'&&(()=>{
-      const[likedQ,setLikedQ]=React.useState('');
-      const[likedSearch,setLikedSearch]=React.useState(false);
-      const filteredLiked=likedQ.trim()?liked.filter(tr=>tr.title.toLowerCase().includes(likedQ.toLowerCase())||tr.artist.toLowerCase().includes(likedQ.toLowerCase())):liked;
-      return liked.length===0
-        ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
-        :<div>
-          <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
-            <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-            <button onPointerDown={()=>{setLikedSearch(s=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </button>
-          </div>
-          {likedSearch&&<div style={{padding:'0 16px',marginBottom:8,animation:'slideDown 0.2s ease both'}}>
-            <input autoFocus placeholder={lang==='ru'?'Поиск в лайках...':lang==='uk'?'Пошук у лайках...':'Search liked...'} value={likedQ} onChange={e=>setLikedQ(e.target.value)}
-              style={{width:'100%',padding:'10px 14px',fontSize:13,background:'#1a1a1a',border:`1px solid ${ACC}44`,borderRadius:12,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
-          </div>}
-          <div style={{padding:'0 4px'}}>{filteredLiked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>
-          {likedSearch&&filteredLiked.length===0&&<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:13}}>{t('notFound')}</div>}
-        </div>;
-    })()}
+ {libTab==='liked'&&(liked.length===0
+      ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
+      :<LikedTab liked={liked} lang={lang} t={t} mkTRow={mkTRow} toggleLike={toggleLike} tap={tap} TEXT_MUTED={TEXT_MUTED} TEXT_PRIMARY={TEXT_PRIMARY} ACC={ACC}/>
+    )}
     {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
     {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
   </div>
