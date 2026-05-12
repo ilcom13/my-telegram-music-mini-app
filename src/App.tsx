@@ -4732,9 +4732,9 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             left:8,right:8,
             bottom:NAV_H+14,
             height:96,
-            background:'rgba(18,18,18,0.98)',
-            backdropFilter:'blur(20px)',
-            border:'1px solid #252525',
+            background:'rgba(14,14,14,0.72)',
+            backdropFilter:'blur(40px)',
+            border:'1px solid rgba(255,255,255,0.07)',
             borderRadius:16,
             zIndex:100,
             boxSizing:'border-box' as const,
@@ -4845,7 +4845,8 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
  
       {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&screen!=='monthstats'&&(
-        <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(12,12,12,0.98)',backdropFilter:'blur(20px)',border:'1px solid #2a2a2a',borderRadius:20,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
+        <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(10,10,10,0.75)',backdropFilter:'blur(40px) saturate(1.8)',WebkitBackdropFilter:'blur(40px) saturate(1.8)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:20
+,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
           {NAV.map(item=>(
             <NavItem
               key={item.id}
