@@ -2746,9 +2746,11 @@ const goBack=useCallback(()=>{
   },[screen]);
   const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
-      onPointerDown={e=>{e.stopPropagation();}}
-      onClick={e=>{e.stopPropagation();goBack();}}
-      style={{background:overlay?'rgba(0,0,0,0.5)':'none',border:'none',cursor:'pointer',padding:overlay?'7px 13px':'6px 10px 6px 0',borderRadius:overlay?20:0,display:'flex',alignItems:'center',gap:5,backdropFilter:overlay?'blur(8px)':'none',...tap,position:overlay?'fixed':'relative',top:overlay?52:undefined,left:overlay?14:undefined,zIndex:overlay?200:undefined,transition:'opacity 0.2s ease'}}>
+onPointerDown={e=>{e.stopPropagation();e.currentTarget.style.transform='scale(0.88)';e.currentTarget.style.opacity='0.55';}}
+      onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.opacity='1';setTimeout(()=>goBack(),80);}}
+      onPointerLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.opacity='1';}}
+      onClick={e=>{e.stopPropagation();}}
+      style={{background:overlay?'rgba(0,0,0,0.5)':'none',border:'none',cursor:'pointer',padding:overlay?'7px 13px':'6px 10px 6px 0',borderRadius:overlay?20:0,display:'flex',alignItems:'center',gap:5,backdropFilter:overlay?'blur(8px)':'none',...tap,position:overlay?'fixed':'relative',top:overlay?52:undefined,left:overlay?14:undefined,zIndex:overlay?200:undefined,transition:'opacity 0.2s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1)'}}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={overlay?'#ddd':'#999'} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span style={{fontSize:12,color:overlay?'#ddd':'#999',fontWeight:500}}>{t('backToSearch')}</span>
     </button>
@@ -2832,7 +2834,10 @@ const goBack=useCallback(()=>{
         .follow-btn{transition:background 0.2s ease,color 0.2s ease,border-color 0.2s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1)}
         .follow-btn:active{transform:scale(0.93)}
         .prev-next-btn{transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease}
-        .prev-next-btn:active{transform:scale(0.82)}
+        .prev-next-btn{transition:transform 0.12s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease}
+        .prev-next-btn:active{transform:scale(0.75)}
+        .play-btn{transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s ease}
+        .play-btn:active{transform:scale(0.88) brightness(1.15)}
         .tab-btn{transition:background 0.18s ease,color 0.18s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.18s ease}
         .tab-btn:active{transform:scale(0.93)}
         .tab-btn.tab-active{box-shadow:0 2px 12px rgba(239,191,127,0.25)}
@@ -3396,7 +3401,10 @@ return(
         .follow-btn{transition:background 0.2s ease,color 0.2s ease,border-color 0.2s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1)}
         .follow-btn:active{transform:scale(0.93)}
         .prev-next-btn{transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease}
-        .prev-next-btn:active{transform:scale(0.82)}
+        .prev-next-btn{transition:transform 0.12s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s ease}
+        .prev-next-btn:active{transform:scale(0.75)}
+        .play-btn{transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s ease}
+        .play-btn:active{transform:scale(0.88) brightness(1.15)}
         .tab-btn{transition:background 0.18s ease,color 0.18s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.18s ease}
         .tab-btn:active{transform:scale(0.93)}
         .tab-btn.tab-active{box-shadow:0 2px 12px rgba(239,191,127,0.25)}
@@ -3902,7 +3910,27 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
         )}
       </div>
     )}
-    {libTab==='liked'&&(liked.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>:<div style={{padding:'0 4px'}}>{liked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>)}
+    {libTab==='liked'&&(()=>{
+      const[likedQ,setLikedQ]=React.useState('');
+      const[likedSearch,setLikedSearch]=React.useState(false);
+      const filteredLiked=likedQ.trim()?liked.filter(tr=>tr.title.toLowerCase().includes(likedQ.toLowerCase())||tr.artist.toLowerCase().includes(likedQ.toLowerCase())):liked;
+      return liked.length===0
+        ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
+        :<div>
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
+            <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+            <button onPointerDown={()=>{setLikedSearch(s=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+          </div>
+          {likedSearch&&<div style={{padding:'0 16px',marginBottom:8,animation:'slideDown 0.2s ease both'}}>
+            <input autoFocus placeholder={lang==='ru'?'Поиск в лайках...':lang==='uk'?'Пошук у лайках...':'Search liked...'} value={likedQ} onChange={e=>setLikedQ(e.target.value)}
+              style={{width:'100%',padding:'10px 14px',fontSize:13,background:'#1a1a1a',border:`1px solid ${ACC}44`,borderRadius:12,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
+          </div>}
+          <div style={{padding:'0 4px'}}>{filteredLiked.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onSwipeLeft:()=>toggleLike(tr)})}/>)}</div>
+          {likedSearch&&filteredLiked.length===0&&<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:13}}>{t('notFound')}</div>}
+        </div>;
+    })()}
     {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
     {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
   </div>
@@ -4810,6 +4838,7 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
               active={screen===item.id||(item.id==='library'&&openPlPage!==null&&screen==='library')}
               onSelect={()=>{
                 screenStack.current=[];
+                if(item.id==='library'){setOpenPlPage(null);}
                 setScreen(item.id as 'home'|'search'|'library'|'trending');
               }}
             />
