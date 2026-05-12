@@ -4188,7 +4188,7 @@ importSource={importSource} setImportSource={setImportSource}
         const isFirstEver=monthStats.current.totalSec===0&&monthStats.current.listenedIds.length===0;
         const isCollecting=monthStats.current.totalSec>0||monthStats.current.listenedIds.length>0;
         return(
-        <div className="screen-fade" style={{position:'fixed',inset:0,background:BG,overflowY:'auto',paddingBottom:100,zIndex:50}}>
+        <div id="pl-page-wrap" className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120,transition:'opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1)'}}>
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
@@ -4558,7 +4558,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
   [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
 ];
       return(
-<div className="screen-fade pl-page" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+<div id="pl-page-wrap" className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120,transition:'opacity 0.22s ease,transform 0.22s cubic-bezier(0.4,0,0.2,1)'}}>
   {/* Header с фоном */}
   <div style={{position:'relative',overflow:'hidden',minHeight:0}}>
     {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
@@ -4566,10 +4566,10 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
     <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
       {/* Верхняя строка — назад + иконки действий */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-        <button onPointerDown={()=>{
-          const el=document.querySelector('.pl-page') as HTMLElement|null;
-          if(el){el.style.animation='slideOutLeft 0.22s cubic-bezier(0.4,0,0.2,1) both';}
-          setTimeout(()=>setOpenPlPage(null),200);
+<button onPointerDown={()=>{
+          const el=document.getElementById('pl-page-wrap');
+          if(el){el.style.opacity='0';el.style.transform='translateX(-36px)';}
+          setTimeout(()=>setOpenPlPage(null),230);
         }} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,...tap}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
