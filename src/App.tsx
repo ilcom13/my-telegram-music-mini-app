@@ -3143,7 +3143,18 @@ return(
       <div style={{fontSize:18,fontWeight:800,color:TEXT_PRIMARY,marginBottom:20,textAlign:'center' as const}}>
         ⭐ {lang==='ru'?'Возможности Premium':lang==='uk'?'Можливості Premium':lang==='kk'?'Premium мүмкіндіктері':lang==='pl'?'Funkcje Premium':lang==='tr'?'Premium özellikleri':'Premium Features'}
       </div>
-      <div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
+<div style={{display:'flex',flexDirection:'column' as const,gap:12,marginBottom:20}}>
+        <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'flex-start',gap:12}}>
+          <div style={{fontSize:22,flexShrink:0}}>📊</div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:4}}>
+              {lang==='ru'?'Статистика за месяц — всегда':lang==='uk'?'Статистика за місяць — завжди':lang==='kk'?'Ай статистикасы — үнемі':lang==='pl'?'Statystyki miesiąca — zawsze':lang==='tr'?'Aylık istatistikler — her zaman':'Monthly Stats — anytime'}
+            </div>
+            <div style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
+              {lang==='ru'?'Смотрите свой топ треков и артистов в любой день, не дожидаясь 23 числа.':lang==='uk'?'Переглядайте свій топ треків і артистів будь-якого дня, не чекаючи 23 числа.':lang==='kk'?'23-ін күтпей, кез-келген күні трек пен орындаушы топыңызды көріңіз.':lang==='pl'?'Przeglądaj swój top utworów i artystów w dowolnym dniu, bez czekania do 23.':lang==='tr'?'23\'ünü beklemeden istediğiniz gün top parça ve sanatçılarınızı görün.':'View your top tracks and artists any day, without waiting for the 23rd.'}
+            </div>
+          </div>
+        </div>
         <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'flex-start',gap:12}}>
           <div style={{fontSize:22,flexShrink:0}}>🎚️</div>
           <div>
@@ -3174,8 +3185,11 @@ return(
       <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,marginBottom:8}}>
         {lang==='ru'?'Статистика собирается':lang==='uk'?'Статистика збирається':lang==='kk'?'Статистика жиналуда':lang==='pl'?'Statystyki są zbierane':lang==='tr'?'İstatistikler toplanıyor':'Stats are being collected'}
       </div>
-      <div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.6,marginBottom:20}}>
+<div style={{fontSize:13,color:TEXT_MUTED,lineHeight:1.6,marginBottom:16}}>
         {lang==='ru'?'Дождитесь 23 числа текущего месяца — тогда откроется статистика за месяц':lang==='uk'?'Зачекайте 23 числа поточного місяця — тоді відкриється статистика за місяць':lang==='kk'?'Ағымдағы айдың 23-ін күтіңіз — айлық статистика ашылады':lang==='pl'?'Poczekaj do 23. dnia miesiąca — wtedy otworzy się statystyka miesięczna':lang==='tr'?'Ayın 23\'ünü bekleyin — aylık istatistikler açılacak':'Wait until the 23rd — monthly stats will be available then'}
+      </div>
+      <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.6,marginBottom:20}}>
+        {lang==='ru'?<>Или подключите <span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> и следите за вашим топом всегда</>:lang==='uk'?<>Або підключіть <span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> і стежте за вашим топом завжди</>:lang==='kk'?<><span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> қосыңыз және топыңызды үнемі қадағалаңыз</>:lang==='pl'?<>Lub aktywuj <span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> i śledź swoje statystyki zawsze</>:lang==='tr'?<><span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> ile istatistiklerinizi her zaman takip edin</>:<>Or get <span style={{color:ACC,fontWeight:700,cursor:'pointer'}} onPointerDown={()=>{setShowStatsLocked(false);setShowPremium(true);}}>Premium</span> to track your stats anytime</>}
       </div>
       <button onPointerDown={()=>setShowStatsLocked(false)} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>
         OK
@@ -4063,7 +4077,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                   {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
                   {(()=>{const _today=new Date();const _showPrev=_today.getDate()<25&&!!monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);const mStat=_showPrev?monthStats.prev!:monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
-                  <button onPointerDown={()=>{const d=new Date().getDate();if(d>=23){setScreen('monthstats');}else{setShowStatsLocked(true);}}} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
+                  <button onPointerDown={()=>{const d=new Date().getDate();if(d>=23||subActive){setScreen('monthstats');}else{setShowStatsLocked(true);}}} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
                     <div style={{fontSize:26,flexShrink:0}}>📊</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly Stats'}</div>
