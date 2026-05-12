@@ -1302,7 +1302,7 @@ const plToSave=playlistsRef.current;
     window.Telegram?.WebApp?.ready();window.Telegram?.WebApp?.expand();
     const ll=()=>{try{
       const l=localStorage.getItem('l47');if(l)setLiked(JSON.parse(l));
-      const p=localStorage.getItem('p47');if(p)setPlaylists(JSON.parse(p));
+      const p=localStorage.getItem('p47');if(p)setPlaylists(JSON.parse(p).map((pl:any)=>({...pl,repeat:false})));
       const h=localStorage.getItem('h47');if(h)setHistory(JSON.parse(h));
       const fa=localStorage.getItem('fa47');if(fa)setFavArtists(JSON.parse(fa));
       const fal=localStorage.getItem('fal47');if(fal)setFavAlbums(JSON.parse(fal));
