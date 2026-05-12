@@ -1299,7 +1299,7 @@ const plToSave=playlistsRef.current;
     syncTimer.current=setTimeout(()=>syncSave({
       liked:likedRef.current,
       liked_ts:now_ts,
-      playlists:plToSave.length>0?plToSave:(playlistsRef.current.length>0?playlistsRef.current:[]),
+      playlists:plToSave,
       playlists_ts:plTs,
       history:historyRef.current,
       history_ts:now_ts,
@@ -1363,9 +1363,9 @@ const plToSave=playlistsRef.current;
 const localPl=playlistsRef.current;
 const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
 const serverPlTs=sv.playlists_ts||0;
-const serverPlValid=Array.isArray(sv.playlists)&&sv.playlists.length>0;
+const serverPlValid=Array.isArray(sv.playlists);
 const plFromServer=serverPlTs>=localPlTs&&serverPlValid?sv.playlists:
-  (localPl.length>0?localPl:(serverPlValid?sv.playlists:[]));
+  (localPlTs>serverPlTs?localPl:(serverPlValid?sv.playlists:localPl));
 if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
   const plFromServerNoRepeat=plFromServer.map((pl:any)=>({...pl,repeat:false}));setPlaylists(plFromServerNoRepeat);try{localStorage.setItem('p47',JSON.stringify(plFromServerNoRepeat));}catch{}
   if(serverPlTs>localPlTs)try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
@@ -2673,7 +2673,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}return n;});setNewPlName('');setShowNewPl(false);doFullSync();};
-  const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
+  const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);playlistsRef.current=n;try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
  const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
   const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
