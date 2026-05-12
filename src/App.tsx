@@ -2757,22 +2757,24 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   );
 
 const goBack=useCallback(()=>{
-    if(screenStack.current.length>0){
-      const prev=screenStack.current.pop()!;
-      setScreen(prev);
-      return;
-    }
-    if(screen==='artist'){setScreen(preArtistScreen.current);return;}
-    if(screen==='album'&&prevScreen.current==='artist'){setScreen('artist');return;}
-    setScreen(prevScreen.current);
+    const el=document.querySelector('.screen-slide-up, .screen-fade, .screen-scale') as HTMLElement|null;
+    if(el){el.style.animation='slideBack 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both';}
+    setTimeout(()=>{
+      if(screenStack.current.length>0){
+        const prev=screenStack.current.pop()!;
+        setScreen(prev);
+        return;
+      }
+      if(screen==='artist'){setScreen(preArtistScreen.current);return;}
+      if(screen==='album'&&prevScreen.current==='artist'){setScreen('artist');return;}
+      setScreen(prevScreen.current);
+    },180);
   },[screen]);
-  const BackBtn=({overlay=false}:{overlay?:boolean})=>(
+const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
-onPointerDown={e=>{e.stopPropagation();e.currentTarget.style.transform='scale(0.88)';e.currentTarget.style.opacity='0.55';}}
-      onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.opacity='1';setTimeout(()=>goBack(),80);}}
-      onPointerLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.opacity='1';}}
-      onClick={e=>{e.stopPropagation();}}
-      style={{background:overlay?'rgba(0,0,0,0.5)':'none',border:'none',cursor:'pointer',padding:overlay?'7px 13px':'6px 10px 6px 0',borderRadius:overlay?20:0,display:'flex',alignItems:'center',gap:5,backdropFilter:overlay?'blur(8px)':'none',...tap,position:overlay?'fixed':'relative',top:overlay?52:undefined,left:overlay?14:undefined,zIndex:overlay?200:undefined,transition:'opacity 0.2s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1)'}}>
+      onPointerDown={e=>{e.stopPropagation();}}
+      onClick={e=>{e.stopPropagation();goBack();}}
+      style={{background:overlay?'rgba(0,0,0,0.5)':'none',border:'none',cursor:'pointer',padding:overlay?'7px 13px':'6px 10px 6px 0',borderRadius:overlay?20:0,display:'flex',alignItems:'center',gap:5,backdropFilter:overlay?'blur(8px)':'none',...tap,position:overlay?'fixed':'relative',top:overlay?52:undefined,left:overlay?14:undefined,zIndex:overlay?200:undefined,transition:'opacity 0.2s ease'}}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={overlay?'#ddd':'#999'} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span style={{fontSize:12,color:overlay?'#ddd':'#999',fontWeight:500}}>{t('backToSearch')}</span>
     </button>
@@ -2822,7 +2824,9 @@ onPointerDown={e=>{e.stopPropagation();e.currentTarget.style.transform='scale(0.
         .tab-btn:active{transform:scale(0.95)}
         .modal-sheet{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both;will-change:transform}
         .screen-fade{animation:fadeIn 0.22s ease both}
-        .screen-slide-up{animation:slideUp 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both}
+        .screen-slide-up{animation:slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
+        .screen-slide-back{animation:slideBack 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
+        @keyframes slideBack{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:translateX(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
         @keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
