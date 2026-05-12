@@ -1784,12 +1784,27 @@ const onVisible=()=>{
     };
 const onE=()=>{
       if(loop){a.currentTime=0;a.play();}
-else if(queueRef.current.length>0){
+      else if(queueRef.current.length>0){
         const nxt=queueRef.current[0];
         setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
         playDirect(nxt);
       }
-else{
+      else if(playingPlIdRef.current){
+        const pl=playlistsRef.current.find(p=>p.id===playingPlIdRef.current);
+        if(pl&&pl.repeat&&pl.tracks.length>0){
+          const sh=[...pl.tracks].sort(()=>Math.random()-.5);
+          playDirect(sh[0]);
+          setQueue(sh.slice(1));
+        } else {
+          setPlayingPlId(null);
+          const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+          if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+          else setPlaying(false);
+        }
+      }
+      else{
         const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
@@ -4531,7 +4546,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
           Shuffle
         </button>
-        <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;})} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+        <button onPointerDown={()=>setPlaylists(prev=>prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p))} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
         <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
