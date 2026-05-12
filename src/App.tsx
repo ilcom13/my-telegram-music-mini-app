@@ -2802,6 +2802,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes fadeInFast{from{opacity:0}to{opacity:1}}
         @keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideOutLeft{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-40px)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes trackIn{from{opacity:0;transform:translateX(18px) scale(0.97)}to{opacity:1;transform:translateX(0) scale(1)}}
         @keyframes trackOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-18px)}}
@@ -4557,7 +4558,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
   [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
 ];
       return(
-<div className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
+<div className="screen-fade pl-page" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120}}>
   {/* Header с фоном */}
   <div style={{position:'relative',overflow:'hidden',minHeight:0}}>
     {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
@@ -4565,7 +4566,11 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
     <div style={{position:'relative',zIndex:1,padding:'14px 16px 0'}}>
       {/* Верхняя строка — назад + иконки действий */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-        <button onPointerDown={()=>setOpenPlPage(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,...tap}}>
+        <button onPointerDown={()=>{
+          const el=document.querySelector('.pl-page') as HTMLElement|null;
+          if(el){el.style.animation='slideOutLeft 0.22s cubic-bezier(0.4,0,0.2,1) both';}
+          setTimeout(()=>setOpenPlPage(null),200);
+        }} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 10px 6px 0',display:'flex',alignItems:'center',gap:6,...tap}}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
         </button>
