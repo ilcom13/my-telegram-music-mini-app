@@ -2647,7 +2647,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
  const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();};
 const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playDirect(sh[0]);setQueue(sh.slice(1));const updated=playlistsRef.current.map(p=>p.id===pl.id?{...p,_shuffled:true}:p);playlistsRef.current=updated;};
-  const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);return n;});
+  const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);queueRef.current=n;try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
   const smartAddQ=(track:Track)=>{
     // Always insert as NEXT track (position 0 in queue = plays after current)
