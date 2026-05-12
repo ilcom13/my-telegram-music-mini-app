@@ -1863,6 +1863,7 @@ if(a.ended&&a.src){
         setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
         playDirect(nxt);
       } else if(playingPlIdRef.current){
+        console.log('QUEUE EMPTY, playingPlIdRef:', playingPlIdRef.current, 'playlists:', playlistsRef.current.map(p=>p.id+':'+p.repeat));
         const pl=playlistsRef.current.find(p=>p.id===playingPlIdRef.current);
         if(pl&&pl.repeat&&pl.tracks.length>0){
           const tracks=pl.sort==='az'||pl.sort==='za'||pl.sort==='artist'?[...pl.tracks]:pl.tracks;
