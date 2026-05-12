@@ -1464,8 +1464,14 @@ if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
         }
 
         // MONTHLY STATS — берём с большим totalSec
-        if(sv.monthStats?.current&&(sv.monthStats.current.totalSec||0)>monthStatsRef.current.current.totalSec){
-          setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
+if(sv.monthStats?.current){
+          const serverMonth=sv.monthStats.current.month||'';
+          const localMonth=monthStatsRef.current.current.month||'';
+          if(serverMonth===localMonth&&(sv.monthStats.current.totalSec||0)>monthStatsRef.current.current.totalSec){
+            setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
+          } else if(serverMonth>localMonth){
+            setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
+          }
         }
 
         // Сохраняем серверный timestamp локально
