@@ -1210,6 +1210,7 @@ export default function App(){
   const pinnedPlIdRef=useRef<string|null>(null);
   const[openPlPage,setOpenPlPage]=useState<string|null>(null);
   const[playingPlId,setPlayingPlId]=useState<string|null>(null);
+  const playingPlIdRef=useRef<string|null>(null);
   const[trackMenuPlId,setTrackMenuPlId]=useState<string|null>(null);
   const[trackMenuTr,setTrackMenuTr]=useState<Track|null>(null);
   const[history,setHistory]=useState<Track[]>([]);
@@ -1585,6 +1586,7 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
   },[]);
   useEffect(()=>{likedRef.current=liked;},[liked]);
   useEffect(()=>{playlistsRef.current=playlists;},[playlists]);
+  useEffect(()=>{playingPlIdRef.current=playingPlId;},[playingPlId]);
   useEffect(()=>{volumeRef.current=volume;},[volume]);
   useEffect(()=>{favArtistsRef.current=favArtists;},[favArtists]);
   useEffect(()=>{favAlbumsRef.current=favAlbums;},[favAlbums]);
@@ -1855,11 +1857,25 @@ useEffect(()=>{
     if(!a||!isPlayingRef.current)return;
     // Не трогаем если вкладка невидима — браузер сам управляет
     if(document.visibilityState==='hidden')return;
-    if(a.ended&&a.src){
+if(a.ended&&a.src){
       if(queueRef.current.length>0){
         const nxt=queueRef.current[0];
         setQueue(prev=>{const n=prev.slice(1);try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
         playDirect(nxt);
+      } else if(playingPlIdRef.current){
+        const pl=playlistsRef.current.find(p=>p.id===playingPlIdRef.current);
+        if(pl&&pl.repeat&&pl.tracks.length>0){
+          const tracks=pl.sort==='az'||pl.sort==='za'||pl.sort==='artist'?[...pl.tracks]:pl.tracks;
+          const shuffled=pl.sort==='default'?tracks:[...tracks].sort(()=>Math.random()-.5);
+          playDirect(shuffled[0]);
+          setQueue(shuffled.slice(1));
+        } else {
+          const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
+          const available=(pool.length>0?pool:fallbackPool).filter(tr=>tr.id!==current?.id);
+          if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
+          else setPlaying(false);
+        }
       } else {
         const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
@@ -3655,7 +3671,7 @@ return(
       {/* Переключатель платформы */}
       <div style={{display:'flex',gap:0,marginBottom:14,background:'#1a1a1a',borderRadius:14,padding:4,border:'1px solid #252525'}}>
         {(['soundcloud','audiomack'] as const).map(src=>(
-          <button key={src} onPointerDown={()=>{setSearchSource(src);setResults([]);setError('');}}
+          <button key={src} onPointerUp={()=>{setSearchSource(src);setResults([]);setError('');}}
             style={{flex:1,padding:'8px 0',borderRadius:10,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:13,fontWeight:searchSource===src?700:400,cursor:'pointer',transition:'all 0.2s ease',...TAP}}>
             {src==='soundcloud'?'Library A':'Library B'}
           </button>
