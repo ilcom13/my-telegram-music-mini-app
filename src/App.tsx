@@ -2841,19 +2841,22 @@ const goBack=useCallback(()=>{
             </div>
 {queue.length===0?<div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'20px 0'}}>{lang==='ru'?'Пусто':'Empty'}</div>
               :queue.map((tr,i)=>(
-                <div key={tr.id+i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:'1px solid #2a2a2a',transition:'background 0.15s ease'}}>
+<div key={tr.id+i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:'1px solid #2a2a2a',transition:'background 0.15s ease'}}>
                   <button onPointerDown={()=>rmQ(i)} style={{background:'none',border:'none',cursor:'pointer',color:'#666',fontSize:14,padding:'0 4px',lineHeight:1,flexShrink:0,...tap}}>✕</button>
+                  <button onPointerDown={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3,flexShrink:0,...tap}}>
+                    <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${ACC}`,marginLeft:1}}/>
+                  </button>
                   <Img src={tr.cover} size={36} radius={6}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
                     <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{tr.artist}</div>
                   </div>
-                  <button onPointerDown={()=>{playDirect(tr);setQueue(prev=>prev.filter((_,j)=>j!==i));setShowQueue(false);}} style={{background:'none',border:'none',cursor:'pointer',padding:3,flexShrink:0,...tap}}>
-                    <div style={{width:0,height:0,borderStyle:'solid',borderWidth:'5px 0 5px 9px',borderColor:`transparent transparent transparent ${ACC}`,marginLeft:1}}/>
-                  </button>
-                  <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
-                    <button onPointerDown={()=>{if(i>0)moveQ(i,i-1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',color:'#888',fontSize:13,...tap}}>▲</button>
-                    <button onPointerDown={()=>{if(i<queue.length-1)moveQ(i,i+1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',color:'#888',fontSize:13,...tap}}>▼</button>
+                  <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+                    <button onPointerDown={()=>{if(i>0){setQueue(prev=>{const n=[...prev];const[item]=n.splice(i,1);n.unshift(item);queueRef.current=n;try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});}}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 5px',flexShrink:0,opacity:i>0?1:0.3,...tap}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                    </button>
+                    <button onPointerDown={()=>{if(i>0)moveQ(i,i-1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 5px',color:'#888',fontSize:13,...tap}}>▲</button>
+                    <button onPointerDown={()=>{if(i<queue.length-1)moveQ(i,i+1);}} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 5px',color:'#888',fontSize:13,...tap}}>▼</button>
                   </div>
                 </div>
               ))
