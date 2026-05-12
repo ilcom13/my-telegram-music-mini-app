@@ -2168,38 +2168,6 @@ const playPrev=()=>{
       audio.current.currentTime=0;
     }
   };
-      const prev=playHistory[0];
-      setPlayHistory(p=>p.slice(1));
-      // Возвращаем текущий трек в начало очереди
-      if(current){
-        setQueue(q=>{
-          const already=q.some(t=>t.id===current.id);
-          const n=already?q:[current,...q];
-          try{localStorage.setItem('q47',JSON.stringify(n));}catch{}
-          return n;
-        });
-      }
-      if(audio.current&&prev.mp3){
-        audio.current.pause();
-        const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
-        audio.current.src=isHlsPrev?prev.mp3:`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
-        audio.current.load();
-        audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
-      }
-      setCurrent(prev);
-      setCurrent(prev);
-      setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
-      progressRef.current=0;curTimeRef.current='0:00';
-      if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
-      if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
-      if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
-      if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
-      if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
-      if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
-    } else if(current&&audio.current){
-      audio.current.currentTime=0;
-    }
-  };
 
 const playNext=()=>{
     if(queue.length>0){
