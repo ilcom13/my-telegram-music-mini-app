@@ -1707,8 +1707,9 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       const d=await resp.json();
       if(d.tracks?.length){
-        const knownArtists=new Set(sortedArtists.map((a:string)=>a.toLowerCase()));
-const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownArtists.has(tr.artist.toLowerCase()));
+const normA=(s:string)=>s.toLowerCase().replace(/[cс]/g,'c').replace(/[oо]/g,'o').replace(/[aа]/g,'a').replace(/[eеёЁ]/g,'e').replace(/[pр]/g,'p').replace(/[xх]/g,'x').replace(/[kк]/g,'k').replace(/[mм]/g,'m').replace(/[tт]/g,'t').replace(/[bв]/g,'b').replace(/[hн]/g,'h').replace(/[yу]/g,'y').replace(/\s*(official|music|records|prod)\s*/gi,'').trim();
+        const knownSet=sortedArtists.map((a:string)=>normA(a));
+        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownSet.some(ka=>normA(tr.artist)===ka||normA(tr.artist).includes(ka)||ka.includes(normA(tr.artist))));
         if(fresh.length>0){
           setRecs(fresh);
           try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
