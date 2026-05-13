@@ -2261,6 +2261,7 @@ if(track.isArtist&&track.source==='audiomack')return;
 
   const trendCacheRef=useRef<{hot:Track[];rising:Track[];ts:number}>({hot:[],rising:[],ts:0});
   const savedScrollY=useRef(0);
+  const savedPlScrollY=useRef(0);
 
   // ── ИЗМЕНЕНИЕ: упрощённый loadTrend — один список, один cursor ──
   const loadTrend=async(genre='top',reset=false)=>{
@@ -2917,7 +2918,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
         </div>
       )}
       <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
-        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,savedScrollY.current)));}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
+        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
         </button>
@@ -2931,7 +2932,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
         <div
           className="full-player-cover"
           style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
-          onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,savedScrollY.current)));}}
+          onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}}
         >
           <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.38, 380)} radius={0}/>
         </div>
@@ -4777,7 +4778,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
               type="button"
               key={current.id+'-c'}
               className="mini-cover"
-              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
               style={{background:'none',border:'none',padding:0,margin:0,cursor:'pointer',borderRadius:10,overflow:'hidden',flexShrink:0,display:'block',animation:'popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both',...tap}}
             >
               <Img src={current.cover} size={52} radius={10}/>
@@ -4785,7 +4786,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
  
             <button
               type="button"
-              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
               style={{flex:1,minWidth:0,background:'none',border:'none',padding:0,margin:0,cursor:'pointer',textAlign:'left' as const,display:'block',...tap}}
             >
               <div key={current.id+'-t'} style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const,animation:'trackIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
