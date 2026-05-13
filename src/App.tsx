@@ -4085,7 +4085,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                   </div>
                   {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
-                  {(()=>{const _today=new Date();const _showPrev=_today.getDate()<25&&!!monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);const mStat=_showPrev?monthStats.prev!:monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
+                  {(()=>{const _today=new Date();const _showPrev=!subActive&&_today.getDate()<25&&!!monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);const mStat=_showPrev?monthStats.prev!:monthStats.current;const mTop=Object.entries(mStat.trackPlays).sort((a,b)=>b[1].count-a[1].count);const mSec=(s:number)=>{const h=Math.floor(s/3600);const m2=Math.floor((s%3600)/60);return h>0?`${h}h ${m2}m`:`${m2}m`;};return(
                   <button onPointerDown={()=>{const d=new Date().getDate();if(d>=23||subActive){setScreen('monthstats');}else{setShowStatsLocked(true);}}} style={{width:'100%',padding:'13px 16px',background:`linear-gradient(135deg,rgba(239,191,127,0.12),rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,display:'flex',alignItems:'center',gap:12,marginBottom:12,cursor:'pointer',textAlign:'left' as const,transition:'all 0.2s ease',...tap}}>
                     <div style={{fontSize:26,flexShrink:0}}>📊</div>
                     <div style={{flex:1,minWidth:0}}>
@@ -4186,7 +4186,7 @@ importSource={importSource} setImportSource={setImportSource}
         // Показываем текущий месяц — он всегда собирается
 // До 25 числа показываем итоги прошлого месяца, после 25 — текущего
         const today=new Date();
-        const showPrev=today.getDate()<25&&monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);
+        const showPrev=!subActive&&today.getDate()<25&&monthStats.prev&&(monthStats.prev.totalSec>0||monthStats.prev.listenedIds.length>0);
         const mStat=showPrev?monthStats.prev!:monthStats.current;
         const mNames={'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'} as Record<string,string>;
         const mNamesRu={'01':'январь','02':'февраль','03':'март','04':'апрель','05':'май','06':'июнь','07':'июль','08':'август','09':'сентябрь','10':'октябрь','11':'ноябрь','12':'декабрь'} as Record<string,string>;
