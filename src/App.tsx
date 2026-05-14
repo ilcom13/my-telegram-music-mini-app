@@ -1658,12 +1658,12 @@ navigator.mediaSession.setActionHandler('play',()=>{
       ensureSilence();
       if(audio.current){
         if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
-        audio.current.play().then(()=>setPlaying(true)).catch(()=>{
+        audio.current.play().then(()=>{setPlaying(true);navigator.mediaSession.playbackState='playing';try{if(audio.current&&audio.current.duration>0)navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:1,position:audio.current.currentTime});}catch{}}).catch(()=>{
           setTimeout(()=>{if(audio.current)audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
         });
       }
     });
-    navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);}});
+    navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);try{if(audio.current.duration>0)navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:1,position:audio.current.currentTime});}catch{}}navigator.mediaSession.playbackState='paused';});
     navigator.mediaSession.setActionHandler('previoustrack',()=>playPrev());
     navigator.mediaSession.setActionHandler('nexttrack',()=>playNext());
 navigator.mediaSession.setActionHandler('seekto',(details)=>{
@@ -1824,7 +1824,7 @@ const onVisible=()=>{
         try{
           if('mediaSession' in navigator&&!isNaN(a.duration)&&a.duration>0){
             const now2=Date.now();
-            if(now2-mediaSessionThrottle.current>2000){
+            if(now2-mediaSessionThrottle.current>500){
               mediaSessionThrottle.current=now2;
               navigator.mediaSession.setPositionState({duration:a.duration,playbackRate:a.playbackRate||1,position:a.currentTime});
             }
