@@ -1134,7 +1134,7 @@ export default function App(){
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
   const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
-  const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';}else{ensureSilence();audio.current.play();setPlaying(true);if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';}};
+  const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{ensureSilence();audio.current.play();setPlaying(true);}};
 
 
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
@@ -1296,15 +1296,9 @@ export default function App(){
     return()=>{s.pause();s.src='';};
   },[]);
 
-const ensureSilence=()=>{
+  const ensureSilence=()=>{
     const s=silenceRef.current;if(!s)return;
-    if(s.paused){
-      s.play().catch(()=>{});
-      // После silence стартует — перебиваем фокус обратно на основной трек
-      if(audio.current&&!audio.current.paused){
-        setTimeout(()=>{if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing';},100);
-      }
-    }
+    if(s.paused)s.play().catch(()=>{});
   };
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}};
@@ -1659,12 +1653,12 @@ navigator.mediaSession.setActionHandler('play',()=>{
       ensureSilence();
       if(audio.current){
         if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
-        audio.current.play().then(()=>{setPlaying(true);navigator.mediaSession.playbackState='playing';}).catch(()=>{
-          setTimeout(()=>{if(audio.current)audio.current.play().then(()=>{setPlaying(true);navigator.mediaSession.playbackState='playing';}).catch(()=>setPlaying(false));},300);
+        audio.current.play().then(()=>setPlaying(true)).catch(()=>{
+          setTimeout(()=>{if(audio.current)audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
         });
       }
     });
-    navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);}navigator.mediaSession.playbackState='paused';});
+    navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);}});
     navigator.mediaSession.setActionHandler('previoustrack',()=>playPrev());
     navigator.mediaSession.setActionHandler('nexttrack',()=>playNext());
     navigator.mediaSession.setActionHandler('seekto',(details)=>{
