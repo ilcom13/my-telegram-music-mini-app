@@ -1292,7 +1292,22 @@ export default function App(){
     if('mediaSession' in navigator&&audio.current&&audio.current.duration>0){
       try{navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:audio.current.playbackRate||1,position:audio.current.currentTime});}catch{}
     }
-  },[playing]);
+},[playing]);
+
+  useEffect(()=>{
+    const setZoom=()=>{
+      const w=window.innerWidth;
+      if(w>440){
+        const z=Math.min(w/375,1.6);
+        (document.documentElement.style as any).zoom=String(z);
+      }else{
+        (document.documentElement.style as any).zoom='1';
+      }
+    };
+    setZoom();
+    window.addEventListener('resize',setZoom);
+    return()=>window.removeEventListener('resize',setZoom);
+  },[]);
 
   useEffect(()=>{
     const s=new Audio(`${W}/silence.mp3`);
