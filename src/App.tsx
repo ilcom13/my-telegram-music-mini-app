@@ -1134,7 +1134,7 @@ export default function App(){
   const[error,setError]=useState('');
   const[menuId,setMenuId]=useState<string|null>(null);
   const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
-    const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{audio.current.play();setPlaying(true);}};
+  const togglePlay=()=>{if(!audio.current)return;if(playing){audio.current.pause();setPlaying(false);}else{ensureSilence();audio.current.play();setPlaying(true);}};
 
 
   const[artistPage,setArtistPage]=useState<ArtistInfo|null>(null);
@@ -1274,6 +1274,8 @@ export default function App(){
   const audio=useRef<HTMLAudioElement|null>(null);
   const audioCtx=useRef<AudioContext|null>(null);
   const audioSourceNode=useRef<MediaElementAudioSourceNode|null>(null);
+  const silenceRef=useRef<HTMLAudioElement|null>(null);
+  const silenceStarted=useRef(false);
   const gainNode=useRef<GainNode|null>(null);
   const delayNode=useRef<DelayNode|null>(null);
   const eqNodes=useRef<{[freq:number]:BiquadFilterNode}>({});
@@ -1286,6 +1288,18 @@ export default function App(){
   const uInit=uName.charAt(0).toUpperCase();
 
   useEffect(()=>{ isPlayingRef.current=playing; },[playing]);
+
+  useEffect(()=>{
+    const s=new Audio(`${W}/silence.mp3`);
+    s.loop=true;s.volume=0.01;
+    silenceRef.current=s;
+    return()=>{s.pause();s.src='';};
+  },[]);
+
+  const ensureSilence=()=>{
+    const s=silenceRef.current;if(!s)return;
+    if(s.paused)s.play().catch(()=>{});
+  };
 
   const syncSave=async(data:object)=>{if(uid==='anon')return;try{await fetch(`${W}/sync/save?uid=${uid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}};
   const doFullSync=()=>{
@@ -1635,7 +1649,8 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
     navigator.mediaSession.playbackState=playing?'playing':'paused';
-    navigator.mediaSession.setActionHandler('play',()=>{
+navigator.mediaSession.setActionHandler('play',()=>{
+      ensureSilence();
       if(audio.current){
         if(audioCtx.current?.state==='suspended')audioCtx.current.resume().catch(()=>{});
         audio.current.play().then(()=>setPlaying(true)).catch(()=>{
@@ -1878,13 +1893,15 @@ a.addEventListener('volumechange',onVol);
       audioCtx.current.resume().catch(()=>{});
     }
     // Синхронизируем состояние только если аудио реально играет
-    const a=audio.current;
+const a=audio.current;
+    ensureSilence();
     if(a&&!a.paused&&!isPlayingRef.current){
       setPlaying(true);
     }
     // Если должен играть но встал — пробуем через 500мс
     if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0){
       setTimeout(()=>{
+        ensureSilence();
         if(a.paused&&isPlayingRef.current)a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       },500);
     }
@@ -1988,6 +2005,7 @@ if(!freshMp3)return;
     const isHls=freshMp3.includes('.m3u8')||freshMp3.includes('/hls/');
     a.src=isHls?freshMp3:`${W}/stream?url=${encodeURIComponent(freshMp3)}`;
     a.load();
+ensureSilence();
 a.play().then(()=>setPlaying(true)).catch((err)=>{
       if(err?.name==='NotAllowedError'){
         const resume=()=>{
