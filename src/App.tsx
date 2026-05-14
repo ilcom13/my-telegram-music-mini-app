@@ -1287,7 +1287,12 @@ export default function App(){
   const uHandle=tg?.username?`@${tg.username}`:'';
   const uInit=uName.charAt(0).toUpperCase();
 
-  useEffect(()=>{ isPlayingRef.current=playing; },[playing]);
+  useEffect(()=>{
+    isPlayingRef.current=playing;
+    if('mediaSession' in navigator&&audio.current&&audio.current.duration>0){
+      try{navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:audio.current.playbackRate||1,position:audio.current.currentTime});}catch{}
+    }
+  },[playing]);
 
   useEffect(()=>{
     const s=new Audio(`${W}/silence.mp3`);
@@ -1661,13 +1666,14 @@ navigator.mediaSession.setActionHandler('play',()=>{
     navigator.mediaSession.setActionHandler('pause',()=>{if(audio.current){audio.current.pause();setPlaying(false);}});
     navigator.mediaSession.setActionHandler('previoustrack',()=>playPrev());
     navigator.mediaSession.setActionHandler('nexttrack',()=>playNext());
-    navigator.mediaSession.setActionHandler('seekto',(details)=>{
+navigator.mediaSession.setActionHandler('seekto',(details)=>{
       if(audio.current&&details.seekTime!=null){
         audio.current.currentTime=details.seekTime;
         const pct2=audio.current.currentTime/(audio.current.duration||1)*100;
         progressRef.current=pct2;
         if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct2}%`;
         if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct2}%`;
+        try{navigator.mediaSession.setPositionState({duration:audio.current.duration||0,playbackRate:audio.current.playbackRate||1,position:audio.current.currentTime});}catch{}
         if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${pct2}%`;
         if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${pct2}%`;
       }
