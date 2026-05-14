@@ -1646,13 +1646,15 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       navigator.mediaSession.playbackState='none';
       return;
     }
-    const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
+const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
     const artwork:MediaImage[]=artworkUrl?[
-      {src:artworkUrl.replace('t500x500','t120x120'),sizes:'128x128',type:'image/jpeg'},
+      {src:artworkUrl.replace('t500x500','t120x120'),sizes:'120x120',type:'image/jpeg'},
       {src:artworkUrl.replace('t500x500','t300x300'),sizes:'300x300',type:'image/jpeg'},
+      {src:artworkUrl,sizes:'500x500',type:'image/jpeg'},
       {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
+    if(artworkUrl){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{try{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx2d=c.getContext('2d');if(ctx2d){ctx2d.drawImage(img,0,0,256,256);c.toBlob(blob=>{if(!blob)return;const burl=URL.createObjectURL(blob);navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork:[{src:burl,sizes:'256x256',type:blob.type}]});});}}catch{}};img.src=artworkUrl;}
     navigator.mediaSession.playbackState=playing?'playing':'paused';
 navigator.mediaSession.setActionHandler('play',()=>{
       ensureSilence();
