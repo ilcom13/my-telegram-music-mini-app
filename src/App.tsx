@@ -1248,6 +1248,8 @@ export default function App(){
   const[trendGenre]=useState('top');
   const[trendOff]=useState<Record<string,number>>({});
   const[forYouTracks,setForYouTracks]=useState<Track[]>([]);
+  const forYouTracksRef=useRef<Track[]>([]);
+  useEffect(()=>{forYouTracksRef.current=forYouTracks;},[forYouTracks]);
   const[forYouLoading,setForYouLoading]=useState(false);
   const[forYouLoaded,setForYouLoaded]=useState(false);
   const[showImport,setShowImport]=useState(false);
@@ -2409,8 +2411,9 @@ if(track.isArtist&&track.source==='audiomack')return;
       // Из поиска по названию: только совсем новые артисты
       const fresh4=pool4.filter(t=>filter(t)&&!knownSet.has(t.artist));
 
-      const result:Track[]=[];
+const result:Track[]=[];
       const seen=new Set<string>();
+      if(!reset){const prev=forYouTracksRef.current||[];prev.forEach(t=>{seen.add(t.id);seen.add(t.title.toLowerCase().trim());});}
       const addUniq=(arr:Track[],max:number)=>{
         let c=0;
         const sh=[...arr].sort(()=>Math.random()-0.5);
