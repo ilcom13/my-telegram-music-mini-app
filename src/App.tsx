@@ -3047,7 +3047,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
           <span style={{fontSize:13,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
         </div>
         <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
-          onChange={e=>{if(!subActive||fxRemaining<=0)return;setPlaybackSpeed(parseFloat(e.target.value));}}
+          onChange={e=>{if(!subActive||fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setPlaybackSpeed(parseFloat(e.target.value));}}
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
           <span style={{fontSize:10,color:TEXT_MUTED}}>0.5x</span>
@@ -3062,7 +3062,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{reverbAmount}%</span>
   </div>
 <input type="range" min="0" max="100" step="1" value={reverbAmount}
-  onChange={e=>{if(!subActive||fxRemaining<=0)return;setReverbAmount(parseInt(e.target.value));}}
+  onChange={e=>{if(!subActive||fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setReverbAmount(parseInt(e.target.value));}}
   style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0%</span>
@@ -3076,7 +3076,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{pitchAmount.toFixed(2)}x</span>
   </div>
   <input type="range" min="0.5" max="2" step="0.05" value={pitchAmount}
-    onChange={e=>{if(!subActive||fxRemaining<=0)return;setPitchAmount(parseFloat(e.target.value));}}
+    onChange={e=>{if(!subActive||fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setPitchAmount(parseFloat(e.target.value));}}
     style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>Lower</span>
@@ -3090,14 +3090,14 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <span style={{fontSize:13,color:ACC,fontWeight:600}}>{bassAmount > 0 ? `+${bassAmount}` : bassAmount}dB</span>
   </div>
   <input type="range" min="0" max="12" step="1" value={bassAmount}
-    onChange={e=>{if(!subActive||fxRemaining<=0)return;setBassAmount(parseInt(e.target.value));}}
+    onChange={e=>{if(!subActive||fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setBassAmount(parseInt(e.target.value));}}
     style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
   <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
     <span style={{fontSize:10,color:TEXT_MUTED}}>0</span>
     <span style={{fontSize:10,color:TEXT_MUTED}}>+12dB</span>
   </div>
 </div>
-<button onPointerDown={()=>{if(!subActive)return;applyFxPreset('custom');}}
+<button onPointerDown={()=>{if(!subActive)return;if(audio.current&&audio.current.duration>360){alert(lang==='ru'?'Эффекты недоступны для треков длиннее 6 минут':lang==='uk'?'Ефекти недоступні для треків довше 6 хвилин':lang==='kk'?'6 минуттан ұзақ тректер үшін эффекттер қолжетімсіз':lang==='pl'?'Efekty niedostępne dla utworów dłuższych niż 6 minut':lang==='tr'?'6 dakikadan uzun parçalar için efektler kullanılamaz':'Effects unavailable for tracks longer than 6 minutes');return;}applyFxPreset('custom');}}
   style={{width:'100%',padding:'11px',background:fxLoading?'#333':ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',marginTop:12,opacity:fxLoading?0.7:1,...tap}}>
   {fxLoading?'Processing...':'Apply'}
 </button>
