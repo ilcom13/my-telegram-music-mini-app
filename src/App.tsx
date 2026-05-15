@@ -2139,6 +2139,7 @@ if(d.hls||d.mp3){
 const applyFxPreset = async (preset: string, customSpeed?: number, customReverb?: number, customPitch?: number, customBass?: number) => {
 const a = audio.current;
 if (!a || !a.src) return;
+if (a.duration > 360) return;
 
 if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
   originalSrcRef.current = a.src;
@@ -3034,7 +3035,7 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
           {label:'Slowed + Reverb',speed:0.85,reverb:35,pitch:0.9},
           {label:'Speed Up',speed:1.15,reverb:0,pitch:1.1},
         ].map(p=>(
-          <button key={p.label} onPointerDown={()=>{if(!subActive)return;setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);setPitchAmount(p.pitch);applyFxPreset('custom',p.speed,p.reverb,p.pitch,p.label==='Slowed + Reverb'?0:bassAmount);}}
+          <button key={p.label} onPointerDown={()=>{if(!subActive)return;if(audio.current&&audio.current.duration>360){alert(lang==='ru'?'Эффекты недоступны для треков длиннее 6 минут':lang==='uk'?'Ефекти недоступні для треків довше 6 хвилин':lang==='kk'?'6 минуттан ұзақ тректер үшін эффекттер қолжетімсіз':lang==='pl'?'Efekty niedostępne dla utworów dłuższych niż 6 minut':lang==='tr'?'6 dakikadan uzun parçalar için efektler kullanılamaz':'Effects unavailable for tracks longer than 6 minutes');return;}setPlaybackSpeed(p.speed);setReverbAmount(p.reverb);setPitchAmount(p.pitch);applyFxPreset('custom',p.speed,p.reverb,p.pitch,p.label==='Slowed + Reverb'?0:bassAmount);}}
             style={{flex:1,padding:'10px 4px',borderRadius:12,border:`1px solid ${playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:'#2a2a2a'}`,background:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC_DIM:'#1a1a1a',color:playbackSpeed===p.speed&&reverbAmount===p.reverb?ACC:TEXT_SEC,fontSize:12,fontWeight:500,cursor:'pointer',opacity:subActive?1:0.4,...tap}}>
             {fxLoading?'Processing...':p.label}
           </button>
