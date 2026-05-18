@@ -2769,6 +2769,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
     const deepLink=track.source==='audiomack'&&track.amId?`https://t.me/forty7mbot?startapp=amtrack-${track.amId}`:`https://t.me/forty7mbot?startapp=track-${track.id}`;
+    if(track.source==='audiomack'&&track.amId){fetch(`${W}/share-am`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:track.amId,title:track.title,artist:track.artist,cover:track.cover,duration:track.duration,plays:track.plays})}).catch(()=>{});}
     const text=`${track.title} — ${track.artist} 🎵\nListen on Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
