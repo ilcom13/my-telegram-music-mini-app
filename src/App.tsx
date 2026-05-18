@@ -2113,13 +2113,22 @@ playCountRef.current+=1;
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if(!startParam||deepLinkHandled.current)return;
-    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-'))return;
+    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-')&&!startParam.startsWith('amtrack-'))return;
     deepLinkHandled.current=true;
     const openAndPlay=async()=>{
       try{
         if(startParam.startsWith('album-')){
           const albumId=startParam.replace('album-','');
           openAlbum(albumId,'','','');
+        } else if(startParam.startsWith('amtrack-')){
+          const amId=startParam.replace('amtrack-','');
+          const r=await fetch(`${W}/resolve-am?id=${amId}`);
+          const d=await r.json();
+          if(d.mp3){
+            const track:Track={id:'am_'+amId,title:d.title||'',artist:d.artist||'',cover:d.cover||'',duration:d.duration||'',plays:d.plays||0,mp3:d.mp3,source:'audiomack',amId:amId};
+            setCurrent(track);
+            playDirect(track);
+          }
         } else {
           const trackId=startParam.replace('track-','');
           const r=await fetch(`${W}/resolve?id=${trackId}`);
@@ -2759,7 +2768,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   };
   const share=(track:Track)=>{navigator.clipboard?.writeText(`${track.artist} — ${track.title}`).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const shareTrack=(track:Track)=>{
-    const deepLink=`https://t.me/forty7mbot?startapp=track-${track.id}`;
+    const deepLink=track.source==='audiomack'&&track.amId?`https://t.me/forty7mbot?startapp=amtrack-${track.amId}`:`https://t.me/forty7mbot?startapp=track-${track.id}`;
     const text=`${track.title} — ${track.artist} 🎵\nListen on Forty7`;
     const tgApp=window.Telegram?.WebApp;
     if(tgApp){
