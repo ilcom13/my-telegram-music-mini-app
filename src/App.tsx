@@ -2801,7 +2801,26 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
-    const leaveRoom=async()=>{
+
+  const pushRoomUpdate=(overrides?:Partial<{playing:boolean;startedAt:number|null;pausedAt:number|null}>)=>{
+    const rs=roomStateRef.current;
+    if(!rs||!rs.isHost||!rs.code)return;
+    const cur=current;
+    if(!cur)return;
+    const a=audio.current;
+    fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      code:rs.code,
+      playing:overrides?.playing??isPlayingRef.current,
+      trackId:cur.source!=='audiomack'?cur.id:null,
+      amId:cur.amId||null,source:cur.source||'soundcloud',
+      title:cur.title,artist:cur.artist,cover:cur.cover,duration:cur.duration,
+      mp3:a?.src||null,
+      startedAt:overrides?.startedAt!==undefined?overrides.startedAt:(isPlayingRef.current?Date.now()-((a?.currentTime||0)*1000):null),
+      pausedAt:overrides?.pausedAt!==undefined?overrides.pausedAt:(!isPlayingRef.current?Date.now():null),
+    })}).catch(()=>{});
+  };
+
+  const leaveRoom=async()=>{
   const ref=roomPollRef.current;
   if(ref){
     if(typeof (ref as any).close==='function')(ref as any).close();
