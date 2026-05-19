@@ -2075,7 +2075,10 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
   // Пушим в комнату если хост
-setTimeout(()=>pushRoomUpdate({playing:true,startedAt:Date.now()}),300);
+setTimeout(()=>{
+    const a=audio.current;
+    if(a?.src)pushRoomUpdate({playing:true,startedAt:Date.now()-(((a.currentTime)||0)*1000)});
+  },1500);
 
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
