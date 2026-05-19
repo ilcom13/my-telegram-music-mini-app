@@ -2075,7 +2075,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
   // Пушим в комнату если хост
-setTimeout(()=>pushRoomUpdate({playing:true,startedAt:Date.now()}),500);
+setTimeout(()=>pushRoomUpdate({playing:true,startedAt:Date.now()}),300);
 
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
@@ -2866,31 +2866,38 @@ const syncRoomTrack=async(state:any)=>{
 
 const startRoomPoll=(code:string)=>{
   if(roomPollRef.current)clearInterval(roomPollRef.current);
+  let lastTrackKey='';
+  let lastPlaying:boolean|null=null;
   roomPollRef.current=setInterval(async()=>{
     try{
       const r=await fetch(`${W}/room/state?code=${code}`);
       const d=await r.json();
       if(d.error){leaveRoom();return;}
-      const prev=roomStateRef.current;
       setRoomState(s=>s?{...s,...d,isHost:false}:null);
+      const trackKey=(d.trackId||'')+'_'+(d.amId||'');
       // Сменился трек
-      if(d.trackId!==prev?.trackId||d.amId!==prev?.amId){
-        if(d.trackId||d.amId)syncRoomTrack(d);
+      if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
+        lastTrackKey=trackKey;
+        lastPlaying=d.playing;
+        await syncRoomTrack(d);
+        return;
       }
-      // Пауза/плей
-      if(d.playing!==prev?.playing){
+      lastTrackKey=trackKey;
+      // Пауза/плей изменились
+      if(d.playing!==lastPlaying){
+        lastPlaying=d.playing;
         if(d.playing){
           if(audio.current){
             const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
             if(pos>0&&pos<(audio.current.duration||9999))audio.current.currentTime=pos;
             audio.current.play().then(()=>setPlaying(true)).catch(()=>{});
           }
-        } else {
+        }else{
           audio.current?.pause();setPlaying(false);
         }
       }
     }catch{}
-  },5000);
+  },4000);
 };
 
 const leaveRoom=async()=>{
