@@ -2945,33 +2945,63 @@ if(oldRef){
     const a=audio.current;
     const trackKey=(d.trackId||'')+'_'+(d.amId||'');
 
-    // Сменился трек
+    // Сменился трек — всегда синхронизируем
     if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
       lastTrackKey=trackKey;
       lastPlaying=d.playing;
       if(syncing)return;
       syncing=true;
-      try{await syncRoomTrack(d);}finally{syncing=false;}
+      try{
+        if(d.mp3){
+          // Есть готовый mp3 — играем сразу
+          if(a){
+            a.pause();
+            a.src=d.mp3;
+            a.load();
+            setCurrent({
+              id:d.amId?'am_'+d.amId:d.trackId,
+              title:d.title,artist:d.artist,cover:d.cover,
+              duration:d.duration,plays:0,mp3:d.mp3,
+              source:d.source||'soundcloud',
+              amId:d.amId||undefined,
+            });
+            if(d.playing){
+              const tryPlay=()=>{
+                const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
+                if(pos>0&&a.duration&&pos<a.duration)a.currentTime=pos;
+                a.play().then(()=>setPlaying(true)).catch(()=>{});
+              };
+              if(a.readyState>=3){tryPlay();}
+              else{a.addEventListener('canplaythrough',tryPlay,{once:true});}
+            }else{
+              setPlaying(false);
+            }
+          }
+        } else {
+          await syncRoomTrack(d);
+        }
+      }finally{syncing=false;}
       return;
     }
     lastTrackKey=trackKey;
+
+    if(!a)return;
 
     // Пауза/плей
     if(d.playing!==lastPlaying){
       lastPlaying=d.playing;
       if(d.playing){
-        if(a&&d.startedAt){
-          const pos=(Date.now()-d.startedAt)/1000;
-          if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-          a.play().then(()=>setPlaying(true)).catch(()=>{});
-        }
+        const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
+        if(pos>0&&a.duration&&pos<a.duration)a.currentTime=pos;
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
       }else{
-        a?.pause();setPlaying(false);
+        a.pause();setPlaying(false);
       }
+      return;
     }
 
     // Коррекция позиции если разъехались > 5 сек
-    if(d.playing&&d.startedAt&&a&&a.duration){
+    if(d.playing&&d.startedAt&&a.duration){
       const expected=(Date.now()-d.startedAt)/1000;
       const actual=a.currentTime||0;
       if(Math.abs(expected-actual)>5){
