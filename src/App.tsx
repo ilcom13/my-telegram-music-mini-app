@@ -2801,191 +2801,195 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
-    const leaveRoom=async()=>{
-  const ref=roomPollRef.current;
-  if(ref){
-    if(typeof (ref as any).close==='function')(ref as any).close();
-    else clearInterval(ref as any);
-  }
-  (roomPollRef as any).current=null;
-  if(roomCode){
-    fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
-  }
-  setRoomState(null);setRoomCode('');setRoomJoinCode('');setRoomError('');
-};
-  const createRoom=async()=>{
-  setRoomLoading(true);setRoomError('');
-  try{
-    const r=await fetch(`${W}/room/create`);
-    const d=await r.json();
-    if(!d.code)throw new Error('No code');
-    setRoomCode(d.code);
-    setRoomState({code:d.code,isHost:true,playing:false,trackId:null,amId:null,source:null,title:'',artist:'',cover:'',duration:'',startedAt:null,pausedAt:null,listeners:0});
-    // Если сейчас играет трек — сразу пушим его в комнату
-    if(current){
-      await fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        code:d.code,playing:isPlayingRef.current,
-        trackId:current.source!=='audiomack'?current.id:null,
-        amId:current.amId||null,source:current.source||'soundcloud',
-        title:current.title,artist:current.artist,cover:current.cover,
-        duration:current.duration,
-        startedAt:isPlayingRef.current?Date.now()-((audio.current?.currentTime||0)*1000):null,
-        pausedAt:!isPlayingRef.current?Date.now():null,
-      })});
+const leaveRoom=async()=>{
+    const ref=roomPollRef.current;
+    if(ref){
+      if(typeof (ref as any).close==='function')(ref as any).close();
+      else clearInterval(ref as any);
     }
-  }catch(e:any){setRoomError(e.message);}
-  setRoomLoading(false);
-};
+    (roomPollRef as any).current=null;
+    if(roomCode){
+      fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
+    }
+    setRoomState(null);setRoomCode('');setRoomJoinCode('');setRoomError('');
+  };
+
+  const createRoom=async()=>{
+    setRoomLoading(true);setRoomError('');
+    try{
+      const r=await fetch(`${W}/room/create`);
+      const d=await r.json();
+      if(!d.code)throw new Error('No code');
+      setRoomCode(d.code);
+      setRoomState({code:d.code,isHost:true,playing:false,trackId:null,amId:null,source:null,title:'',artist:'',cover:'',duration:'',startedAt:null,pausedAt:null,listeners:0});
+      if(current){
+        const a=audio.current;
+        await fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          code:d.code,playing:isPlayingRef.current,
+          trackId:current.source!=='audiomack'?current.id:null,
+          amId:current.amId||null,source:current.source||'soundcloud',
+          title:current.title,artist:current.artist,cover:current.cover,
+          duration:current.duration,mp3:a?.src||null,
+          startedAt:isPlayingRef.current?Date.now()-((a?.currentTime||0)*1000):null,
+          pausedAt:!isPlayingRef.current?Date.now():null,
+        })});
+      }
+    }catch(e:any){setRoomError(e.message);}
+    setRoomLoading(false);
+  };
+
+  const pushRoomUpdate=(overrides?:Partial<{playing:boolean;startedAt:number|null;pausedAt:number|null}>)=>{
+    const rs=roomStateRef.current;
+    if(!rs||!rs.isHost||!rs.code)return;
+    const cur=current;
+    if(!cur)return;
+    const a=audio.current;
+    fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      code:rs.code,
+      playing:overrides?.playing??isPlayingRef.current,
+      trackId:cur.source!=='audiomack'?cur.id:null,
+      amId:cur.amId||null,source:cur.source||'soundcloud',
+      title:cur.title,artist:cur.artist,cover:cur.cover,duration:cur.duration,
+      mp3:a?.src||null,
+      startedAt:overrides?.startedAt!==undefined?overrides.startedAt:(isPlayingRef.current?Date.now()-((a?.currentTime||0)*1000):null),
+      pausedAt:overrides?.pausedAt!==undefined?overrides.pausedAt:(!isPlayingRef.current?Date.now():null),
+    })}).catch(()=>{});
+  };
 
   const joinRoom=async(code:string)=>{
-  setRoomLoading(true);setRoomError('');
-  try{
-    const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
-    const d=await r.json();
-    if(d.error)throw new Error(t('roomNotFound'));
-    setRoomState({...d,isHost:false});
-    setRoomCode(code.toUpperCase().trim());
-    if(d.trackId||d.amId) syncRoomTrack(d);
-    startRoomAbly(code.toUpperCase().trim());
-  }catch(e:any){setRoomError(e.message);}
-  setRoomLoading(false);
-};
+    setRoomLoading(true);setRoomError('');
+    try{
+      const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
+      const d=await r.json();
+      if(d.error)throw new Error(t('roomNotFound'));
+      setRoomState({...d,isHost:false});
+      setRoomCode(code.toUpperCase().trim());
+      if(d.trackId||d.amId)syncRoomTrack(d);
+      startRoomAbly(code.toUpperCase().trim());
+    }catch(e:any){setRoomError(e.message);}
+    setRoomLoading(false);
+  };
 
   const syncRoomTrack=async(state:any)=>{
-  if(!state.trackId&&!state.amId)return;
-  const a=audio.current;
-  if(!a)return;
-
-  // Если хост прислал готовый mp3 — играем сразу без resolve
-  if(state.mp3){
-    a.pause();
-    a.src=state.mp3;
-    a.load();
-    setCurrent({
+    if(!state.trackId&&!state.amId)return;
+    const a=audio.current;
+    if(!a)return;
+    if(state.mp3){
+      a.pause();
+      a.src=state.mp3;
+      a.load();
+      setCurrent({
+        id:state.amId?'am_'+state.amId:state.trackId,
+        title:state.title,artist:state.artist,cover:state.cover,
+        duration:state.duration,plays:0,mp3:state.mp3,
+        source:state.source||'soundcloud',
+        amId:state.amId||undefined,
+      });
+      const syncAndPlay=()=>{
+        if(state.playing&&state.startedAt){
+          const pos=(Date.now()-state.startedAt)/1000;
+          if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
+          a.play().then(()=>setPlaying(true)).catch(()=>{});
+        }else{
+          a.pause();setPlaying(false);
+        }
+      };
+      a.addEventListener('canplay',syncAndPlay,{once:true});
+      setTimeout(()=>{if(a.readyState>=2)syncAndPlay();},1000);
+      return;
+    }
+    const track:Track={
       id:state.amId?'am_'+state.amId:state.trackId,
       title:state.title,artist:state.artist,cover:state.cover,
-      duration:state.duration,plays:0,mp3:state.mp3,
+      duration:state.duration,plays:0,mp3:null,
       source:state.source||'soundcloud',
       amId:state.amId||undefined,
-    });
-    const syncAndPlay=()=>{
+    };
+    await playDirect(track);
+    setTimeout(()=>{
+      if(!a)return;
       if(state.playing&&state.startedAt){
         const pos=(Date.now()-state.startedAt)/1000;
         if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
         a.play().then(()=>setPlaying(true)).catch(()=>{});
-      } else {
-        a.pause();setPlaying(false);
       }
-    };
-    a.addEventListener('canplay',syncAndPlay,{once:true});
-    // Fallback если canplay уже сработал
-    setTimeout(()=>{
-      if(a.readyState>=2)syncAndPlay();
-    },1000);
-    return;
-  }
-
-  // Fallback — resolve как раньше
-  const track:Track={
-    id:state.amId?'am_'+state.amId:state.trackId,
-    title:state.title,artist:state.artist,cover:state.cover,
-    duration:state.duration,plays:0,mp3:null,
-    source:state.source||'soundcloud',
-    amId:state.amId||undefined,
+    },500);
   };
-  await playDirect(track);
-  setTimeout(()=>{
-    if(!a)return;
-    if(state.playing&&state.startedAt){
-      const pos=(Date.now()-state.startedAt)/1000;
-      if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-      a.play().then(()=>setPlaying(true)).catch(()=>{});
-    }
-  },500);
-};
 
   const startRoomAbly=async(code:string)=>{
-  // Останавливаем старый polling если был
-  const oldRef=roomPollRef.current;
-if(oldRef){
-  if(typeof (oldRef as any).close==='function')(oldRef as any).close();
-  else clearInterval(oldRef as any);
-}
-(roomPollRef as any).current=null;
-
-  let lastTrackKey='';
-  let lastPlaying:boolean|null=null;
-  let syncing=false;
-
-  const handleState=async(d:any)=>{
-    if(!d||d.error)return;
-    setRoomState(s=>s?{...s,...d,isHost:false}:null);
-    const a=audio.current;
-    const trackKey=(d.trackId||'')+'_'+(d.amId||'');
-
-    // Сменился трек
-    if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
+    const oldRef=roomPollRef.current;
+    if(oldRef){
+      if(typeof (oldRef as any).close==='function')(oldRef as any).close();
+      else clearInterval(oldRef as any);
+    }
+    (roomPollRef as any).current=null;
+    let lastTrackKey='';
+    let lastPlaying:boolean|null=null;
+    let syncing=false;
+    const handleState=async(d:any)=>{
+      if(!d||d.error)return;
+      setRoomState(s=>s?{...s,...d,isHost:false}:null);
+      const a=audio.current;
+      const trackKey=(d.trackId||'')+'_'+(d.amId||'');
+      if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
+        lastTrackKey=trackKey;
+        lastPlaying=d.playing;
+        if(syncing)return;
+        syncing=true;
+        try{await syncRoomTrack(d);}finally{syncing=false;}
+        return;
+      }
       lastTrackKey=trackKey;
-      lastPlaying=d.playing;
-      if(syncing)return;
-      syncing=true;
-      try{await syncRoomTrack(d);}finally{syncing=false;}
-      return;
-    }
-    lastTrackKey=trackKey;
-
-    // Пауза/плей
-    if(d.playing!==lastPlaying){
-      lastPlaying=d.playing;
-      if(d.playing){
-        if(a&&d.startedAt){
-          const pos=(Date.now()-d.startedAt)/1000;
-          if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-          a.play().then(()=>setPlaying(true)).catch(()=>{});
+      if(d.playing!==lastPlaying){
+        lastPlaying=d.playing;
+        if(d.playing){
+          if(a&&d.startedAt){
+            const pos=(Date.now()-d.startedAt)/1000;
+            if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
+            a.play().then(()=>setPlaying(true)).catch(()=>{});
+          }
+        }else{
+          a?.pause();setPlaying(false);
         }
-      }else{
-        a?.pause();setPlaying(false);
       }
-    }
-
-    // Коррекция позиции если разъехались > 5 сек
-    if(d.playing&&d.startedAt&&a&&a.duration){
-      const expected=(Date.now()-d.startedAt)/1000;
-      const actual=a.currentTime||0;
-      if(Math.abs(expected-actual)>5){
-        a.currentTime=Math.min(expected,a.duration-1);
-      }
-    }
-  };
-
-  // Получаем Ably token с сервера
-  try{
-    const tokenRes=await fetch(`${W}/room/token?code=${code}`);
-    const tokenData=await tokenRes.json();
-
-    // Подключаемся к Ably через REST-совместимый SSE endpoint
-    const channelName=`room-${code}`;
-    const token=tokenData.token;
-    if(!token)throw new Error('no token');
-
-    const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
-    const es=new EventSource(sseUrl);
-
-    (es as any)._roomCode=code;
-
-    es.onmessage=(e)=>{
-      try{
-        const msg=JSON.parse(e.data);
-        if(msg.name==='update'||msg.data){
-          const data=typeof msg.data==='string'?JSON.parse(msg.data):msg.data;
-          handleState(data);
+      if(d.playing&&d.startedAt&&a&&a.duration){
+        const expected=(Date.now()-d.startedAt)/1000;
+        const actual=a.currentTime||0;
+        if(Math.abs(expected-actual)>5){
+          a.currentTime=Math.min(expected,a.duration-1);
         }
-      }catch{}
+      }
     };
-
-    es.onerror=()=>{
-      // Fallback на polling если SSE упал
-      es.close();
+    try{
+      const tokenRes=await fetch(`${W}/room/token?code=${code}`);
+      const tokenData=await tokenRes.json();
+      const channelName=`room-${code}`;
+      const token=tokenData.token;
+      if(!token)throw new Error('no token');
+      const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
+      const es=new EventSource(sseUrl);
+      (es as any)._roomCode=code;
+      es.onmessage=(e)=>{
+        try{
+          const msg=JSON.parse(e.data);
+          if(msg.name==='update'||msg.data){
+            const data=typeof msg.data==='string'?JSON.parse(msg.data):msg.data;
+            handleState(data);
+          }
+        }catch{}
+      };
+      es.onerror=()=>{
+        es.close();
+        roomPollRef.current=setInterval(async()=>{
+          try{
+            const r=await fetch(`${W}/room/state?code=${code}`);
+            const d=await r.json();
+            handleState(d);
+          }catch{}
+        },2000);
+      };
+      (roomPollRef as any).current=es;
+    }catch{
       roomPollRef.current=setInterval(async()=>{
         try{
           const r=await fetch(`${W}/room/state?code=${code}`);
@@ -2993,22 +2997,8 @@ if(oldRef){
           handleState(d);
         }catch{}
       },2000);
-    };
-
-    // Сохраняем EventSource чтобы закрыть при выходе
-    (roomPollRef as any).current=es;
-
-  }catch{
-    // Fallback на polling
-    roomPollRef.current=setInterval(async()=>{
-      try{
-        const r=await fetch(`${W}/room/state?code=${code}`);
-        const d=await r.json();
-        handleState(d);
-      }catch{}
-    },2000);
-  }
-};
+    }
+  };
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
     <button className="like-btn" onPointerDown={e=>{e.stopPropagation();toggleLike(track);}} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
