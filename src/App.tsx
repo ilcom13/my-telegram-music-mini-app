@@ -2985,7 +2985,9 @@ if(oldRef){
     // Подключаемся к Ably через REST-совместимый SSE endpoint
     const channelName=`room-${code}`;
     console.log('Ably tokenData:', tokenData);
-    const token=tokenData.token;
+    // token может быть строкой или объектом
+    const token=typeof tokenData.token==='string'?tokenData.token:
+      typeof tokenData==='string'?tokenData:null;
     if(!token){console.error('No token in response');throw new Error('no token');}
 
     const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
