@@ -2984,8 +2984,9 @@ if(oldRef){
 
     // Подключаемся к Ably через REST-совместимый SSE endpoint
     const channelName=`room-${code}`;
+    console.log('Ably tokenData:', tokenData);
     const token=tokenData.token;
-    if(!token)throw new Error('no token');
+    if(!token){console.error('No token in response');throw new Error('no token');}
 
     const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
     const es=new EventSource(sseUrl);
@@ -2993,6 +2994,7 @@ if(oldRef){
     (es as any)._roomCode=code;
 
     es.onmessage=(e)=>{
+      console.log('SSE message:', e.data);
       try{
         const msg=JSON.parse(e.data);
         if(msg.name==='update'||msg.data){
@@ -3002,8 +3004,8 @@ if(oldRef){
       }catch{}
     };
 
-    es.onerror=()=>{
-      // Fallback на polling если SSE упал
+    es.onerror=(e)=>{
+      console.error('SSE error:', e);
       es.close();
       roomPollRef.current=setInterval(async()=>{
         try{
@@ -3017,8 +3019,8 @@ if(oldRef){
     // Сохраняем EventSource чтобы закрыть при выходе
     (roomPollRef as any).current=es;
 
-  }catch{
-    // Fallback на polling
+  }catch(err){
+    console.error('Ably connect error:', err);
     roomPollRef.current=setInterval(async()=>{
       try{
         const r=await fetch(`${W}/room/state?code=${code}`);
