@@ -2801,7 +2801,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
-  const leaveRoom=async()=>{
+    const leaveRoom=async()=>{
   const ref=roomPollRef.current;
   if(ref){
     if(typeof (ref as any).close==='function')(ref as any).close();
@@ -2837,7 +2837,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   setRoomLoading(false);
 };
 
-const joinRoom=async(code:string)=>{
+  const joinRoom=async(code:string)=>{
   setRoomLoading(true);setRoomError('');
   try{
     const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
@@ -2851,7 +2851,7 @@ const joinRoom=async(code:string)=>{
   setRoomLoading(false);
 };
 
-const syncRoomTrack=async(state:any)=>{
+  const syncRoomTrack=async(state:any)=>{
   if(!state.trackId&&!state.amId)return;
   const a=audio.current;
   if(!a)return;
@@ -2904,7 +2904,7 @@ const syncRoomTrack=async(state:any)=>{
   },500);
 };
 
-const startRoomAbly=async(code:string)=>{
+  const startRoomAbly=async(code:string)=>{
   // Останавливаем старый polling если был
   const oldRef=roomPollRef.current;
 if(oldRef){
