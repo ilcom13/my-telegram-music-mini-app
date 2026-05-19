@@ -2990,7 +2990,7 @@ if(oldRef){
       typeof tokenData==='string'?tokenData:null;
     if(!token){console.error('No token in response');throw new Error('no token');}
 
-    const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
+    const sseUrl=`https://realtime.ably.io/event-stream?v=1.2&accessToken=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
     const es=new EventSource(sseUrl);
 
     (es as any)._roomCode=code;
