@@ -2844,6 +2844,39 @@ const joinRoom=async(code:string)=>{
 
 const syncRoomTrack=async(state:any)=>{
   if(!state.trackId&&!state.amId)return;
+  const a=audio.current;
+  if(!a)return;
+
+  // Если хост прислал готовый mp3 — играем сразу без resolve
+  if(state.mp3){
+    a.pause();
+    a.src=state.mp3;
+    a.load();
+    setCurrent({
+      id:state.amId?'am_'+state.amId:state.trackId,
+      title:state.title,artist:state.artist,cover:state.cover,
+      duration:state.duration,plays:0,mp3:state.mp3,
+      source:state.source||'soundcloud',
+      amId:state.amId||undefined,
+    });
+    const syncAndPlay=()=>{
+      if(state.playing&&state.startedAt){
+        const pos=(Date.now()-state.startedAt)/1000;
+        if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
+      } else {
+        a.pause();setPlaying(false);
+      }
+    };
+    a.addEventListener('canplay',syncAndPlay,{once:true});
+    // Fallback если canplay уже сработал
+    setTimeout(()=>{
+      if(a.readyState>=2)syncAndPlay();
+    },1000);
+    return;
+  }
+
+  // Fallback — resolve как раньше
   const track:Track={
     id:state.amId?'am_'+state.amId:state.trackId,
     title:state.title,artist:state.artist,cover:state.cover,
@@ -2852,27 +2885,14 @@ const syncRoomTrack=async(state:any)=>{
     amId:state.amId||undefined,
   };
   await playDirect(track);
-  // Ждём пока аудио загрузится и синхронизируем позицию
-  const syncPos=()=>{
-    const a=audio.current;
+  setTimeout(()=>{
     if(!a)return;
     if(state.playing&&state.startedAt){
-      // Считаем позицию с учётом времени polling задержки
       const pos=(Date.now()-state.startedAt)/1000;
-      if(pos>0&&pos<(a.duration||9999)){
-        a.currentTime=pos;
-      }
+      if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
       a.play().then(()=>setPlaying(true)).catch(()=>{});
-    } else if(!state.playing){
-      a.pause();
-      setPlaying(false);
     }
-  };
-  // Пробуем сразу, потом ещё раз когда метаданные загрузятся
-  setTimeout(syncPos, 300);
-  if(audio.current){
-    audio.current.addEventListener('loadedmetadata', syncPos, {once:true});
-  }
+  },500);
 };
 
 const startRoomPoll=(code:string)=>{
@@ -2935,13 +2955,16 @@ const pushRoomUpdate=useCallback((overrides?:Partial<{playing:boolean;startedAt:
   if(!rs||!rs.isHost||!rs.code)return;
   const cur=current;
   if(!cur)return;
+  const a=audio.current;
+  const mp3Url=a?.src||null;
   fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     code:rs.code,
     playing:overrides?.playing??isPlayingRef.current,
     trackId:cur.source!=='audiomack'?cur.id:null,
     amId:cur.amId||null,source:cur.source||'soundcloud',
     title:cur.title,artist:cur.artist,cover:cur.cover,duration:cur.duration,
-    startedAt:overrides?.startedAt!==undefined?overrides.startedAt:(isPlayingRef.current?Date.now()-((audio.current?.currentTime||0)*1000):null),
+    mp3:mp3Url,
+    startedAt:overrides?.startedAt!==undefined?overrides.startedAt:(isPlayingRef.current?Date.now()-((a?.currentTime||0)*1000):null),
     pausedAt:overrides?.pausedAt!==undefined?overrides.pausedAt:(!isPlayingRef.current?Date.now():null),
   })}).catch(()=>{});
 },[current]);
