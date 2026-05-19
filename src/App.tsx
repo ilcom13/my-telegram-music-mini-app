@@ -193,7 +193,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Відкрий',importOtherStep2:'і підключи свій акаунт',
     importOtherStep3:'Вибери плейлист і перенеси його в SoundCloud',
     importOtherStep4:'Поверніться сюди і вставте посилання SoundCloud плейлиста',
-    importOtherBtn:'Відкрити Soundiiz',importNotFound:'не знайдено на SoundCloud',spotifyConnect:'Підключити Spotify',spotifyConnected:'Spotify підключено',spotifyDisconnect:'Відключити Spotify',
+    importOtherBtn:'Відкрити Soundiiz',importNotFound:'не знайдено на SoundCloud',spotifyConnect:'Підключити Spotify',spotifyConnected:'Spotify підключено',spotifyDisconnect:'Відключити Spotify',rooms:'Кімнати',roomsTitle:'Спільне прослуховування',createRoom:'Створити кімнату',joinRoom:'Увійти в кімнату',roomCode:'Код кімнати',roomCodeHint:'Введи 6-значний код',roomListeners:'слухачів',roomHost:'Ти хост',roomGuest:'Ти слухач',roomShare:'Поділитися кодом',roomLeave:'Покинути',roomNotFound:'Кімнату не знайдено',roomCopied:'Код скопійовано!',roomWaiting:'Чекаємо учасників...',roomJoin:'Увійти',
   },
   kk: {
     home:'Басты',search:'Іздеу',library:'Медиатека',trending:'Сен үшін',profile:'Профиль',
@@ -219,7 +219,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Ашу',importOtherStep2:'және аккаунтты қосу',
     importOtherStep3:'Плейлистті таңдап SoundCloud-қа көшір',
     importOtherStep4:'Осында оралып SoundCloud плейлист сілтемесін қой',
-    importOtherBtn:'Soundiiz ашу',importNotFound:'SoundCloud-та табылмады',spotifyConnect:'Spotify қосу',spotifyConnected:'Spotify қосылды',spotifyDisconnect:'Spotify ажырату',
+    importOtherBtn:'Soundiiz ашу',importNotFound:'SoundCloud-та табылмады',rooms:'Бөлмелер',roomsTitle:'Бірге тыңдау',createRoom:'Бөлме жасау',joinRoom:'Бөлмеге кіру',roomCode:'Бөлме коды',roomCodeHint:'6 таңбалы кодты енгіз',roomListeners:'тыңдаушы',roomHost:'Сен хост',roomGuest:'Сен тыңдаушысың',roomShare:'Кодты бөлісу',roomLeave:'Шығу',roomNotFound:'Бөлме табылмады',roomCopied:'Код көшірілді!',roomWaiting:'Қатысушыларды күтуде...',roomJoin:'Кіру',spotifyConnect:'Spotify қосу',spotifyConnected:'Spotify қосылды',spotifyDisconnect:'Spotify ажырату',
   },
   pl: {
     home:'Główna',search:'Szukaj',library:'Biblioteka',trending:'Dla Ciebie',profile:'Profil',
@@ -245,7 +245,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Otwórz',importOtherStep2:'i połącz swoje konto',
     importOtherStep3:'Wybierz playlistę i przenieś ją do SoundCloud',
     importOtherStep4:'Wróć tutaj i wklej link do playlisty SoundCloud',
-    importOtherBtn:'Otwórz Soundiiz',importNotFound:'nie znaleziono na SoundCloud',spotifyConnect:'Połącz Spotify',spotifyConnected:'Spotify połączono',spotifyDisconnect:'Odłącz Spotify',
+    importOtherBtn:'Otwórz Soundiiz',importNotFound:'nie znaleziono na SoundCloud',spotifyConnect:'Połącz Spotify',spotifyConnected:'Spotify połączono',spotifyDisconnect:'Odłącz Spotify',rooms:'Pokoje',roomsTitle:'Słuchaj razem',createRoom:'Utwórz pokój',joinRoom:'Dołącz do pokoju',roomCode:'Kod pokoju',roomCodeHint:'Wpisz 6-znakowy kod',roomListeners:'słuchaczy',roomHost:'Jesteś hostem',roomGuest:'Jesteś słuchaczem',roomShare:'Udostępnij kod',roomLeave:'Wyjdź',roomNotFound:'Pokój nie znaleziony',roomCopied:'Kod skopiowany!',roomWaiting:'Czekamy na uczestników...',roomJoin:'Dołącz',
   },
   tr: {
     home:'Ana Sayfa',search:'Ara',library:'Kütüphane',trending:'Senin İçin',profile:'Profil',
@@ -271,7 +271,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Aç',importOtherStep2:'ve hesabını bağla',
     importOtherStep3:'Çalma listeni seç ve SoundCloud\'a aktar',
     importOtherStep4:'Buraya dön ve SoundCloud çalma listesi bağlantısını yapıştır',
-    importOtherBtn:'Soundiiz\'i Aç',importNotFound:'SoundCloud\'da bulunamadı',
+    importOtherBtn:'Soundiiz\'i Aç',importNotFound:'SoundCloud\'da bulunamadı',rooms:'Odalar',roomsTitle:'Birlikte Dinle',createRoom:'Oda oluştur',joinRoom:'Odaya katıl',roomCode:'Oda kodu',roomCodeHint:'6 haneli kodu gir',roomListeners:'dinleyici',roomHost:'Sen hostssun',roomGuest:'Sen dinleyicisin',roomShare:'Kodu paylaş',roomLeave:'Ayrıl',roomNotFound:'Oda bulunamadı',roomCopied:'Kod kopyalandı!',roomWaiting:'Katılımcılar bekleniyor...',roomJoin:'Katıl',
   },
   en: {
     home:'Home',search:'Search',library:'Library',trending:'For You',profile:'Profile',
@@ -296,7 +296,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Open',importOtherStep2:'and connect your account',
     importOtherStep3:'Select your playlist and transfer it to SoundCloud',
     importOtherStep4:'Come back here and paste the SoundCloud playlist link',
-    importOtherBtn:'Open Soundiiz',importNotFound:'not found on SoundCloud',spotifyConnect:'Connect Spotify',spotifyConnected:'Spotify Connected',spotifyDisconnect:'Disconnect Spotify',
+    importOtherBtn:'Open Soundiiz',importNotFound:'not found on SoundCloud',spotifyConnect:'Connect Spotify',spotifyConnected:'Spotify Connected',spotifyDisconnect:'Disconnect Spotify',rooms:'Rooms',roomsTitle:'Listen Together',createRoom:'Create room',joinRoom:'Join room',roomCode:'Room code',roomCodeHint:'Enter 6-digit code',roomListeners:'listeners',roomHost:'You are host',roomGuest:'You are listener',roomShare:'Share code',roomLeave:'Leave',roomNotFound:'Room not found',roomCopied:'Code copied!',roomWaiting:'Waiting for listeners...',roomJoin:'Join',
   },
   ru: {
     home:'Главная',search:'Поиск',library:'Библиотека',trending:'Для тебя',profile:'Профиль',
@@ -322,7 +322,7 @@ const T: Record<string,Record<string,string>> = {
     importOtherStep1:'Открой',importOtherStep2:'и подключи свой аккаунт',
     importOtherStep3:'Выбери плейлист и перенеси его в SoundCloud',
     importOtherStep4:'Вернись сюда и вставь ссылку на плейлист SoundCloud',
-    importOtherBtn:'Открыть Soundiiz',importNotFound:'не найден на SoundCloud',spotifyConnect:'Подключить Spotify',spotifyConnected:'Spotify подключён',spotifyDisconnect:'Отключить Spotify',
+    importOtherBtn:'Открыть Soundiiz',importNotFound:'не найден на SoundCloud',spotifyConnect:'Подключить Spotify',spotifyConnected:'Spotify подключён',spotifyDisconnect:'Отключить Spotify',rooms:'Комнаты',roomsTitle:'Совместное прослушивание',createRoom:'Создать комнату',joinRoom:'Войти в комнату',roomCode:'Код комнаты',roomCodeHint:'Введи 6-значный код',roomListeners:'слушателей',roomHost:'Ты хост',roomGuest:'Ты слушатель',roomShare:'Поделиться кодом',roomLeave:'Покинуть',roomNotFound:'Комната не найдена',roomCopied:'Код скопирован!',roomWaiting:'Ожидаем участников...',roomJoin:'Войти',
     // ru
 rooms:'Комнаты',roomsTitle:'Совместное прослушивание',createRoom:'Создать комнату',joinRoom:'Войти в комнату',roomCode:'Код комнаты',roomCodeHint:'Введи 6-значный код',roomListeners:'слушателей',roomHost:'Ты хост',roomGuest:'Ты слушатель',roomShare:'Поделиться кодом',roomLeave:'Покинуть',roomNotFound:'Комната не найдена',roomCopied:'Код скопирован!',roomWaiting:'Ожидаем участников...',roomJoin:'Войти',
 
