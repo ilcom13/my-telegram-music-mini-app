@@ -2801,6 +2801,18 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
+  const leaveRoom=async()=>{
+  const ref=roomPollRef.current;
+  if(ref){
+    if(typeof (ref as any).close==='function')(ref as any).close();
+    else clearInterval(ref as any);
+  }
+  (roomPollRef as any).current=null;
+  if(roomCode){
+    fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
+  }
+  setRoomState(null);setRoomCode('');setRoomJoinCode('');setRoomError('');
+};
   const createRoom=async()=>{
   setRoomLoading(true);setRoomError('');
   try{
@@ -2894,7 +2906,12 @@ const syncRoomTrack=async(state:any)=>{
 
 const startRoomAbly=async(code:string)=>{
   // Останавливаем старый polling если был
-  if(roomPollRef.current)clearInterval(roomPollRef.current);
+  const oldRef=roomPollRef.current;
+if(oldRef){
+  if(typeof (oldRef as any).close==='function')(oldRef as any).close();
+  else clearInterval(oldRef as any);
+}
+(roomPollRef as any).current=null;
 
   let lastTrackKey='';
   let lastPlaying:boolean|null=null;
