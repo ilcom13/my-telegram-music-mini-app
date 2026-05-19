@@ -2852,15 +2852,26 @@ const syncRoomTrack=async(state:any)=>{
     amId:state.amId||undefined,
   };
   await playDirect(track);
-  // Синхронизируем позицию
-  if(audio.current&&state.startedAt&&state.playing){
-    const pos=(Date.now()-state.startedAt)/1000;
-    if(pos>0&&pos<(audio.current.duration||9999)){
-      audio.current.currentTime=pos;
+  // Ждём пока аудио загрузится и синхронизируем позицию
+  const syncPos=()=>{
+    const a=audio.current;
+    if(!a)return;
+    if(state.playing&&state.startedAt){
+      // Считаем позицию с учётом времени polling задержки
+      const pos=(Date.now()-state.startedAt)/1000;
+      if(pos>0&&pos<(a.duration||9999)){
+        a.currentTime=pos;
+      }
+      a.play().then(()=>setPlaying(true)).catch(()=>{});
+    } else if(!state.playing){
+      a.pause();
+      setPlaying(false);
     }
-  } else if(audio.current&&state.pausedAt&&!state.playing){
-    audio.current.pause();
-    setPlaying(false);
+  };
+  // Пробуем сразу, потом ещё раз когда метаданные загрузятся
+  setTimeout(syncPos, 300);
+  if(audio.current){
+    audio.current.addEventListener('loadedmetadata', syncPos, {once:true});
   }
 };
 
@@ -2877,11 +2888,21 @@ const startRoomPoll=(code:string)=>{
       const trackKey=(d.trackId||'')+'_'+(d.amId||'');
       // Сменился трек
       if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
-        lastTrackKey=trackKey;
-        lastPlaying=d.playing;
-        await syncRoomTrack(d);
-        return;
-      }
+  lastTrackKey=trackKey;
+  lastPlaying=d.playing;
+  syncRoomTrack(d); // не await — не блокируем polling
+  return;
+}
+// Если трек тот же но гость ещё не играет а хост играет — догоняем
+if(lastTrackKey&&d.playing&&lastPlaying===null){
+  lastPlaying=d.playing;
+  const a=audio.current;
+  if(a&&a.src&&d.startedAt){
+    const pos=(Date.now()-d.startedAt)/1000;
+    if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
+    a.play().then(()=>setPlaying(true)).catch(()=>{});
+  }
+}
       lastTrackKey=trackKey;
       // Пауза/плей изменились
       if(d.playing!==lastPlaying){
