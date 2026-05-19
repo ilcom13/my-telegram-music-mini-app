@@ -2833,11 +2833,8 @@ const joinRoom=async(code:string)=>{
     if(d.error)throw new Error(t('roomNotFound'));
     setRoomState({...d,isHost:false});
     setRoomCode(code.toUpperCase().trim());
-    // Сразу синхронизируем трек
-    if(d.trackId||d.amId){
-      syncRoomTrack(d);
-    }
-    startRoomPoll(code.toUpperCase().trim());
+    if(d.trackId||d.amId) syncRoomTrack(d);
+    startRoomAbly(code.toUpperCase().trim());
   }catch(e:any){setRoomError(e.message);}
   setRoomLoading(false);
 };
@@ -2895,103 +2892,106 @@ const syncRoomTrack=async(state:any)=>{
   },500);
 };
 
-const startRoomPoll=(code:string)=>{
+const startRoomAbly=async(code:string)=>{
+  // Останавливаем старый polling если был
   if(roomPollRef.current)clearInterval(roomPollRef.current);
+
   let lastTrackKey='';
   let lastPlaying:boolean|null=null;
-  roomPollRef.current=setInterval(async()=>{
-    try{
-      const r=await fetch(`${W}/room/state?code=${code}`);
-      const d=await r.json();
-      if(d.error){leaveRoom();return;}
-      setRoomState(s=>s?{...s,...d,isHost:false}:null);
-      const trackKey=(d.trackId||'')+'_'+(d.amId||'');
-      // Сменился трек
-      if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
-  lastTrackKey=trackKey;
-  lastPlaying=d.playing;
-  syncRoomTrack(d); // не await — не блокируем polling
-  return;
-}
-// Если трек тот же но гость ещё не играет а хост играет — догоняем
-if(lastTrackKey&&d.playing&&lastPlaying===null){
-  lastPlaying=d.playing;
-  const a=audio.current;
-  if(a&&a.src&&d.startedAt){
-    const pos=(Date.now()-d.startedAt)/1000;
-    if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-    a.play().then(()=>setPlaying(true)).catch(()=>{});
-  }
-}
+  let syncing=false;
+
+  const handleState=async(d:any)=>{
+    if(!d||d.error)return;
+    setRoomState(s=>s?{...s,...d,isHost:false}:null);
+    const a=audio.current;
+    const trackKey=(d.trackId||'')+'_'+(d.amId||'');
+
+    // Сменился трек
+    if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
       lastTrackKey=trackKey;
-      // Пауза/плей изменились
-      if(d.playing!==lastPlaying){
-        lastPlaying=d.playing;
-        if(d.playing){
-          if(audio.current){
-            const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
-            if(pos>0&&pos<(audio.current.duration||9999))audio.current.currentTime=pos;
-            audio.current.play().then(()=>setPlaying(true)).catch(()=>{});
-          }
-        }else{
-          audio.current?.pause();setPlaying(false);
+      lastPlaying=d.playing;
+      if(syncing)return;
+      syncing=true;
+      try{await syncRoomTrack(d);}finally{syncing=false;}
+      return;
+    }
+    lastTrackKey=trackKey;
+
+    // Пауза/плей
+    if(d.playing!==lastPlaying){
+      lastPlaying=d.playing;
+      if(d.playing){
+        if(a&&d.startedAt){
+          const pos=(Date.now()-d.startedAt)/1000;
+          if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
+          a.play().then(()=>setPlaying(true)).catch(()=>{});
         }
+      }else{
+        a?.pause();setPlaying(false);
       }
-    }catch{}
-  },4000);
-};
+    }
 
-const leaveRoom=async()=>{
-  if(roomPollRef.current)clearInterval(roomPollRef.current);
-  if(roomCode){
-    fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
-  }
-  setRoomState(null);setRoomCode('');setRoomJoinCode('');setRoomError('');
-};
+    // Коррекция позиции если разъехались > 5 сек
+    if(d.playing&&d.startedAt&&a&&a.duration){
+      const expected=(Date.now()-d.startedAt)/1000;
+      const actual=a.currentTime||0;
+      if(Math.abs(expected-actual)>5){
+        a.currentTime=Math.min(expected,a.duration-1);
+      }
+    }
+  };
 
-// Хост пушит изменения при смене трека или паузе
-const pushRoomUpdate=useCallback((overrides?:Partial<{playing:boolean;startedAt:number|null;pausedAt:number|null}>)=>{
-  const rs=roomStateRef.current;
-  if(!rs||!rs.isHost||!rs.code)return;
-  const cur=current;
-  if(!cur)return;
-  const a=audio.current;
-  const mp3Url=a?.src||null;
-  fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-    code:rs.code,
-    playing:overrides?.playing??isPlayingRef.current,
-    trackId:cur.source!=='audiomack'?cur.id:null,
-    amId:cur.amId||null,source:cur.source||'soundcloud',
-    title:cur.title,artist:cur.artist,cover:cur.cover,duration:cur.duration,
-    mp3:mp3Url,
-    startedAt:overrides?.startedAt!==undefined?overrides.startedAt:(isPlayingRef.current?Date.now()-((a?.currentTime||0)*1000):null),
-    pausedAt:overrides?.pausedAt!==undefined?overrides.pausedAt:(!isPlayingRef.current?Date.now():null),
-  })}).catch(()=>{});
-},[current]);
+  // Получаем Ably token с сервера
+  try{
+    const tokenRes=await fetch(`${W}/room/token?code=${code}`);
+    const tokenData=await tokenRes.json();
 
-  // seekSP removed — slider теперь управляется через DOM refs напрямую
-  const volSP=useSlider(volume,v=>setVol(v));
+    // Подключаемся к Ably через REST-совместимый SSE endpoint
+    const channelName=`room-${code}`;
+    const token=tokenData.token;
+    if(!token)throw new Error('no token');
 
-  const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
+    const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
+    const es=new EventSource(sseUrl);
 
-  // Фабрика стабильных пропсов для внешнего React.memo TRow
-  const mkTRow=useCallback((track:Track,extra?:{num?:number;onArtistClick?:(n:string,c:string,id?:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
-    const isActive=current?.id===track.id;
-    const mOpen=menuId===track.id;
-    return{
-      track,
-      isActive,
-      isPlaying:playing,
-      inQueue:queue.some(t=>t.id===track.id),
-      menuOpen:mOpen,
-      onPlay:()=>playTrack(track),
-      onToggleQ:()=>toggleQ(track),
-      onMenu:(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:!!extra?.showBlockBtn});setMenuId(track.id);},
-      onCloseMenu:()=>{setMenuId(null);setMenuAnchor(null);},
-      ...extra,
+    (es as any)._roomCode=code;
+
+    es.onmessage=(e)=>{
+      try{
+        const msg=JSON.parse(e.data);
+        if(msg.name==='update'||msg.data){
+          const data=typeof msg.data==='string'?JSON.parse(msg.data):msg.data;
+          handleState(data);
+        }
+      }catch{}
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[current?.id,menuId,playing,queue]);
+
+    es.onerror=()=>{
+      // Fallback на polling если SSE упал
+      es.close();
+      roomPollRef.current=setInterval(async()=>{
+        try{
+          const r=await fetch(`${W}/room/state?code=${code}`);
+          const d=await r.json();
+          handleState(d);
+        }catch{}
+      },2000);
+    };
+
+    // Сохраняем EventSource чтобы закрыть при выходе
+    (roomPollRef as any).current=es;
+
+  }catch{
+    // Fallback на polling
+    roomPollRef.current=setInterval(async()=>{
+      try{
+        const r=await fetch(`${W}/room/state?code=${code}`);
+        const d=await r.json();
+        handleState(d);
+      }catch{}
+    },2000);
+  }
+};
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
     <button className="like-btn" onPointerDown={e=>{e.stopPropagation();toggleLike(track);}} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
