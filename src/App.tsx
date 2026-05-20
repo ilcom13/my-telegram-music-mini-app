@@ -1135,13 +1135,12 @@ export default function App(){
   const[menuId,setMenuId]=useState<string|null>(null);
   const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
   const togglePlay=()=>{
+    
   if(!audio.current)return;
   if(playing){
     audio.current.pause();setPlaying(false);
-    pushRoomUpdate({playing:false,pausedAt:Date.now(),startedAt:null});
   }else{
     ensureSilence();audio.current.play();setPlaying(true);
-    pushRoomUpdate({playing:true,startedAt:Date.now()-((audio.current.currentTime||0)*1000),pausedAt:null});
   }
 };
   
@@ -1280,15 +1279,6 @@ export default function App(){
   const[newPlName,setNewPlName]=useState('');
   const[addToPl,setAddToPl]=useState<Track|null>(null);
   const[copied,setCopied]=useState(false);
-  const[showRooms,setShowRooms]=useState(false);
-const[roomCode,setRoomCode]=useState('');
-const[roomJoinCode,setRoomJoinCode]=useState('');
-const[roomState,setRoomState]=useState<{code:string;isHost:boolean;playing:boolean;trackId:string|null;amId:string|null;source:string|null;title:string;artist:string;cover:string;duration:string;startedAt:number|null;pausedAt:number|null;listeners:number}|null>(null);
-const[roomError,setRoomError]=useState('');
-const[roomLoading,setRoomLoading]=useState(false);
-const roomPollRef=useRef<ReturnType<typeof setInterval>|null>(null);
-const roomStateRef=useRef<typeof roomState>(null);
-useEffect(()=>{roomStateRef.current=roomState;},[roomState]);
   const prevScreen=useRef<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>('search');
   const preArtistScreen=useRef<'home'|'search'|'library'|'trending'|'profile'>('search');
   const screenStack=useRef<Array<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'>>([]);
@@ -1927,6 +1917,7 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
       }
     };
 a.addEventListener('volumechange',onVol);
+    // При перемотке — обновляем комнату
     return()=>a.removeEventListener('volumechange',onVol);
   },[]);
 
@@ -2074,8 +2065,6 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
     if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
-  // Пушим в комнату если хост
-setTimeout(()=>pushRoomUpdate({playing:true,startedAt:Date.now()}),300);
 
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
@@ -2801,214 +2790,6 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     window.open(`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`,'_blank');
   };
   const chgLang=(l:'ru'|'en'|'uk'|'kk'|'pl'|'tr')=>{setLang(l);try{localStorage.setItem('lg47',l);}catch{}};
-    const leaveRoom=async()=>{
-  const ref=roomPollRef.current;
-  if(ref){
-    if(typeof (ref as any).close==='function')(ref as any).close();
-    else clearInterval(ref as any);
-  }
-  (roomPollRef as any).current=null;
-  if(roomCode){
-    fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
-  }
-  setRoomState(null);setRoomCode('');setRoomJoinCode('');setRoomError('');
-};
-  const createRoom=async()=>{
-  setRoomLoading(true);setRoomError('');
-  try{
-    const r=await fetch(`${W}/room/create`);
-    const d=await r.json();
-    if(!d.code)throw new Error('No code');
-    setRoomCode(d.code);
-    setRoomState({code:d.code,isHost:true,playing:false,trackId:null,amId:null,source:null,title:'',artist:'',cover:'',duration:'',startedAt:null,pausedAt:null,listeners:0});
-    // Если сейчас играет трек — сразу пушим его в комнату
-    if(current){
-      await fetch(`${W}/room/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        code:d.code,playing:isPlayingRef.current,
-        trackId:current.source!=='audiomack'?current.id:null,
-        amId:current.amId||null,source:current.source||'soundcloud',
-        title:current.title,artist:current.artist,cover:current.cover,
-        duration:current.duration,
-        startedAt:isPlayingRef.current?Date.now()-((audio.current?.currentTime||0)*1000):null,
-        pausedAt:!isPlayingRef.current?Date.now():null,
-      })});
-    }
-  }catch(e:any){setRoomError(e.message);}
-  setRoomLoading(false);
-};
-
-  const joinRoom=async(code:string)=>{
-  setRoomLoading(true);setRoomError('');
-  try{
-    const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
-    const d=await r.json();
-    if(d.error)throw new Error(t('roomNotFound'));
-    setRoomState({...d,isHost:false});
-    setRoomCode(code.toUpperCase().trim());
-    if(d.trackId||d.amId) syncRoomTrack(d);
-    startRoomAbly(code.toUpperCase().trim());
-  }catch(e:any){setRoomError(e.message);}
-  setRoomLoading(false);
-};
-
-  const syncRoomTrack=async(state:any)=>{
-  if(!state.trackId&&!state.amId)return;
-  const a=audio.current;
-  if(!a)return;
-
-  // Если хост прислал готовый mp3 — играем сразу без resolve
-  if(state.mp3){
-    a.pause();
-    a.src=state.mp3;
-    a.load();
-    setCurrent({
-      id:state.amId?'am_'+state.amId:state.trackId,
-      title:state.title,artist:state.artist,cover:state.cover,
-      duration:state.duration,plays:0,mp3:state.mp3,
-      source:state.source||'soundcloud',
-      amId:state.amId||undefined,
-    });
-    const syncAndPlay=()=>{
-      if(state.playing&&state.startedAt){
-        const pos=(Date.now()-state.startedAt)/1000;
-        if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-        a.play().then(()=>setPlaying(true)).catch(()=>{});
-      } else {
-        a.pause();setPlaying(false);
-      }
-    };
-    a.addEventListener('canplay',syncAndPlay,{once:true});
-    // Fallback если canplay уже сработал
-    setTimeout(()=>{
-      if(a.readyState>=2)syncAndPlay();
-    },1000);
-    return;
-  }
-
-  // Fallback — resolve как раньше
-  const track:Track={
-    id:state.amId?'am_'+state.amId:state.trackId,
-    title:state.title,artist:state.artist,cover:state.cover,
-    duration:state.duration,plays:0,mp3:null,
-    source:state.source||'soundcloud',
-    amId:state.amId||undefined,
-  };
-  await playDirect(track);
-  setTimeout(()=>{
-    if(!a)return;
-    if(state.playing&&state.startedAt){
-      const pos=(Date.now()-state.startedAt)/1000;
-      if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-      a.play().then(()=>setPlaying(true)).catch(()=>{});
-    }
-  },500);
-};
-
-  const startRoomAbly=async(code:string)=>{
-  // Останавливаем старый polling если был
-  const oldRef=roomPollRef.current;
-if(oldRef){
-  if(typeof (oldRef as any).close==='function')(oldRef as any).close();
-  else clearInterval(oldRef as any);
-}
-(roomPollRef as any).current=null;
-
-  let lastTrackKey='';
-  let lastPlaying:boolean|null=null;
-  let syncing=false;
-
-  const handleState=async(d:any)=>{
-    if(!d||d.error)return;
-    setRoomState(s=>s?{...s,...d,isHost:false}:null);
-    const a=audio.current;
-    const trackKey=(d.trackId||'')+'_'+(d.amId||'');
-
-    // Сменился трек
-    if(trackKey!==lastTrackKey&&(d.trackId||d.amId)){
-      lastTrackKey=trackKey;
-      lastPlaying=d.playing;
-      if(syncing)return;
-      syncing=true;
-      try{await syncRoomTrack(d);}finally{syncing=false;}
-      return;
-    }
-    lastTrackKey=trackKey;
-
-    // Пауза/плей
-    if(d.playing!==lastPlaying){
-      lastPlaying=d.playing;
-      if(d.playing){
-        if(a&&d.startedAt){
-          const pos=(Date.now()-d.startedAt)/1000;
-          if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-          a.play().then(()=>setPlaying(true)).catch(()=>{});
-        }
-      }else{
-        a?.pause();setPlaying(false);
-      }
-    }
-
-    // Коррекция позиции если разъехались > 5 сек
-    if(d.playing&&d.startedAt&&a&&a.duration){
-      const expected=(Date.now()-d.startedAt)/1000;
-      const actual=a.currentTime||0;
-      if(Math.abs(expected-actual)>5){
-        a.currentTime=Math.min(expected,a.duration-1);
-      }
-    }
-  };
-
-  // Получаем Ably token с сервера
-  try{
-    const tokenRes=await fetch(`${W}/room/token?code=${code}`);
-    const tokenData=await tokenRes.json();
-
-    // Подключаемся к Ably через REST-совместимый SSE endpoint
-    const channelName=`room-${code}`;
-    const token=tokenData.token;
-    if(!token)throw new Error('no token');
-
-    const sseUrl=`https://realtime.ably.io/sse?v=1.1&key=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
-    const es=new EventSource(sseUrl);
-
-    (es as any)._roomCode=code;
-
-    es.onmessage=(e)=>{
-      try{
-        const msg=JSON.parse(e.data);
-        if(msg.name==='update'||msg.data){
-          const data=typeof msg.data==='string'?JSON.parse(msg.data):msg.data;
-          handleState(data);
-        }
-      }catch{}
-    };
-
-    es.onerror=()=>{
-      // Fallback на polling если SSE упал
-      es.close();
-      roomPollRef.current=setInterval(async()=>{
-        try{
-          const r=await fetch(`${W}/room/state?code=${code}`);
-          const d=await r.json();
-          handleState(d);
-        }catch{}
-      },2000);
-    };
-
-    // Сохраняем EventSource чтобы закрыть при выходе
-    (roomPollRef as any).current=es;
-
-  }catch{
-    // Fallback на polling
-    roomPollRef.current=setInterval(async()=>{
-      try{
-        const r=await fetch(`${W}/room/state?code=${code}`);
-        const d=await r.json();
-        handleState(d);
-      }catch{}
-    },2000);
-  }
-};
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
     <button className="like-btn" onPointerDown={e=>{e.stopPropagation();toggleLike(track);}} style={{background:'none',border:'none',cursor:'pointer',padding:4,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
@@ -3025,7 +2806,7 @@ if(oldRef){
     <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase',letterSpacing:0.8,padding:'0 16px',marginBottom:8}}>{text}</div>
   );
 
-const goBack=useCallback(()=>{
+  const goBack=useCallback(()=>{
     const el=document.querySelector('.screen-slide-up, .screen-fade, .screen-scale') as HTMLElement|null;
     if(el){el.style.animation='slideBack 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both';}
     setTimeout(()=>{
@@ -3039,7 +2820,7 @@ const goBack=useCallback(()=>{
       setScreen(prevScreen.current);
     },180);
   },[screen]);
-const BackBtn=({overlay=false}:{overlay?:boolean})=>(
+  const BackBtn=({overlay=false}:{overlay?:boolean})=>(
     <button
       onPointerDown={e=>{e.stopPropagation();}}
       onClick={e=>{e.stopPropagation();goBack();}}
@@ -3055,6 +2836,26 @@ const BackBtn=({overlay=false}:{overlay?:boolean})=>(
   // ImportModal перенесён за пределы App (см. ниже) — здесь пустышка
 
   // PlModal перенесён за пределы App (см. ниже) — здесь пустышка
+
+  const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
+  const volSP=useSlider(volume,v=>setVol(v));
+  const mkTRow=useCallback((track:Track,extra?:{num?:number;onArtistClick?:(n:string,c:string,id?:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
+    const isActive=current?.id===track.id;
+    const mOpen=menuId===track.id;
+    return{
+      track,
+      isActive,
+      isPlaying:playing,
+      inQueue:queue.some(t=>t.id===track.id),
+      menuOpen:mOpen,
+      onPlay:()=>playTrack(track),
+      onToggleQ:()=>toggleQ(track),
+      onMenu:(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:!!extra?.showBlockBtn});setMenuId(track.id);},
+      onCloseMenu:()=>{setMenuId(null);setMenuAnchor(null);},
+      ...extra,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[current?.id,menuId,playing,queue]);
 
   const NAV=[
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
@@ -4101,10 +3902,6 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:2}}>
   <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div>
   <div style={{display:'flex',alignItems:'center',gap:6}}>
-    <button onPointerDown={()=>{setShowRooms(true);setRoomError('');}} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:14,background:roomState?ACC_DIM:'#1a1a1a',border:`1px solid ${roomState?ACC:'#2a2a2a'}`,cursor:'pointer',...tap}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={roomState?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      <span style={{fontSize:11,color:roomState?ACC:'#888',fontWeight:roomState?700:400}}>{t('rooms')}</span>
-    </button>
     <button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'none',border:'none',padding:4,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
       <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block',transition:'stroke 0.2s ease'}} fill="none" stroke={showLibSettings?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
@@ -4430,80 +4227,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           </div>
         );
       })()}
-      {showRooms&&(
-  <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:400,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowRooms(false)}>
-    <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'20px 16px 40px',maxHeight:'85vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-        <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY}}>{t('roomsTitle')}</div>
-        <button onPointerDown={()=>setShowRooms(false)} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:20,padding:4,lineHeight:1,...tap}}>×</button>
-      </div>
 
-      {/* Активная комната */}
-      {roomState&&(
-        <div style={{background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:14,padding:'14px',marginBottom:16}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-            <div style={{fontSize:13,fontWeight:700,color:ACC}}>{roomState.isHost?t('roomHost'):t('roomGuest')}</div>
-            <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:3}}>{roomState.code}</div>
-          </div>
-          {roomState.title&&(
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px',background:'rgba(0,0,0,0.3)',borderRadius:10,marginBottom:10}}>
-              {roomState.cover&&<img src={roomState.cover} style={{width:36,height:36,borderRadius:6,objectFit:'cover',flexShrink:0}}/>}
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{roomState.title}</div>
-                <div style={{fontSize:10,color:TEXT_SEC}}>{roomState.artist}</div>
-              </div>
-              <div style={{fontSize:10,color:roomState.playing?'#7ecf7e':'#888',flexShrink:0}}>{roomState.playing?'▶':'⏸'}</div>
-            </div>
-          )}
-          <div style={{fontSize:11,color:TEXT_SEC,marginBottom:12}}>
-            👥 {roomState.listeners} {t('roomListeners')}
-          </div>
-          <div style={{display:'flex',gap:8}}>
-            {roomState.isHost&&(
-              <button onPointerDown={()=>{
-                const text=`🎧 ${t('roomsTitle')}\n${lang==='ru'?'Код комнаты':lang==='uk'?'Код кімнати':lang==='kk'?'Бөлме коды':lang==='pl'?'Kod pokoju':lang==='tr'?'Oda kodu':'Room code'}: ${roomState.code}\n\nForty7 — @forty7mbot`;
-                const tgApp=window.Telegram?.WebApp;
-                if(tgApp?.openTelegramLink)tgApp.openTelegramLink(`https://t.me/share/url?url=https://t.me/forty7mbot&text=${encodeURIComponent(text)}`);
-                else{navigator.clipboard?.writeText(roomState.code).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});}
-              }} style={{flex:1,padding:'10px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
-                {t('roomShare')}
-              </button>
-            )}
-            <button onPointerDown={()=>{leaveRoom();setShowRooms(false);}} style={{flex:1,padding:'10px',background:'#2a1a1a',border:'1px solid #3a2020',borderRadius:10,color:'#d06060',fontSize:13,cursor:'pointer',...tap}}>
-              {t('roomLeave')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Создать комнату */}
-      {!roomState&&(
-        <>
-          <button onPointerDown={createRoom} disabled={roomLoading} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',marginBottom:12,opacity:roomLoading?0.7:1,...tap}}>
-            {roomLoading?'...':`🎧 ${t('createRoom')}`}
-          </button>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-            <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
-            <span style={{fontSize:11,color:TEXT_MUTED}}>или</span>
-            <div style={{flex:1,height:1,background:'#2a2a2a'}}/>
-          </div>
-          <div style={{display:'flex',gap:8}}>
-            <input
-              placeholder={t('roomCodeHint')}
-              value={roomJoinCode}
-              onChange={e=>setRoomJoinCode(e.target.value.toUpperCase().slice(0,6))}
-              style={{flex:1,padding:'12px 14px',fontSize:16,fontWeight:700,letterSpacing:4,background:BG,border:`1px solid ${roomError?'#d06060':'#2a2a2a'}`,borderRadius:12,color:TEXT_PRIMARY,outline:'none',textAlign:'center' as const}}
-            />
-            <button onPointerDown={()=>joinRoom(roomJoinCode)} disabled={roomJoinCode.length<6||roomLoading} style={{padding:'12px 18px',background:roomJoinCode.length===6?ACC:BG3,border:'none',borderRadius:12,color:roomJoinCode.length===6?BG:TEXT_MUTED,fontSize:14,fontWeight:700,cursor:roomJoinCode.length===6?'pointer':'default',...tap}}>
-              {t('roomJoin')}
-            </button>
-          </div>
-          {roomError&&<div style={{marginTop:8,padding:'8px 12px',background:'#1a0808',borderRadius:8,color:'#d06060',fontSize:12}}>{roomError}</div>}
-        </>
-      )}
-    </div>
-  </div>
-)}
       {addToPl&&!fullPlayer&&<PlModalExt track={addToPl} playlists={playlists} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
       {showImport&&<ImportModalExt
         importStep={importStep} setImportStep={setImportStep}
