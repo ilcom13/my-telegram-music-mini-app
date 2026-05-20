@@ -1172,7 +1172,7 @@ export default function App(){
   // Monthly stats: current month accumulator + last completed month archive
   type MonthTrackEntry={title:string;artist:string;cover:string;count:number;source?:string;amId?:string};
   type MonthData={month:string;totalSec:number;trackPlays:Record<string,MonthTrackEntry>;listenedIds:string[]};
-  const[monthStats,setMonthStats]=useState<{current:MonthData;prev:MonthData|null;firstEverMonth:string|null}>(()=>{
+  const[monthStats,setMonthStats]=useState<{current:MonthData;prev:MonthData|null;firstEverMonth:string|null;archive?:MonthData[]}>(()=>{
     try{const s=localStorage.getItem('mst47');if(s)return JSON.parse(s);}catch{}
     const m=new Date().toISOString().slice(0,7);
     return{current:{month:m,totalSec:0,trackPlays:{},listenedIds:[]},prev:null,firstEverMonth:null};
@@ -1512,10 +1512,20 @@ if(JSON.stringify(plFromServer)!==JSON.stringify(localPl)){
 if(sv.monthStats?.current){
           const serverMonth=sv.monthStats.current.month||'';
           const localMonth=monthStatsRef.current.current.month||'';
+          // Мержим архивы — сервер + локал
+          const mergedArchive=[...(monthStatsRef.current.archive||[])];
+          if(sv.monthStats.archive){
+            for(const a of sv.monthStats.archive){
+              if(!mergedArchive.some(m=>m.month===a.month))mergedArchive.push(a);
+            }
+          }
+          mergedArchive.sort((a,b)=>a.month.localeCompare(b.month));
           if(serverMonth===localMonth&&(sv.monthStats.current.totalSec||0)>monthStatsRef.current.current.totalSec){
-            setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
-          } else if(serverMonth>localMonth){
-            setMonthStats(sv.monthStats);try{localStorage.setItem('mst47',JSON.stringify(sv.monthStats));}catch{}
+            const merged={...sv.monthStats,archive:mergedArchive};
+            setMonthStats(merged);try{localStorage.setItem('mst47',JSON.stringify(merged));}catch{}
+          } else if(serverMonth!==localMonth){
+            const merged={...sv.monthStats,archive:mergedArchive};
+            setMonthStats(merged);try{localStorage.setItem('mst47',JSON.stringify(merged));}catch{}
           }
         }
 
@@ -1641,13 +1651,19 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
     const checkMonthRollover=()=>{
       const now=new Date().toISOString().slice(0,7); // "2026-03"
       setMonthStats(prev=>{
-        if(prev.current.month===now)return prev; // same month, no change
-        // Month changed — archive current into prev, start fresh
+        if(prev.current.month===now)return prev;
         const isFirst=prev.firstEverMonth===null;
+        const oldArchive=prev.archive||[];
+        // Архивируем prev если он есть и ещё не в архиве
+        const newArchive=[...oldArchive];
+        if(prev.prev&&prev.prev.totalSec>0&&!newArchive.some(a=>a.month===prev.prev!.month)){
+          newArchive.push(prev.prev);
+        }
         const next={
           current:{month:now,totalSec:0,trackPlays:{},listenedIds:[]},
-          prev: isFirst?null:prev.current, // don't archive if it was the very first month (incomplete)
+          prev: isFirst?null:prev.current,
           firstEverMonth: prev.firstEverMonth??prev.current.month,
+          archive:newArchive,
         };
         try{localStorage.setItem('mst47',JSON.stringify(next));}catch{}
         return next;
