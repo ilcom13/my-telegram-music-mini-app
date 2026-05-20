@@ -2905,10 +2905,8 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
       if(state.playing&&state.startedAt){
         const pos=(Date.now()-state.startedAt)/1000;
         if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-        a.play().then(()=>setPlaying(true)).catch(()=>{});
-      } else {
-        a.pause();setPlaying(false);
       }
+      a.pause();setPlaying(false);
     };
     a.addEventListener('canplay',syncAndPlay,{once:true});
     // Fallback если canplay уже сработал
@@ -2929,13 +2927,12 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   await playDirect(track);
   setTimeout(()=>{
     if(!a)return;
+    a.pause();setPlaying(false);
     if(state.playing&&state.startedAt){
       const pos=(Date.now()-state.startedAt)/1000;
       if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
-      a.play().then(()=>setPlaying(true)).catch(()=>{});
     }
   },500);
-  };
 
   const startRoomPoll=(code:string)=>{
   const oldRef=roomPollRef.current;
