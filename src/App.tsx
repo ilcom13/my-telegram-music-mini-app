@@ -1286,8 +1286,6 @@ export default function App(){
   const[roomState,setRoomState]=useState<{code:string;isHost:boolean;playing:boolean;trackId:string|null;amId:string|null;source:string|null;title:string;artist:string;cover:string;duration:string;startedAt:number|null;pausedAt:number|null;listeners:number}|null>(null);
   const[roomError,setRoomError]=useState('');
   const[roomLoading,setRoomLoading]=useState(false);
-  const[roomNeedsTap,setRoomNeedsTap]=useState(false);
-  const roomPendingState=useRef<any>(null);
   const roomUnlocked=useRef(false);
   const roomPollRef=useRef<ReturnType<typeof setInterval>|null>(null);
   const roomStateRef=useRef<typeof roomState>(null);
@@ -2868,37 +2866,27 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
 
   const joinRoom=async(code:string)=>{
   setRoomLoading(true);setRoomError('');
+  // СРАЗУ разблокируем аудио в контексте жеста пользователя
+  const a=audio.current;
+  if(a){
+    const prevSrc=a.src;
+    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    a.load();
+    try{await a.play();}catch{}
+    a.pause();
+    a.src=prevSrc||'';
+  }
   try{
     const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
     const d=await r.json();
     if(d.error)throw new Error(t('roomNotFound'));
     setRoomState({...d,isHost:false});
     setRoomCode(code.toUpperCase().trim());
-    roomPendingState.current=d;
-    setRoomNeedsTap(true);
+    roomUnlocked.current=true;
+    if(d.trackId||d.amId) await syncRoomTrack(d);
+    startRoomPoll(code.toUpperCase().trim());
   }catch(e:any){setRoomError(e.message);}
   setRoomLoading(false);
-  };
-
-  const roomTapStart=()=>{
-    const a=audio.current;
-    if(a){
-      // Разблокируем аудио жестом — проигрываем тишину
-      a.volume=0;
-      a.play().then(()=>{a.pause();a.volume=volumeRef.current;}).catch(()=>{a.volume=volumeRef.current;});
-    }
-    setRoomNeedsTap(false);
-    const code=roomCode||roomStateRef.current?.code;
-    if(!code)return;
-    // Синхронизируем текущий трек
-    const pending=roomPendingState.current;
-    if(pending&&(pending.trackId||pending.amId)){
-      syncRoomTrack(pending);
-    }
-    roomPendingState.current=null;
-    // Запускаем polling
-    roomUnlocked.current=true;
-    startRoomPoll(code);
   };
 
   const syncRoomTrack=async(state:any)=>{
@@ -4529,15 +4517,10 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                 {t('roomShare')}
               </button>
             )}
-            <button onPointerDown={()=>{leaveRoom();setRoomNeedsTap(false);setShowRooms(false);}} style={{flex:1,padding:'10px',background:'#2a1a1a',border:'1px solid #3a2020',borderRadius:10,color:'#d06060',fontSize:13,cursor:'pointer',...tap}}>
+            <button onPointerDown={()=>{leaveRoom();setShowRooms(false);}} style={{flex:1,padding:'10px',background:'#2a1a1a',border:'1px solid #3a2020',borderRadius:10,color:'#d06060',fontSize:13,cursor:'pointer',...tap}}>
               {t('roomLeave')}
             </button>
           </div>
-          {roomNeedsTap&&!roomState?.isHost&&(
-            <button onPointerDown={()=>{roomTapStart();setShowRooms(false);}} style={{width:'100%',marginTop:10,padding:'14px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',animation:'pulse 1.5s ease-in-out infinite',...tap}}>
-              🎧 {lang==='ru'?'Начать прослушивание':lang==='uk'?'Почати прослуховування':'Start listening'}
-            </button>
-          )}
         </div>
       )}
 
