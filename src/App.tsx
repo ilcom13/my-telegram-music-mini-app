@@ -1135,6 +1135,10 @@ export default function App(){
   const[menuId,setMenuId]=useState<string|null>(null);
   const[menuAnchor,setMenuAnchor]=useState<{top:number,right:number,showBlock?:boolean}|null>(null);
   const togglePlay=()=>{
+    // Гость нажал play вручную — разблокируем синхронизацию
+    if(roomStateRef.current&&!roomStateRef.current.isHost){
+      (window as any).__roomUserTapped=true;
+    }
   if(!audio.current)return;
   if(playing){
     audio.current.pause();setPlaying(false);
@@ -2835,6 +2839,8 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   const ref=roomPollRef.current;
   if(ref){clearInterval(ref as any);}
   (roomPollRef as any).current=null;
+    (window as any).__roomUserTapped=false;
+  roomUnlocked.current=false;
   if(roomCode){
     fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
   }
@@ -2866,23 +2872,12 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
 
   const joinRoom=async(code:string)=>{
   setRoomLoading(true);setRoomError('');
-  // СРАЗУ разблокируем аудио в контексте жеста пользователя
-  const a=audio.current;
-  if(a){
-    const prevSrc=a.src;
-    a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    a.load();
-    try{await a.play();}catch{}
-    a.pause();
-    a.src=prevSrc||'';
-  }
   try{
     const r=await fetch(`${W}/room/join?code=${code.toUpperCase().trim()}`);
     const d=await r.json();
     if(d.error)throw new Error(t('roomNotFound'));
     setRoomState({...d,isHost:false});
     setRoomCode(code.toUpperCase().trim());
-    roomUnlocked.current=true;
     if(d.trackId||d.amId) await syncRoomTrack(d);
     startRoomPoll(code.toUpperCase().trim());
   }catch(e:any){setRoomError(e.message);}
@@ -2943,7 +2938,6 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   };
 
   const startRoomPoll=(code:string)=>{
-  // Останавливаем старый polling если был
   const oldRef=roomPollRef.current;
   if(oldRef){clearInterval(oldRef as any);}
   (roomPollRef as any).current=null;
@@ -2952,15 +2946,17 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   let lastPlaying:boolean|null=null;
   let lastUpdatedAt=0;
   let syncing=false;
+  let userTapped=false;
+  const checkTap=()=>{if((window as any).__roomUserTapped)userTapped=true;};
 
   const handleState=async(d:any)=>{
     if(!d||d.error)return;
     // Не обрабатываем если данные не изменились
     if(d.updatedAt&&d.updatedAt===lastUpdatedAt)return;
     lastUpdatedAt=d.updatedAt||0;
+    checkTap();
 
     setRoomState(s=>s?{...s,...d,isHost:false}:null);
-    if(!roomUnlocked.current)return;
     const a=audio.current;
     const trackKey=(d.trackId||'')+'_'+(d.amId||'');
 
@@ -2987,7 +2983,11 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
               const tryPlay=()=>{
                 const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
                 if(pos>0&&a.duration&&pos<a.duration)a.currentTime=pos;
-                a.play().then(()=>setPlaying(true)).catch(()=>{});
+                if(userTapped){
+                  a.play().then(()=>setPlaying(true)).catch(()=>{});
+                }else{
+                  setPlaying(false);
+                }
               };
               if(a.readyState>=3){tryPlay();}
               else{a.addEventListener('canplaythrough',tryPlay,{once:true});}
@@ -3009,9 +3009,11 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     if(d.playing!==lastPlaying){
       lastPlaying=d.playing;
       if(d.playing){
-        const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
-        if(pos>0&&a.duration&&pos<a.duration)a.currentTime=pos;
-        a.play().then(()=>setPlaying(true)).catch(()=>{});
+        if(userTapped){
+          const pos=d.startedAt?(Date.now()-d.startedAt)/1000:0;
+          if(pos>0&&a.duration&&pos<a.duration)a.currentTime=pos;
+          a.play().then(()=>setPlaying(true)).catch(()=>{});
+        }
       }else{
         a.pause();setPlaying(false);
       }
