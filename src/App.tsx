@@ -1927,7 +1927,14 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
       }
     };
 a.addEventListener('volumechange',onVol);
-    return()=>a.removeEventListener('volumechange',onVol);
+    // При перемотке — обновляем комнату
+    const onSeeked=()=>{
+      if(roomStateRef.current?.isHost){
+        pushRoomUpdate({playing:isPlayingRef.current,startedAt:isPlayingRef.current?Date.now()-((a.currentTime||0)*1000):null,pausedAt:!isPlayingRef.current?Date.now():null});
+      }
+    };
+    a.addEventListener('seeked',onSeeked);
+    return()=>{a.removeEventListener('volumechange',onVol);a.removeEventListener('seeked',onSeeked);};
   },[]);
 
  useEffect(()=>{
@@ -2825,10 +2832,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
 
   const leaveRoom=async()=>{
   const ref=roomPollRef.current;
-  if(ref){
-    if(typeof (ref as any).close==='function')(ref as any).close();
-    else clearInterval(ref as any);
-  }
+  if(ref){clearInterval(ref as any);}
   (roomPollRef as any).current=null;
   if(roomCode){
     fetch(`${W}/room/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:roomCode})}).catch(()=>{});
@@ -2868,7 +2872,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     setRoomState({...d,isHost:false});
     setRoomCode(code.toUpperCase().trim());
     if(d.trackId||d.amId) syncRoomTrack(d);
-    startRoomAbly(code.toUpperCase().trim());
+    startRoomPoll(code.toUpperCase().trim());
   }catch(e:any){setRoomError(e.message);}
   setRoomLoading(false);
   };
@@ -2926,21 +2930,23 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
   },500);
   };
 
-  const startRoomAbly=async(code:string)=>{
+  const startRoomPoll=(code:string)=>{
   // Останавливаем старый polling если был
   const oldRef=roomPollRef.current;
-if(oldRef){
-  if(typeof (oldRef as any).close==='function')(oldRef as any).close();
-  else clearInterval(oldRef as any);
-}
-(roomPollRef as any).current=null;
+  if(oldRef){clearInterval(oldRef as any);}
+  (roomPollRef as any).current=null;
 
   let lastTrackKey='';
   let lastPlaying:boolean|null=null;
+  let lastUpdatedAt=0;
   let syncing=false;
 
   const handleState=async(d:any)=>{
     if(!d||d.error)return;
+    // Не обрабатываем если данные не изменились
+    if(d.updatedAt&&d.updatedAt===lastUpdatedAt)return;
+    lastUpdatedAt=d.updatedAt||0;
+
     setRoomState(s=>s?{...s,...d,isHost:false}:null);
     const a=audio.current;
     const trackKey=(d.trackId||'')+'_'+(d.amId||'');
@@ -2953,7 +2959,6 @@ if(oldRef){
       syncing=true;
       try{
         if(d.mp3){
-          // Есть готовый mp3 — играем сразу
           if(a){
             a.pause();
             a.src=d.mp3;
@@ -3000,70 +3005,24 @@ if(oldRef){
       return;
     }
 
-    // Коррекция позиции если разъехались > 5 сек
+    // Коррекция позиции если разъехались > 3 сек
     if(d.playing&&d.startedAt&&a.duration){
       const expected=(Date.now()-d.startedAt)/1000;
       const actual=a.currentTime||0;
-      if(Math.abs(expected-actual)>5){
+      if(Math.abs(expected-actual)>3){
         a.currentTime=Math.min(expected,a.duration-1);
       }
     }
   };
 
-  // Получаем Ably token с сервера
-  try{
-    const tokenRes=await fetch(`${W}/room/token?code=${code}`);
-    const tokenData=await tokenRes.json();
-
-    // Подключаемся к Ably через REST-совместимый SSE endpoint
-    const channelName=`room-${code}`;
-    console.log('Ably tokenData:', tokenData);
-    // token может быть строкой или объектом
-    const token=typeof tokenData.token==='string'?tokenData.token:
-      typeof tokenData==='string'?tokenData:null;
-    if(!token){console.error('No token in response');throw new Error('no token');}
-
-    const sseUrl=`https://realtime.ably.io/event-stream?v=1.2&accessToken=${encodeURIComponent(token)}&channels=${encodeURIComponent(channelName)}&heartbeats=true`;
-    const es=new EventSource(sseUrl);
-
-    (es as any)._roomCode=code;
-
-    es.onmessage=(e)=>{
-      console.log('SSE message:', e.data);
-      try{
-        const msg=JSON.parse(e.data);
-        if(msg.name==='update'||msg.data){
-          const data=typeof msg.data==='string'?JSON.parse(msg.data):msg.data;
-          handleState(data);
-        }
-      }catch{}
-    };
-
-    es.onerror=(e)=>{
-      console.error('SSE error:', e);
-      es.close();
-      roomPollRef.current=setInterval(async()=>{
-        try{
-          const r=await fetch(`${W}/room/state?code=${code}`);
-          const d=await r.json();
-          handleState(d);
-        }catch{}
-      },2000);
-    };
-
-    // Сохраняем EventSource чтобы закрыть при выходе
-    (roomPollRef as any).current=es;
-
-  }catch(err){
-    console.error('Ably connect error:', err);
-    roomPollRef.current=setInterval(async()=>{
-      try{
-        const r=await fetch(`${W}/room/state?code=${code}`);
-        const d=await r.json();
-        handleState(d);
-      }catch{}
-    },2000);
-  }
+  // Простой polling каждые 2 секунды
+  roomPollRef.current=setInterval(async()=>{
+    try{
+      const r=await fetch(`${W}/room/state?code=${code}`);
+      const d=await r.json();
+      handleState(d);
+    }catch{}
+  },2000);
   };
 
   const HBtn=({track,sz=19}:{track:Track;sz?:number})=>(
