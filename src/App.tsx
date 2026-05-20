@@ -1289,7 +1289,6 @@ export default function App(){
   const[roomNeedsTap,setRoomNeedsTap]=useState(false);
   const roomPendingState=useRef<any>(null);
   const roomUnlocked=useRef(false);
-  const roomPendingState=useRef<any>(null);
   const roomPollRef=useRef<ReturnType<typeof setInterval>|null>(null);
   const roomStateRef=useRef<typeof roomState>(null);
   useEffect(()=>{roomStateRef.current=roomState;},[roomState]);
