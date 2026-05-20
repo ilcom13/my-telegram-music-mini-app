@@ -2933,6 +2933,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
       if(pos>0&&pos<(a.duration||9999))a.currentTime=pos;
     }
   },500);
+  };
 
   const startRoomPoll=(code:string)=>{
   const oldRef=roomPollRef.current;
