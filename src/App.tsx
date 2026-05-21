@@ -3079,7 +3079,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
           <span style={{fontSize:13,color:ACC,fontWeight:600}}>{playbackSpeed.toFixed(2)}x</span>
         </div>
         <input type="range" min="0.5" max="2" step="0.05" value={playbackSpeed}
-          onChange={e=>{if(!subActive||fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setPlaybackSpeed(parseFloat(e.target.value));}}
+          onChange={e=>{if(fxRemaining<=0)return;if(audio.current&&audio.current.duration>360)return;setPlaybackSpeed(parseFloat(e.target.value));}}
           style={{width:'100%',accentColor:ACC,cursor:'pointer',height:4}}/>
         <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
           <span style={{fontSize:10,color:TEXT_MUTED}}>0.5x</span>
