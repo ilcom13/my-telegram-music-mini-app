@@ -976,7 +976,7 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
   return(
     <div ref={wrapRef} style={{position:'relative',touchAction:'pan-y'}} onClick={handleClick}>
       {!track.isArtist&&!track.isAlbum&&<div ref={bgRRef} style={{position:'absolute',inset:0,background:'rgba(239,191,127,0.15)',display:'flex',alignItems:'center',paddingLeft:14,pointerEvents:'none',opacity:0}}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.3" fill={ACC}/><circle cx="3" cy="12" r="1.3" fill={ACC}/><circle cx="3" cy="18" r="1.3" fill={ACC}/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>}
       {onSwipeLeft&&<div ref={bgLRef} style={{position:'absolute',inset:0,background:'rgba(200,60,60,0.12)',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:14,pointerEvents:'none',opacity:0}}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -1077,7 +1077,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
         ):(
           <>
             <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={isManualQ?ACC:TEXT_MUTED} strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </button>
             <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
