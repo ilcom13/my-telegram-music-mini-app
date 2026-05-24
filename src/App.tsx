@@ -3349,11 +3349,10 @@ return(
                   </div>
                   <div style={{fontSize:12,color:TEXT_MUTED,marginTop:3}}>{p.crypto} · {p.stars}</div>
                 </div>
-                <a href="https://t.me/forty7paymentbot" target="_blank" rel="noreferrer"
-                  style={{padding:'8px 16px',background:ACC,borderRadius:10,color:BG,fontSize:13,fontWeight:700,textDecoration:'none',flexShrink:0}}
-                  onClick={e=>e.stopPropagation()}>
+                <button onPointerDown={e=>{e.stopPropagation();const tgApp=(window as any).Telegram?.WebApp;const link='https://t.me/forty7paymentbot';if(tgApp?.openTelegramLink){tgApp.openTelegramLink(link);}else{window.open(link,'_blank');}}}
+                  style={{padding:'8px 16px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',flexShrink:0,...tap}}>
                   Buy
-                </a>
+                </button>
               </div>
             ))}
           </div>
