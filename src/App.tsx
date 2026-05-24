@@ -2185,6 +2185,9 @@ const srcToProcess = originalSrcRef.current;
   return;
 }
   setFxLoading(true);
+  const wasPlaying = !a.paused;
+  a.pause();
+  setPlaying(false);
   try {
     const resp = await fetch(srcToProcess)
     const blob = await resp.blob();
@@ -2219,12 +2222,13 @@ if (!fxResp.ok) throw new Error('FX error');
       a.currentTime = ratio * newDuration;
       a.onloadedmetadata = null;
     };
-    a.play();
+    if (wasPlaying) { a.play(); setPlaying(true); }
     fetch(`${W}/fx/use?uid=${uid}`).then(r=>r.json()).then(d=>{
   setFxRemaining(d.remaining??0);
 }).catch(()=>{});
   } catch(e) {
     console.error('FX error:', e);
+    if (wasPlaying) { a.play().catch(()=>{}); setPlaying(true); }
   } finally {
     setFxLoading(false);
   }
