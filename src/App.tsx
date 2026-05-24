@@ -2181,7 +2181,7 @@ if (!originalSrcRef.current || !a.src.startsWith('blob:')) {
 }
 const srcToProcess = originalSrcRef.current;
   if(fxRemaining<=0){
-  alert(lang==='ru'?'Лимит обработок на сегодня исчерпан (3/3)':lang==='uk'?'Ліміт обробок вичерпано (3/3)':lang==='kk'?'Бүгінгі өңдеу лимиті таусылды (3/3)':lang==='pl'?'Dzienny limit przetwarzania wyczerpany (3/3)':lang==='tr'?'Günlük işleme limiti doldu (3/3)':'Daily FX limit reached (3/3)');
+  alert(lang==='ru'?'Лимит обработок на сегодня исчерпан (5/5)':lang==='uk'?'Ліміт обробок вичерпано (5/5)':lang==='kk'?'Бүгінгі өңдеу лимиті таусылды (5/5)':lang==='pl'?'Dzienny limit przetwarzania wyczerpany (5/5)':lang==='tr'?'Günlük işleme limiti doldu (5/5)':'Daily FX limit reached (5/5)');
   return;
 }
   setFxLoading(true);
@@ -3057,7 +3057,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
   <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
   {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12}}>
-    {fxRemaining}/3 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
+    {fxRemaining}/5 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
   </div>}
 </div>
 
