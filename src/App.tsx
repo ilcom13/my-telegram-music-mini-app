@@ -1586,6 +1586,16 @@ if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
       }
       try{localStorage.setItem('sync_ts',String(serverSyncTs));}catch{}
     }).catch(()=>{});
+    // Синхронизация переименований треков между устройствами
+    fetch(`${W}/titles/load?uid=${uid}`).then(r=>r.json()).then(d=>{
+      if(d.titles&&typeof d.titles==='object'){
+        setCustomTitles(prev=>{
+          if(JSON.stringify(prev)===JSON.stringify(d.titles))return prev; // нет изменений
+          try{localStorage.setItem('ctitles47',JSON.stringify(d.titles));}catch{}
+          return d.titles;
+        });
+      }
+    }).catch(()=>{});
   },30000); // каждые 30 секунд
   return()=>clearInterval(interval);
 },[uid]);
