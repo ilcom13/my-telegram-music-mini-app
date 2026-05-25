@@ -3132,7 +3132,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
   <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
   {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12}}>
-    {fxRemaining}/3 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'} <span style={{fontSize:9,opacity:0.5}}>· {lang==='ru'?'1-я обработка дольше':lang==='uk'?'1-а обробка довша':lang==='kk'?'1-ші өңдеу ұзақ':lang==='pl'?'1. dłuższe':lang==='tr'?'1. daha uzun':'1st takes longer'}</span>
+    {fxRemaining}/5 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'} <span style={{fontSize:9,opacity:0.5}}>· {lang==='ru'?'1-я обработка дольше':lang==='uk'?'1-а обробка довша':lang==='kk'?'1-ші өңдеу ұзақ':lang==='pl'?'1. dłuższe':lang==='tr'?'1. daha uzun':'1st takes longer'}</span>
   </div>}
 </div>
 
