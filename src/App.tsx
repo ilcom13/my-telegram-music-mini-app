@@ -2205,6 +2205,7 @@ playCountRef.current+=1;
   };
 
   const deepLinkHandled=useRef(false);
+  const lastRefreshedShared=useRef<string|null>(null);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if(!startParam||deepLinkHandled.current)return;
@@ -2865,6 +2866,16 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     }catch{return null;}
   };
 
+  // ── Перепубликовать плейлист, если он уже расшарен (для синхронизации правок владельца) ──
+  const republishIfShared=(plId:string)=>{
+    const pl=playlistsRef.current.find(p=>p.id===plId);
+    if(!pl||!pl.published||pl.shared||uid==='anon')return;
+    fetch(`${W}/pl/publish`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid,ownerName:uName,plId:pl.id,name:pl.name,tracks:pl.tracks}),
+    }).catch(()=>{});
+  };
+
   // ── Подписаться на чужой плейлист по owner+id ──
   const subscribePl=async(owner:string,srcPlId:string):Promise<boolean>=>{
     if(owner===uid)return false; // свой же плейлист — не подписываемся
@@ -2911,11 +2922,11 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     }catch{}
   };
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);playlistsRef.current=n;try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
- const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
-  const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();};
-  const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}return n;});};
- const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();};
-const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
+  const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
+  const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();republishIfShared(plId);};
+  const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;});setTimeout(()=>republishIfShared(plId),50);};
+  const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();republishIfShared(plId);};
+  const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
   const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playDirect(sh[0]);setQueue(sh.slice(1));const updated=playlistsRef.current.map(p=>p.id===pl.id?{...p,_shuffled:true}:p);playlistsRef.current=updated;};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);queueRef.current=n;try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
@@ -4836,6 +4847,7 @@ importSource={importSource} setImportSource={setImportSource}
       {openPlPage&&(()=>{
         const pl=playlists.find(p=>p.id===openPlPage);
         if(!pl)return null;
+        if(pl.shared&&openPlPage!==lastRefreshedShared.current){lastRefreshedShared.current=openPlPage;refreshSharedPl(pl);}
         if(screen!=='library')return null;
         const isPinned=pinnedPlId===pl.id;
         const sortPl=(s:'default'|'az'|'za'|'artist'|'newest'|'oldest')=>{
@@ -4895,10 +4907,10 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
           </button>
-          <button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+          {!pl.shared&&<button onPointerDown={()=>{setRenamePlId(pl.id);setRenamePlVal(pl.name);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button onPointerDown={()=>{if(window.confirm(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`)){deletePl(pl.id);setOpenPlPage(null);}}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+          </button>}
+          <button onPointerDown={()=>{if(window.confirm(pl.shared?(lang==='ru'?`Удалить "${pl.name}" из библиотеки?`:`Remove "${pl.name}" from library?`):(lang==='ru'?`Удалить "${pl.name}"?`:`Delete "${pl.name}"?`))){deletePl(pl.id);setOpenPlPage(null);}}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
         </div>
@@ -4919,6 +4931,10 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}</div>
           )}
           <div style={{fontSize:11,color:TEXT_SEC,marginTop:4}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+          {pl.shared&&<div style={{fontSize:11,color:ACC,marginTop:3,display:'flex',alignItems:'center',gap:4}}>
+            <svg viewBox="0 0 24 24" style={{width:11,height:11}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {lang==='ru'?`Плейлист от ${pl.ownerName||'другого пользователя'}`:lang==='uk'?`Плейлист від ${pl.ownerName||'іншого користувача'}`:`Playlist by ${pl.ownerName||'another user'}`}
+          </div>}
         </div>
       </div>
       {/* Кнопки действий — компактнее */}
@@ -4934,9 +4950,9 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;})} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={pl.repeat?BG:TEXT_PRIMARY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
-        <button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+        {!pl.shared&&<button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
+        </button>}
       </div>
       {/* Фильтры — только в режиме редактирования */}
       {editMode&&(
@@ -5026,13 +5042,13 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                 curSort={curSort}
                 onPlay={()=>{playTrack(tr);setPlayingPlId(pl.id);}}
                 onQueue={()=>smartAddQ(tr)}
-                onRemove={()=>removeFromPl(pl.id,tr.id)}
+                onRemove={()=>{if(!pl.shared)removeFromPl(pl.id,tr.id);}}
                 onMenu={()=>{setTrackMenuPlId(pl.id);setTrackMenuTr(tr);}}
-               onDragStart={()=>{const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
-                onDrop={()=>{const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
-                editMode={editMode}
-                onMoveUp={()=>{const idx=pl.tracks.indexOf(tr);if(idx<pl.tracks.length-1)moveTrackInPl(pl.id,idx,idx+1);}}
-                onMoveDown={()=>{const idx=pl.tracks.indexOf(tr);if(idx>0)moveTrackInPl(pl.id,idx,idx-1);}}
+               onDragStart={()=>{if(pl.shared)return;const ev=window.event as DragEvent;ev?.dataTransfer?.setData('plTrackIdx',String(pl.tracks.indexOf(tr)));ev?.dataTransfer?.setData('plId',pl.id);}}
+                onDrop={()=>{if(pl.shared)return;const ev=window.event as DragEvent;if(!ev?.dataTransfer)return;const from=parseInt(ev.dataTransfer.getData('plTrackIdx'));const pid=ev.dataTransfer.getData('plId');if(pid===pl.id&&from!==pl.tracks.indexOf(tr))moveTrackInPl(pl.id,from,pl.tracks.indexOf(tr));}}
+                editMode={editMode&&!pl.shared}
+                onMoveUp={()=>{if(pl.shared)return;const idx=pl.tracks.indexOf(tr);if(idx<pl.tracks.length-1)moveTrackInPl(pl.id,idx,idx+1);}}
+                onMoveDown={()=>{if(pl.shared)return;const idx=pl.tracks.indexOf(tr);if(idx>0)moveTrackInPl(pl.id,idx,idx-1);}}
               />
               );
             })}
