@@ -3060,9 +3060,8 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
   <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY}}>FX</div>
-  {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12,textAlign:'right' as const}}>
-    {fxRemaining}/3 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'}
-    <div style={{fontSize:9,color:TEXT_MUTED,opacity:0.6,marginTop:2}}>{lang==='ru'?'первая обработка может быть дольше':lang==='uk'?'перша обробка може бути довшою':lang==='kk'?'бірінші өңдеу ұзағырақ болуы мүмкін':lang==='pl'?'pierwsze przetwarzanie może trwać dłużej':lang==='tr'?'ilk işlem biraz daha uzun sürebilir':'first processing may take a bit longer'}</div>
+  {subActive&&<div style={{fontSize:11,color:fxRemaining>0?TEXT_MUTED:'#d06060',marginLeft:'auto',paddingLeft:12}}>
+    {fxRemaining}/3 {lang==='ru'?'сегодня':lang==='uk'?'сьогодні':'today'} <span style={{fontSize:9,opacity:0.5}}>· {lang==='ru'?'1-я обработка дольше':lang==='uk'?'1-а обробка довша':lang==='kk'?'1-ші өңдеу ұзақ':lang==='pl'?'1. dłuższe':lang==='tr'?'1. daha uzun':'1st takes longer'}</span>
   </div>}
 </div>
 
