@@ -959,7 +959,7 @@ interface TRowProps {
   onMenu: (r:DOMRect)=>void;
   onCloseMenu: ()=>void;
 }
-const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOpen,onArtistClick,showBlockBtn,onSwipeLeft,onPlay,onToggleQ,onMenu,onCloseMenu}:TRowProps){
+const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isActive,isPlaying,inQueue,menuOpen,onArtistClick,showBlockBtn,onSwipeLeft,onPlay,onToggleQ,onMenu,onCloseMenu}:TRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:()=>{if(!track.isArtist&&!track.isAlbum)onToggleQ();},
     onLeft:onSwipeLeft,
@@ -991,7 +991,7 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
             {isActive&&!track.isArtist&&!track.isAlbum&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{isPlaying?'⏸':'▶'}</div>}
           </div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13,fontWeight:500,color:isActive?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{track.title}</div>
+            <div style={{fontSize:13,fontWeight:500,color:isActive?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{displayName??track.title}</div>
             <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
               {!track.isArtist&&!track.isAlbum&&onArtistClick
               ?<button onClick={e=>{e.stopPropagation();if(track.source!=='audiomack')onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{track.artist}</button>
@@ -1019,13 +1019,13 @@ const TRow=React.memo(function TRow({track,num,isActive,isPlaying,inQueue,menuOp
 });
 
 interface PlTrackRowProps {
-  tr: Track; i: number; isActive: boolean; playing: boolean; isManualQ: boolean;
+  tr: Track; i: number; displayName?: string; displayArtistName?: string; isActive: boolean; playing: boolean; isManualQ: boolean;
   curSort: string; onPlay:()=>void; onQueue:()=>void; onRemove:()=>void; onMenu:()=>void;
 editMode?: boolean;
   onDragStart:()=>void; onDrop:()=>void;
   onMoveUp?:()=>void; onMoveDown?:()=>void;
 }
-const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop,onMoveUp,onMoveDown}:PlTrackRowProps){
+const PlTrackRow=React.memo(function PlTrackRow({tr,i,displayName,displayArtistName,isActive,playing:isPlaying,isManualQ,curSort,editMode=false,onPlay,onQueue,onRemove,onMenu,onDragStart,onDrop,onMoveUp,onMoveDown}:PlTrackRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:onQueue,
     onLeft:onRemove,
@@ -1064,8 +1064,8 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,isActive,playing:isPlaying
             {isActive&&<div style={{position:'absolute',inset:0,borderRadius:7,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{isPlaying?'⏸':'▶'}</div>}
           </div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13,color:isActive?ACC:TEXT_PRIMARY,fontWeight:isActive?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.title}</div>
-            <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{tr.artist}</div>
+            <div style={{fontSize:13,color:isActive?ACC:TEXT_PRIMARY,fontWeight:isActive?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName??tr.title}</div>
+            <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{displayArtistName??tr.artist}</div>
           </div>
           <div style={{fontSize:10,color:TEXT_MUTED,flexShrink:0,paddingRight:2}}>{tr.duration}</div>
         </div>
@@ -2907,6 +2907,8 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
     const mOpen=menuId===track.id;
     return{
       track,
+      displayName:displayTitle(track),
+      displayArtistName:displayArtist(track),
       isActive,
       isPlaying:playing,
       inQueue:queue.some(t=>t.id===track.id),
@@ -2918,7 +2920,7 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
       ...extra,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[current?.id,menuId,playing,queue]);
+  },[current?.id,menuId,playing,queue,customTitles]);
 
   const NAV=[
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
@@ -4888,6 +4890,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
               <PlTrackRow
                 key={tr.id+String(i)}
                 tr={tr}
+                displayName={displayTitle(tr)}
+                displayArtistName={displayArtist(tr)}
                 i={i}
                 isActive={isActive}
                 playing={playing}
