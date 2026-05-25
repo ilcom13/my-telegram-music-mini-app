@@ -1759,8 +1759,8 @@ const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
       {src:artworkUrl,sizes:'500x500',type:'image/jpeg'},
       {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
     ]:[];
-    navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork});
-    if(artworkUrl){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{try{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx2d=c.getContext('2d');if(ctx2d){ctx2d.drawImage(img,0,0,256,256);c.toBlob(blob=>{if(!blob)return;const burl=URL.createObjectURL(blob);navigator.mediaSession.metadata=new MediaMetadata({title:current.title||'',artist:current.artist||'',album:'',artwork:[{src:burl,sizes:'256x256',type:blob.type}]});});}}catch{}};img.src=artworkUrl;}
+    navigator.mediaSession.metadata=new MediaMetadata({title:(customTitlesRef.current[current.id]?.t||current.title||''),artist:(customTitlesRef.current[current.id]?.a||current.artist||''),album:'',artwork});
+    if(artworkUrl){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{try{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx2d=c.getContext('2d');if(ctx2d){ctx2d.drawImage(img,0,0,256,256);c.toBlob(blob=>{if(!blob)return;const burl=URL.createObjectURL(blob);navigator.mediaSession.metadata=new MediaMetadata({title:(customTitlesRef.current[current.id]?.t||current.title||''),artist:(customTitlesRef.current[current.id]?.a||current.artist||''),album:'',artwork:[{src:burl,sizes:'256x256',type:blob.type}]});});}}catch{}};img.src=artworkUrl;}
     navigator.mediaSession.playbackState=playing?'playing':'paused';
 navigator.mediaSession.setActionHandler('play',()=>{
       ensureSilence();
@@ -1791,7 +1791,7 @@ navigator.mediaSession.setActionHandler('seekto',(details)=>{
         navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:1,position:audio.current.currentTime||0});
       }
     }catch{}
-  },[current,playing]);
+  },[current,playing,customTitles]);
 
   useEffect(()=>{
     if(fullPlayer&&current?.cover){
@@ -3319,6 +3319,17 @@ return(
             </div>
             <div style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
               {lang==='ru'?'Slowed+Reverb, Speed Up, Bass Boost — эквализация любого трека. До 7 обработок в день.':lang==='uk'?'Slowed+Reverb, Speed Up, Bass Boost — еквалізація будь-якого треку. До 7 обробок на день.':lang==='kk'?'Slowed+Reverb, Speed Up, Bass Boost. Күніне 7 өңдеуге дейін.':lang==='pl'?'Slowed+Reverb, Speed Up, Bass Boost. Do 7 przetworzeń dziennie.':lang==='tr'?'Slowed+Reverb, Speed Up, Bass Boost. Günde 7 işleme kadar.':'Slowed+Reverb, Speed Up, Bass Boost — equalize any track. Up to 7 uses per day.'}
+            </div>
+          </div>
+        </div>
+        <div style={{background:'#1a1a1a',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'flex-start',gap:12}}>
+          <div style={{fontSize:22,flexShrink:0}}>✏️</div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,marginBottom:4}}>
+              {lang==='ru'?'Переименование треков':lang==='uk'?'Перейменування треків':lang==='kk'?'Тректердің атын өзгерту':lang==='pl'?'Zmiana nazw utworów':lang==='tr'?'Parçaları yeniden adlandırma':'Rename Tracks'}
+            </div>
+            <div style={{fontSize:12,color:TEXT_MUTED,lineHeight:1.5}}>
+              {lang==='ru'?'Меняйте название и исполнителя любого трека на своё. Сохраняется и синхронизируется между устройствами.':lang==='uk'?'Змінюйте назву та виконавця будь-якого треку на свій. Зберігається і синхронізується між пристроями.':lang==='kk'?'Кез келген トректің атауы мен орындаушысын өзгертіңіз. Сақталып, құрылғылар арасында синхрондалады.':lang==='pl'?'Zmieniaj tytuł i wykonawcę dowolnego utworu. Zapisywane i synchronizowane między urządzeniami.':lang==='tr'?'Herhangi bir parçanın adını ve sanatçısını değiştirin. Kaydedilir ve cihazlar arasında senkronize edilir.':'Change the title and artist of any track. Saved and synced across your devices.'}
             </div>
           </div>
         </div>
