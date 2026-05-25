@@ -160,7 +160,7 @@ interface Track {
   source?: string; amId?: string;
   trackCount?: number; albumId?: string; albumTitle?: string;
 }
-interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; sort?: 'default'|'az'|'za'|'artist'|'newest'|'oldest'; }
+interface Playlist { id: string; name: string; tracks: Track[]; repeat: boolean; sort?: 'default'|'az'|'za'|'artist'|'newest'|'oldest'; shared?: boolean; owner?: string; ownerName?: string; sourcePlId?: string; published?: boolean; }
 interface AlbumInfo { id: string; title: string; artist: string; cover: string; tracks: Track[]; permalink: string; trackCount?: number; plays?: number; }
 interface ArtistInfo {
   id: string; name: string; username: string; avatar: string; banner: string;
@@ -2208,11 +2208,24 @@ playCountRef.current+=1;
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if(!startParam||deepLinkHandled.current)return;
-    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-')&&!startParam.startsWith('amtrack-'))return;
+    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-')&&!startParam.startsWith('amtrack-')&&!startParam.startsWith('pl_'))return;
     deepLinkHandled.current=true;
     const openAndPlay=async()=>{
       try{
-        if(startParam.startsWith('album-')){
+        if(startParam.startsWith('pl_')){
+          // формат: pl_<ownerUid>_<plId>
+          const rest=startParam.slice(3);
+          const sep=rest.indexOf('_');
+          if(sep>0){
+            const owner=rest.slice(0,sep);
+            const srcPlId=rest.slice(sep+1);
+            const ok=await subscribePl(owner,srcPlId);
+            if(ok){
+              setScreen('library');setLibTab('playlists');
+              setOpenPlPage(`shared_${owner}_${srcPlId}`);
+            }
+          }
+        } else if(startParam.startsWith('album-')){
           const albumId=startParam.replace('album-','');
           openAlbum(albumId,'','','');
         } else if(startParam.startsWith('amtrack-')){
@@ -2835,6 +2848,68 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   const isFavAl=(id:string)=>favAlbums.some(x=>x.id===id);
   const toggleFavAl=(al:AlbumInfo)=>{setFavAlbums(prev=>{const has=prev.some(x=>x.id===al.id);const n=has?prev.filter(x=>x.id!==al.id):[{...al,tracks:[]},...prev];try{localStorage.setItem('fal47',JSON.stringify(n));}catch{}triggerSync(liked,playlists,history,volume,favArtists,n,blockedArtists,bgCover);return n;});};
   const createPl=()=>{if(!newPlName.trim())return;const pl:Playlist={id:Date.now().toString(),name:newPlName.trim(),tracks:[],repeat:false};setPlaylists(prev=>{const n=[...prev,pl];try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}return n;});setNewPlName('');setShowNewPl(false);doFullSync();};
+  // ── Опубликовать (расшарить) свой плейлист → вернуть ссылку ──
+  const publishPl=async(plId:string):Promise<string|null>=>{
+    const pl=playlistsRef.current.find(p=>p.id===plId);
+    if(!pl||uid==='anon')return null;
+    try{
+      const r=await fetch(`${W}/pl/publish`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({uid,ownerName:uName,plId:pl.id,name:pl.name,tracks:pl.tracks}),
+      });
+      const d=await r.json();
+      if(!d.ok)return null;
+      // помечаем локально как опубликованный
+      setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,published:true}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;});
+      return `https://t.me/forty7mbot?startapp=pl_${uid}_${pl.id}`;
+    }catch{return null;}
+  };
+
+  // ── Подписаться на чужой плейлист по owner+id ──
+  const subscribePl=async(owner:string,srcPlId:string):Promise<boolean>=>{
+    if(owner===uid)return false; // свой же плейлист — не подписываемся
+    try{
+      const r=await fetch(`${W}/pl/get?owner=${encodeURIComponent(owner)}&id=${encodeURIComponent(srcPlId)}`);
+      const d=await r.json();
+      if(!d.playlist)return false;
+      const sp=d.playlist;
+      const localId=`shared_${owner}_${srcPlId}`;
+      setPlaylists(prev=>{
+        const exists=prev.find(p=>p.id===localId);
+        const entry:Playlist={
+          id:localId,name:sp.name||'Playlist',tracks:sp.tracks||[],repeat:false,
+          shared:true,owner,ownerName:sp.ownerName||'',sourcePlId:srcPlId,
+        };
+        const n=exists?prev.map(p=>p.id===localId?entry:p):[...prev,entry];
+        try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}
+        playlistsRef.current=n;
+        return n;
+      });
+      doFullSync();
+      return true;
+    }catch{return false;}
+  };
+
+  // ── Обновить подписанный плейлист (вызывается при заходе в него) ──
+  const refreshSharedPl=async(pl:Playlist)=>{
+    if(!pl.shared||!pl.owner||!pl.sourcePlId)return;
+    try{
+      const r=await fetch(`${W}/pl/get?owner=${encodeURIComponent(pl.owner)}&id=${encodeURIComponent(pl.sourcePlId)}`);
+      const d=await r.json();
+      if(!d.playlist)return; // владелец удалил шару — оставляем как есть
+      const sp=d.playlist;
+      setPlaylists(prev=>{
+        const cur=prev.find(p=>p.id===pl.id);
+        if(!cur)return prev;
+        // обновляем только если изменилось
+        if(cur.name===sp.name&&JSON.stringify(cur.tracks)===JSON.stringify(sp.tracks))return prev;
+        const n=prev.map(p=>p.id===pl.id?{...p,name:sp.name||p.name,tracks:sp.tracks||p.tracks,ownerName:sp.ownerName||p.ownerName}:p);
+        try{localStorage.setItem('p47',JSON.stringify(n));}catch{}
+        playlistsRef.current=n;
+        return n;
+      });
+    }catch{}
+  };
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);playlistsRef.current=n;try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
  const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
   const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();};
