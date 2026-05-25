@@ -1616,6 +1616,15 @@ useEffect(()=>{
     return (ov&&ov.a&&ov.a.length)?ov.a:(tk.artist||'');
   },[customTitles]);
 
+  const statTitle=useCallback((id:string,data:{title?:string})=>{
+    const ov=customTitles[id];
+    return (ov&&ov.t&&ov.t.length)?ov.t:(data?.title||'');
+  },[customTitles]);
+  const statArtist=useCallback((id:string,data:{artist?:string})=>{
+    const ov=customTitles[id];
+    return (ov&&ov.a&&ov.a.length)?ov.a:(data?.artist||'');
+  },[customTitles]);
+
   const saveRename=useCallback((trackId:string,newTitle:string,newArtist:string)=>{
     if(!subActive)return;
     const tT=newTitle.replace(/[\u0000-\u001F\u007F]/g,'').trim().slice(0,200);
@@ -3066,9 +3075,9 @@ const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.len
         </div>
       </div>
       <div style={{width:'100%',flexShrink:0,marginBottom:10,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-        <div style={{fontSize:'clamp(15px,4.5vw,20px)',fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{current.title}</div>
+        <div style={{fontSize:'clamp(15px,4.5vw,20px)',fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{displayTitle(current)}</div>
         <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,...tap}}>
-          <span style={{fontSize:'clamp(11px,3.5vw,15px)',color:ACC}}>{current.artist}</span>
+          <span style={{fontSize:'clamp(11px,3.5vw,15px)',color:ACC}}>{displayArtist(current)}</span>
         </button>
         {current.plays>0&&<div style={{fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
       </div>
@@ -4219,7 +4228,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                     <div style={{fontSize:26,flexShrink:0}}>📊</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:2}}>{lang==='ru'?'Статистика за месяц':lang==='uk'?'Статистика за місяць':lang==='kk'?'Ай статистикасы':lang==='pl'?'Statystyki miesiąca':lang==='tr'?'Aylık istatistikler':'Monthly Stats'}</div>
-                      <div style={{fontSize:11,color:TEXT_SEC}}>{mSec(mStat.totalSec)} · {mStat.listenedIds.length} {lang==='ru'?'треков':lang==='uk'?'треків':lang==='kk'?'трек':lang==='pl'?'utworów':lang==='tr'?'parça':'tracks'}{mTop[0]?` · ${mTop[0][1].artist}`:''}</div>
+                      <div style={{fontSize:11,color:TEXT_SEC}}>{mSec(mStat.totalSec)} · {mStat.listenedIds.length} {lang==='ru'?'треков':lang==='uk'?'треків':lang==='kk'?'трек':lang==='pl'?'utworów':lang==='tr'?'parça':'tracks'}{mTop[0]?` · ${statArtist(mTop[0][0],mTop[0][1])}`:''}</div>
                     </div>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
                   </button>);})()}
@@ -4250,8 +4259,8 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                         <Img src={topTrackData.cover||''} size={48} radius={8}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:10,color:TEXT_MUTED,marginBottom:4,textTransform:'uppercase' as const,letterSpacing:0.7}}>{lang==='ru'?'Самый зацикленный':lang==='uk'?'Найулюбленіший':lang==='kk'?'Ең көп тыңдалған':lang==='pl'?'Najczęściej grany':lang==='tr'?'En çok çalınan':'Most played'}</div>
-                          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTrackData.title}</div>
-                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{topTrackData.artist}</div>
+                          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(topTrackData.id,topTrackData)}</div>
+                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{statArtist(topTrackData.id,topTrackData)}</div>
                         </div>
                         <div style={{flexShrink:0,textAlign:'center' as const}}>
                           <div style={{fontSize:20,fontWeight:700,color:ACC}}>{topTrackData.count}</div>
@@ -4433,8 +4442,8 @@ importSource={importSource} setImportSource={setImportSource}
                   <div style={{fontSize:9,color:ACC,fontWeight:700,letterSpacing:1,textTransform:'uppercase' as const,marginBottom:4}}>
                     {lang==='ru'?'🔥 Трек месяца':lang==='uk'?'🔥 Трек місяця':lang==='kk'?'🔥 Ай треги':lang==='pl'?'🔥 Utwór miesiąca':lang==='tr'?'🔥 Ayın parçası':'🔥 Track of the month'}
                   </div>
-                  <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
-                  <div style={{fontSize:12,color:TEXT_SEC,marginTop:2}}>{topTracks[0][1].artist}</div>
+                  <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(topTracks[0][0],topTracks[0][1])}</div>
+                  <div style={{fontSize:12,color:TEXT_SEC,marginTop:2}}>{statArtist(topTracks[0][0],topTracks[0][1])}</div>
                 </div>
               </div>
               <div style={{padding:'10px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -4442,7 +4451,7 @@ importSource={importSource} setImportSource={setImportSource}
                   <div style={{textAlign:'center' as const}}><div style={{fontSize:18,fontWeight:700,color:ACC}}>{topTracks[0][1].count}</div><div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'включений':lang==='uk'?'увімкнень':'plays'}</div></div>
                   {totalPlays>0&&<div style={{textAlign:'center' as const}}><div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{Math.round(topTracks[0][1].count/totalPlays*100)}%</div><div style={{fontSize:9,color:TEXT_MUTED}}>{lang==='ru'?'от всего':lang==='uk'?'від усього':'of total'}</div></div>}
                 </div>
-                <button onPointerDown={()=>{const t=topTracks[0];if(t)playTrack({id:t[0],title:t[1].title,artist:t[1].artist,cover:t[1].cover,duration:'',plays:t[1].count,mp3:null});}} style={{padding:'7px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:11,fontWeight:700,cursor:'pointer',...tap}}>
+                <button onPointerDown={()=>{const t=topTracks[0];if(t)playTrack({id:t[0],title:statTitle(t[0],t[1]),artist:statArtist(t[0],t[1]),cover:t[1].cover,duration:'',plays:t[1].count,mp3:null});}} style={{padding:'7px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:11,fontWeight:700,cursor:'pointer',...tap}}>
                   {lang==='ru'?'▶ Слушать':lang==='uk'?'▶ Слухати':'▶ Play'}
                 </button>
               </div>
@@ -4456,12 +4465,12 @@ importSource={importSource} setImportSource={setImportSource}
                 {lang==='ru'?'🎵 Топ-5 треков':lang==='uk'?'🎵 Топ-5 треків':lang==='kk'?'🎵 Топ-5 трек':lang==='pl'?'🎵 Top 5 utworów':lang==='tr'?'🎵 Top 5 parça':'🎵 Top 5 Tracks'}
               </div>
               {topTracks.slice(0,5).map(([id,v],i)=>(
-                <div key={id} onPointerDown={(e)=>{const el=e.currentTarget;el.dataset.startY=String(e.clientY);el.dataset.scrolling='0';}} onPointerMove={(e)=>{const el=e.currentTarget;const startY=Number(el.dataset.startY||0);if(Math.abs(e.clientY-startY)>10)el.dataset.scrolling='1';}} onPointerUp={(e)=>{const el=e.currentTarget;if(el.dataset.scrolling==='0')playTrack({id,title:v.title,artist:v.artist,cover:v.cover,duration:'',plays:v.count,mp3:null});}} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
+                <div key={id} onPointerDown={(e)=>{const el=e.currentTarget;el.dataset.startY=String(e.clientY);el.dataset.scrolling='0';}} onPointerMove={(e)=>{const el=e.currentTarget;const startY=Number(el.dataset.startY||0);if(Math.abs(e.clientY-startY)>10)el.dataset.scrolling='1';}} onPointerUp={(e)=>{const el=e.currentTarget;if(el.dataset.scrolling==='0')playTrack({id,title:statTitle(id,v),artist:statArtist(id,v),cover:v.cover,duration:'',plays:v.count,mp3:null});}} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:i<4?'1px solid #1a1a1a':'none',cursor:'pointer'}}>
                   <div style={{fontSize:13,fontWeight:800,color:i===0?ACC:'#444',width:18,textAlign:'right' as const,flexShrink:0}}>{i+1}</div>
                   <Img src={v.cover||''} size={38} radius={7}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,color:i===0?ACC:TEXT_PRIMARY,fontWeight:i===0?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
-                    <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{v.artist}</div>
+                    <div style={{fontSize:12,color:i===0?ACC:TEXT_PRIMARY,fontWeight:i===0?700:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(id,v)}</div>
+                    <div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{statArtist(id,v)}</div>
                   </div>
                   <div style={{textAlign:'right' as const,flexShrink:0}}>
                     <div style={{fontSize:12,fontWeight:600,color:i===0?ACC:TEXT_SEC}}>{v.count}</div>
@@ -4559,8 +4568,8 @@ importSource={importSource} setImportSource={setImportSource}
                 <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10}}>
                   <div style={{width:52,height:52,borderRadius:10,overflow:'hidden',flexShrink:0,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}><Img src={obsessionTrack[1].cover} size={52} radius={10}/></div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{obsessionTrack[1].title}</div>
-                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{obsessionTrack[1].artist}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(obsessionTrack[0],obsessionTrack[1])}</div>
+                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{statArtist(obsessionTrack[0],obsessionTrack[1])}</div>
                   </div>
                 </div>
                 <div style={{display:'flex',gap:8}}>
@@ -4598,8 +4607,8 @@ importSource={importSource} setImportSource={setImportSource}
                   <div style={{position:'absolute',inset:0,borderRadius:10,boxShadow:'0 0 20px rgba(126,207,126,0.4)'}}/>
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
-                  <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{v.artist}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(id,v)}</div>
+                  <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{statArtist(id,v)}</div>
                 </div>
               </div>
               <div style={{fontSize:12,color:'#7ecf7e',fontStyle:'italic' as const,borderLeft:'2px solid #7ecf7e44',paddingLeft:10}}>
@@ -4656,8 +4665,8 @@ importSource={importSource} setImportSource={setImportSource}
                 <Img src={topTracks[0][1].cover} size={42} radius={8}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:9,color:TEXT_MUTED,marginBottom:2}}>{lang==='ru'?'🔥 Трек месяца':'🔥 Track of the month'}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{topTracks[0][1].title}</div>
-                  <div style={{fontSize:10,color:TEXT_SEC}}>{topTracks[0][1].artist}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{statTitle(topTracks[0][0],topTracks[0][1])}</div>
+                  <div style={{fontSize:10,color:TEXT_SEC}}>{statArtist(topTracks[0][0],topTracks[0][1])}</div>
                 </div>
               </div>
               {shareArtist&&<div style={{display:'flex',gap:10,alignItems:'center',marginBottom:10,padding:'10px',background:'rgba(255,255,255,0.04)',borderRadius:10}}>
@@ -4686,8 +4695,8 @@ importSource={importSource} setImportSource={setImportSource}
               <button onPointerDown={()=>{
                 const deepLink=`https://t.me/forty7mbot`;
                 const text=(lang==='ru'||lang==='uk')
-                  ?`🎧 Мой музыкальный месяц — ${monthTitle}\n🔥 ${topTracks[0][1].title} · ${topTracks[0][1].artist}\n🎤 ${topArtists[0]?.name||''}\n⏱ ${fmtT} · ${mStat.listenedIds.length} треков · ${totalPlays} включений\n\nСлушай без рекламы в Forty7 👇`
-                  :`🎧 My Music Month — ${monthTitle}\n🔥 ${topTracks[0][1].title} · ${topTracks[0][1].artist}\n🎤 ${topArtists[0]?.name||''}\n⏱ ${fmtT} · ${mStat.listenedIds.length} tracks · ${totalPlays} plays\n\nListen ad-free on Forty7 👇`;
+                  ?`🎧 Мой музыкальный месяц — ${monthTitle}\n🔥 ${statTitle(topTracks[0][0],topTracks[0][1])} · ${statArtist(topTracks[0][0],topTracks[0][1])}\n🎤 ${topArtists[0]?.name||''}\n⏱ ${fmtT} · ${mStat.listenedIds.length} треков · ${totalPlays} включений\n\nСлушай без рекламы в Forty7 👇`
+                  :`🎧 My Music Month — ${monthTitle}\n🔥 ${statTitle(topTracks[0][0],topTracks[0][1])} · ${statArtist(topTracks[0][0],topTracks[0][1])}\n🎤 ${topArtists[0]?.name||''}\n⏱ ${fmtT} · ${mStat.listenedIds.length} tracks · ${totalPlays} plays\n\nListen ad-free on Forty7 👇`;
                 const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(text)}`;
                 const tgApp=window.Telegram?.WebApp;
                 if(tgApp){
@@ -4960,10 +4969,10 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
               style={{flex:1,minWidth:0,background:'none',border:'none',padding:0,margin:0,cursor:'pointer',textAlign:'left' as const,display:'block',...tap}}
             >
               <div key={current.id+'-t'} style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const,animation:'trackIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
-                {current.title}
+                {displayTitle(current)}
               </div>
               <div key={current.id+'-a'} style={{fontSize:11,color:TEXT_SEC,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const,animation:'trackIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94) 0.04s both'}}>
-                {current.artist}
+                {displayArtist(current)}
               </div>
             </button>
  
