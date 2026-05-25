@@ -4876,8 +4876,22 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           <span style={{fontSize:13,color:TEXT_SEC}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':'Playlists'}</span>
         </button>
-        {/* Иконки закрепить/переименовать/удалить */}
+        {/* Иконки поделиться/закрепить/переименовать/удалить */}
         <div style={{display:'flex',alignItems:'center',gap:4}}>
+          {!pl.shared&&(
+          <button onPointerDown={async()=>{
+            const link=await publishPl(pl.id);
+            if(!link){alert(lang==='ru'?'Не удалось поделиться. Попробуйте позже.':lang==='uk'?'Не вдалося поділитися. Спробуйте пізніше.':'Failed to share. Try again later.');return;}
+            const text=lang==='ru'?`🎵 Зацени мой плейлист «${pl.name}» в Forty7`:lang==='uk'?`🎵 Зацiни мій плейлист «${pl.name}» у Forty7`:`🎵 Check out my playlist "${pl.name}" on Forty7`;
+            const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+            const tgApp=window.Telegram?.WebApp;
+            if(tgApp?.openTelegramLink){tgApp.openTelegramLink(shareUrl);}
+            else if(tgApp?.openLink){tgApp.openLink(shareUrl);}
+            else{try{navigator.clipboard?.writeText(link);alert(lang==='ru'?'Ссылка скопирована!':'Link copied!');}catch{window.open(shareUrl,'_blank');}}
+          }} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={pl.published?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          )}
           <button onPointerDown={()=>{pinPl(pl.id);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={isPinned?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
           </button>
