@@ -947,6 +947,8 @@ function getPlCovers(pl: Playlist): Track[] {
 interface TRowProps {
   track: Track;
   num?: number;
+  displayName?: string;
+  displayArtistName?: string;
   isActive: boolean;
   isPlaying: boolean;
   inQueue: boolean;
