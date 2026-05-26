@@ -4953,6 +4953,9 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
         {!pl.shared&&<button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
           <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>}
+        {pl.shared&&<button onPointerDown={()=>setEditMode((v:boolean)=>!v)} style={{width:44,height:44,padding:0,borderRadius:12,background:editMode?ACC_DIM:BG3,border:`1px solid ${editMode?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
+          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={editMode?ACC:TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+        </button>}
       </div>
       {/* Фильтры — только в режиме редактирования */}
       {editMode&&(
@@ -4962,14 +4965,14 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
 <button key={val} onPointerDown={()=>sortPl(val)} style={{flexShrink:0,padding:'5px 11px',borderRadius:16,border:'1px solid #2a2a2a',background:'transparent',color:'#888',fontSize:11,fontWeight:400,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}>{label}</button>
             ))}
           </div>
-          <div style={{display:'flex',gap:8,marginBottom:8}}>
+          {!pl.shared&&<div style={{display:'flex',gap:8,marginBottom:8}}>
 <button onPointerDown={()=>{const updated=playlists.map(p=>p.id===pl.id?{...p,sort:curSort}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setEditMode(false);setTimeout(()=>doFullSync(),100);}} style={{flex:1,padding:'9px',background:ACC,border:'none',borderRadius:10,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
   {lang==='ru'?'Сохранить':lang==='uk'?'Зберегти':'Save'}
 </button>
             <button onPointerDown={()=>setEditMode(false)} style={{flex:1,padding:'9px',background:BG3,border:'none',borderRadius:10,color:TEXT_SEC,fontSize:13,cursor:'pointer',...tap}}>
               {lang==='ru'?'Отмена':lang==='uk'?'Скасувати':'Cancel'}
             </button>
-          </div>
+          </div>}
         </div>
       )}
     </div>
