@@ -1564,8 +1564,10 @@ useEffect(()=>{
       if(Array.isArray(sv.playlists)&&sv.playlists.length>0){
         const serverPlTs=sv.playlists_ts||0;
         const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
-if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)){
+if(JSON.stringify(sv.playlists)!==JSON.stringify(playlistsRef.current)&&serverPlTs>=localPlTs){
+  // применяем серверную версию только если она не старше локальной — иначе затрём свежую правку
   setPlaylists(sv.playlists);
+  playlistsRef.current=sv.playlists;
   try{localStorage.setItem('p47',JSON.stringify(sv.playlists));}catch{}
   try{localStorage.setItem('p47_ts',String(serverPlTs));}catch{}
 }
@@ -1903,6 +1905,7 @@ const onVisible=()=>{
             const localPlTs=parseInt(localStorage.getItem('p47_ts')||'0');
             if((sv.playlists_ts||0)>localPlTs&&sv.playlists!=null){
               setPlaylists(sv.playlists);
+              playlistsRef.current=sv.playlists;
               try{localStorage.setItem('p47',JSON.stringify(sv.playlists));localStorage.setItem('p47_ts',String(sv.playlists_ts));}catch{}
             }
             // Артисты и альбомы
@@ -3379,7 +3382,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         <SliderTrack sp={volSP} h={3}/>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
       </div>
-      {addToPl&&<PlModalExt track={addToPl} playlists={playlists} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
+      {addToPl&&<PlModalExt track={addToPl} playlists={playlists.filter(p=>!p.shared)} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
     </div>
   );
 
@@ -4419,7 +4422,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
         );
       })()}
 
-      {addToPl&&!fullPlayer&&<PlModalExt track={addToPl} playlists={playlists} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
+      {addToPl&&!fullPlayer&&<PlModalExt track={addToPl} playlists={playlists.filter(p=>!p.shared)} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
       {renameTrack&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',zIndex:520,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setRenameTrack(null)}>
           <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,background:'#161616',borderRadius:'20px 20px 0 0',padding:'20px 18px calc(20px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none'}}>
@@ -5019,7 +5022,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={subActive?ACC:TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,label:(lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':lang==='kk'?'Атын өзгерту':lang==='pl'?'Zmień nazwę':lang==='tr'?'Yeniden adlandır':'Rename')+(subActive?'':' ⭐'),color:TEXT_PRIMARY,fn:()=>{const tk=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(!subActive){setShowRenameLocked(true);return;}setRenameTrack(tk);setRenameVal(displayTitle(tk));setRenameArtistVal(tk.artist||'');}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist('',t.artist,t.cover,0);}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}},
+                  ...(pl.shared?[]:[{icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}}]),
                 ].map((item,ii,arr)=>(
                   <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
                     {item.icon}{item.label}
