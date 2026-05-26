@@ -2205,6 +2205,7 @@ playCountRef.current+=1;
   };
 
   const deepLinkHandled=useRef(false);
+  const publishedPlsRef=useRef<Set<string>>(new Set((()=>{try{return JSON.parse(localStorage.getItem('pubpls47')||'[]');}catch{return [];}})()));
   const lastRefreshedShared=useRef<string|null>(null);
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -2861,6 +2862,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       const d=await r.json();
       if(!d.ok)return null;
       // помечаем локально как опубликованный
+      publishedPlsRef.current.add(plId);try{localStorage.setItem('pubpls47',JSON.stringify([...publishedPlsRef.current]));}catch{}
       setPlaylists(prev=>{const n=prev.map(p=>p.id===plId?{...p,published:true}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;});
       return `https://t.me/forty7mbot?startapp=pl_${uid}_${pl.id}`;
     }catch{return null;}
@@ -2869,7 +2871,8 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   // ── Перепубликовать плейлист, если он уже расшарен (для синхронизации правок владельца) ──
   const republishIfShared=(plId:string)=>{
     const pl=playlistsRef.current.find(p=>p.id===plId);
-    if(!pl||!pl.published||pl.shared||uid==='anon')return;
+    if(!pl||pl.shared||uid==='anon')return;
+    if(!pl.published&&!publishedPlsRef.current.has(plId))return;
     fetch(`${W}/pl/publish`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({uid,ownerName:uName,plId:pl.id,name:pl.name,tracks:pl.tracks}),
