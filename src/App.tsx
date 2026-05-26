@@ -1254,6 +1254,9 @@ export default function App(){
   const[trackMenuPlId,setTrackMenuPlId]=useState<string|null>(null);
   const[trackMenuTr,setTrackMenuTr]=useState<Track|null>(null);
   const[history,setHistory]=useState<Track[]>([]);
+  const[incognito,setIncognito]=useState<boolean>(()=>{try{return localStorage.getItem('incog47')==='1';}catch{return false;}});
+  const incognitoRef=useRef(incognito);
+  useEffect(()=>{incognitoRef.current=incognito;try{localStorage.setItem('incog47',incognito?'1':'0');}catch{}},[incognito]);
   const[recs,setRecs]=useState<Track[]>([]);
   const[recsVersion,setRecsVersion]=useState(0);
   const[hotTracks,setHotTracks]=useState<Track[]>([]);
@@ -2155,14 +2158,17 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
     if(track.cover){setBgCover(track.cover);try{localStorage.setItem('bgc47',track.cover);}catch{}}
 
     if(fullPlayer||true){extractColors(track.cover).then(setFpColors);}
+    if(!incognitoRef.current){
     setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
     const today=new Date().toISOString().slice(0,10);
     setStreakDays(prev=>{if(prev.includes(today))return prev;const n=[...prev,today];try{localStorage.setItem('sdays47',JSON.stringify(n));}catch{}setMaxStreak(calcMaxStreak(n));return n;});
+    }
 
     if(listenTimer.current)clearInterval(listenTimer.current);
     listenSec.current=0;listenTrackId.current=track.id;
     listenTimer.current=setInterval(()=>{
       if(!isPlayingRef.current||!audio.current||audio.current.paused)return;
+      if(incognitoRef.current)return; // инкогнито: не копим статистику/время
       listenSec.current+=1;
       setTotalSec(prev=>{const n=prev+1;try{localStorage.setItem('tsec47',String(n));}catch{}return n;});
       // Monthly stats: accumulate seconds
@@ -2194,6 +2200,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
       }
     },1000);
 
+    if(!incognitoRef.current){
     setHistory(prev=>{
       const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
       try{
@@ -2205,6 +2212,7 @@ playCountRef.current+=1;
       triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
       return n;
     });
+    }
   };
 
   const deepLinkHandled=useRef(false);
@@ -2708,7 +2716,7 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
 
   const doSearch=async(mode=searchMode)=>{
     if(!query.trim())return;
-    setRecentSearches(prev=>{const n=[query.trim(),...prev.filter(q=>q!==query.trim())].slice(0,5);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});
+    if(!incognitoRef.current)setRecentSearches(prev=>{const n=[query.trim(),...prev.filter(q=>q!==query.trim())].slice(0,5);try{localStorage.setItem('rsrch47',JSON.stringify(n));}catch{}return n;});
     setLoading(true);setError('');setResults([]);
     try{
       if(searchSource==='audiomack'){
@@ -4032,6 +4040,17 @@ return(
             {src==='soundcloud'?'Library A':'Library B'}
           </button>
         ))}
+      </div>
+      {/* Тумблер инкогнито */}
+      <div onPointerDown={()=>setIncognito(v=>!v)} style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'10px 14px',background:incognito?ACC_DIM:'#1a1a1a',border:`1px solid ${incognito?ACC+'66':'#252525'}`,borderRadius:14,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
+        <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={incognito?ACC:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18h20"/><path d="M5 18l1.5-5h11L19 18"/><circle cx="7.5" cy="18" r="2.5"/><circle cx="16.5" cy="18" r="2.5"/><path d="M9.5 13l.5-2h4l.5 2"/></svg>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:600,color:incognito?ACC:TEXT_PRIMARY}}>{lang==='ru'?'Режим инкогнито':lang==='uk'?'Режим інкогніто':lang==='kk'?'Жасырын режим':lang==='pl'?'Tryb incognito':lang==='tr'?'Gizli mod':'Incognito mode'}</div>
+          <div style={{fontSize:10,color:TEXT_MUTED,marginTop:1,lineHeight:1.3}}>{lang==='ru'?'Прослушанное не попадёт в историю и статистику':lang==='uk'?'Прослухане не потрапить в історію та статистику':lang==='kk'?'Тыңдалғаны тарихқа және статистикаға енбейді':lang==='pl'?'Odtworzenia nie trafią do historii i statystyk':lang==='tr'?'Dinlenenler geçmişe ve istatistiklere girmez':"Listens won't affect history or stats"}</div>
+        </div>
+        <div style={{width:40,height:24,borderRadius:12,background:incognito?ACC:'#333',position:'relative' as const,flexShrink:0,transition:'background 0.2s ease'}}>
+          <div style={{width:18,height:18,borderRadius:'50%',background:'#fff',position:'absolute' as const,top:3,left:incognito?19:3,transition:'left 0.2s ease'}}/>
+        </div>
       </div>
       {/* Строка поиска */}
       <div style={{display:'flex',gap:8,marginBottom:10}}>
