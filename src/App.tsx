@@ -4281,7 +4281,20 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
     <div style={{padding:'18px 16px 6px'}}>
      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:2}}>
   <div style={{fontSize:26,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{t('library')}</div>
-  <div style={{display:'flex',alignItems:'center',gap:6}}>
+  <div style={{display:'flex',alignItems:'center',gap:8}}>
+    {libTab==='liked'&&liked.filter(x=>x.id).length>0&&(()=>{
+      const total=liked.filter(x=>x.id).length;
+      const dl=liked.filter(x=>x.id&&offlineIds.has(x.id)).length;
+      const allDl=dl===total;
+      const isDl=downloadingPl==='__liked__';
+      return(
+        <button onPointerDown={()=>{if(isDl)return;if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки лайкнутых?':lang==='uk'?'Видалити завантаження?':'Remove liked downloads?'))removeLikedOffline();}else startDownloadLiked();}} style={{height:30,display:'inline-flex',alignItems:'center',gap:5,padding:'0 11px',borderRadius:15,background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',color:allDl?ACC:TEXT_PRIMARY,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
+          {isDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>{downloadProgress.done}/{downloadProgress.total}</>)
+          :allDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{lang==='ru'?'Загружено':lang==='uk'?'Завантажено':'Saved'}</>)
+          :(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>{lang==='ru'?'Скачать':lang==='uk'?'Завантажити':'Download'}</>)}
+        </button>
+      );
+    })()}
     <button onPointerDown={()=>setShowLibSettings(s=>!s)} style={{background:'none',border:'none',padding:4,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
       <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block',transition:'stroke 0.2s ease'}} fill="none" stroke={showLibSettings?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
