@@ -1176,6 +1176,16 @@ export default function App(){
   const [showStatsNotif, setShowStatsNotif] = useState(false);
   const [showStatsLocked, setShowStatsLocked] = useState(false);
   const [subActive, setSubActive] = useState(false);
+  const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set());
+  const [downloadingPl, setDownloadingPl] = useState<string|null>(null); // id плейлиста, который качается
+  const [downloadProgress, setDownloadProgress] = useState<{done:number;total:number}>({done:0,total:0});
+  // при старте: загрузить список офлайн-треков и запросить устойчивое хранилище
+  useEffect(()=>{
+    (async()=>{
+      try{const keys=await idbAllKeys();setOfflineIds(new Set(keys));}catch{}
+      try{if(navigator.storage&&navigator.storage.persist){await navigator.storage.persist();}}catch{}
+    })();
+  },[]);
   const [customTitles, setCustomTitles] = useState<Record<string,{t?:string;a?:string}>>(()=>{try{return JSON.parse(localStorage.getItem('ctitles47')||'{}');}catch{return {};}});
   const customTitlesRef = useRef<Record<string,{t?:string;a?:string}>>(customTitles);
   useEffect(()=>{customTitlesRef.current=customTitles;},[customTitles]);
@@ -2148,6 +2158,60 @@ useEffect(()=>{
   },[]);
 
 
+  // Получить готовый стрим-URL трека (как в playDirect, но без проигрывания)
+  const resolveStreamUrl=async(track:Track):Promise<string|null>=>{
+    let mp3=track.mp3||null;
+    if(track.source==='audiomack'&&track.amId){
+      try{const r=await fetch(`${W}/audiomack-stream?id=${track.amId}`);const d=await r.json();if(d.url)mp3=d.url;else return null;}catch{return null;}
+    }else if(track.id&&!track.isArtist&&!track.isAlbum){
+      try{const r=await fetch(`${W}/resolve?id=${track.id}`);const d=await r.json();if(d.mp3)mp3=d.mp3;else if(d.hls)mp3=d.hls;}catch{}
+    }
+    return mp3;
+  };
+  // Скачать один трек в IndexedDB
+  const downloadTrack=async(track:Track):Promise<boolean>=>{
+    if(!track.id||offlineIds.has(track.id))return true; // уже есть
+    const url=await resolveStreamUrl(track);
+    if(!url)return false;
+    // HLS скачать в один файл нельзя (это плейлист сегментов) — пропускаем
+    const isHls=url.includes('.m3u8')||url.includes('/hls/');
+    if(isHls)return false;
+    try{
+      const fetchUrl=`${W}/stream?url=${encodeURIComponent(url)}`;
+      const res=await fetch(fetchUrl);
+      if(!res.ok)return false;
+      const blob=await res.blob();
+      if(!blob||blob.size<1000)return false; // подозрительно мало — не сохраняем
+      await idbPutTrack(track.id,blob,{title:track.title,artist:track.artist,cover:track.cover,duration:track.duration,source:track.source,amId:track.amId});
+      setOfflineIds(prev=>{const n=new Set(prev);n.add(track.id);return n;});
+      return true;
+    }catch{return false;}
+  };
+  // Удалить трек из офлайна
+  const removeOffline=async(trackId:string)=>{
+    await idbDeleteTrack(trackId);
+    setOfflineIds(prev=>{const n=new Set(prev);n.delete(trackId);return n;});
+  };
+
+  // Скачать весь плейлист батчами по 3 (бережём лимиты воркера)
+  const downloadPlaylist=async(pl:Playlist)=>{
+    const tracks=pl.tracks.filter(t=>t.id&&!offlineIds.has(t.id));
+    if(!tracks.length){setDownloadingPl(null);return;}
+    setDownloadingPl(pl.id);
+    setDownloadProgress({done:0,total:tracks.length});
+    let done=0;
+    const BATCH=3;
+    for(let i=0;i<tracks.length;i+=BATCH){
+      const batch=tracks.slice(i,i+BATCH);
+      await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+    }
+    setDownloadingPl(null);
+  };
+  // Удалить весь плейлист из офлайна
+  const removePlaylistOffline=async(pl:Playlist)=>{
+    for(const t of pl.tracks){if(t.id&&offlineIds.has(t.id))await removeOffline(t.id);}
+  };
+  
 const playDirect=async(track:Track)=>{
     let freshMp3=track.mp3;
 if(track.source==='audiomack' && track.amId){
