@@ -5217,8 +5217,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
           <svg width="16" height="16" viewBox="0 0 24 24" fill={BG}><polygon points="6 3 20 12 6 21 6 3"/></svg>
           {lang==='ru'?'Слушать':lang==='uk'?'Слухати':'Play'}
         </button>
-        <button onPointerDown={()=>shufflePl(pl)} style={{flex:2,padding:'10px 0',background:ACC_DIM,border:`1px solid ${ACC}44`,borderRadius:12,color:ACC,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        <button onPointerDown={()=>shufflePl(pl)} style={{flex:2,padding:'10px 0',background:BG3,border:'1px solid #2a2a2a',borderRadius:12,color:TEXT_PRIMARY,fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
           Shuffle
         </button>
         <button onPointerDown={()=>setPlaylists(prev=>{const n=prev.map(p=>p.id===pl.id?{...p,repeat:!p.repeat}:p);try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;})} style={{width:44,height:44,padding:0,borderRadius:12,background:pl.repeat?ACC:BG3,border:`1px solid ${pl.repeat?ACC:'#2a2a2a'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,...tap}}>
