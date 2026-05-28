@@ -2282,6 +2282,35 @@ const playDirect=async(track:Track)=>{
           if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
           if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
           if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
+          // Запускаем listenTimer и для офлайн-трека, чтобы накапливалась статистика, history и т.д.
+          if(listenTimer.current)clearInterval(listenTimer.current);
+          listenSec.current=0;
+          listenTimer.current=setInterval(()=>{
+            if(!isPlayingRef.current||!audio.current||audio.current.paused)return;
+            if(incognitoRef.current)return;
+            listenSec.current+=1;
+            setTotalSec(prev=>{const n=prev+1;try{localStorage.setItem('ts47',String(n));}catch{}return n;});
+            const monthKey=new Date().toISOString().slice(0,7);
+            setMonthStats(prev=>{const cur=prev[monthKey]||{totalSec:0,trackPlays:{},listenedIds:[],topArtists:{}};const next={...prev,[monthKey]:{...cur,totalSec:cur.totalSec+1}};try{localStorage.setItem('mstats47',JSON.stringify(next));}catch{}return next;});
+            if(listenSec.current===40&&track.id){
+              const tid=track.id;
+              setTrackPlays(prev=>{const entry=prev[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0,source:track.source||'soundcloud',amId:track.amId||''};const n={...prev,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1,source:track.source||entry.source||'soundcloud',amId:track.amId||entry.amId||''}};try{localStorage.setItem('tpl47',JSON.stringify(n));}catch{}return n;});
+              setMonthStats(prev=>{const cur=prev[monthKey]||{totalSec:0,trackPlays:{},listenedIds:[],topArtists:{}};const entry=cur.trackPlays[tid]||{title:track.title,artist:track.artist,cover:track.cover||'',count:0,source:track.source||'soundcloud',amId:track.amId||''};const newListened=cur.listenedIds.includes(tid)?cur.listenedIds:[...cur.listenedIds,tid];const next={...prev,[monthKey]:{...cur,trackPlays:{...cur.trackPlays,[tid]:{...entry,cover:track.cover||entry.cover||'',count:entry.count+1,source:track.source||entry.source||'soundcloud',amId:track.amId||entry.amId||''}},listenedIds:newListened,topArtists:{...cur.topArtists,[track.artist]:(cur.topArtists[track.artist]||0)+1}}};try{localStorage.setItem('mstats47',JSON.stringify(next));}catch{}return next;});
+            }
+          },1000);
+          if(!incognitoRef.current){
+            setExploredIds(prev=>{if(prev.includes(track.id))return prev;const n=[...prev,track.id];try{localStorage.setItem('exp47',JSON.stringify(n));}catch{}return n;});
+            const today=new Date().toISOString().slice(0,10);
+            setStreakDays(prev=>{if(prev.includes(today))return prev;const n=[...prev,today];try{localStorage.setItem('sdays47',JSON.stringify(n));}catch{}setMaxStreak(calcMaxStreak(n));return n;});
+            setHistory(prev=>{
+              const n=[track,...prev.filter(x=>x.id!==track.id)].slice(0,50);
+              try{localStorage.setItem('h47',JSON.stringify(n));localStorage.setItem('sync_ts',String(Date.now()));}catch{}
+              playCountRef.current+=1;
+              if(playCountRef.current%4===0)setRecsVersion(v=>v+1);
+              triggerSync(liked,playlists,n,volume,favArtists,favAlbums,blockedArtists,track.cover||bgCover);
+              return n;
+            });
+          }
           return;
         }
       }catch{}
