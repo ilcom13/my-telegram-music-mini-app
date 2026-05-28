@@ -1157,7 +1157,6 @@ const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,
     <div>
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
         <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-        </button>);})()}
         <button onPointerDown={()=>{setLikedSearch((s:boolean)=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
