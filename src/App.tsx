@@ -1149,7 +1149,7 @@ export default function App(){
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
   const [showLibSettings,setShowLibSettings]=useState(false);
 
-  const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,TEXT_MUTED,TEXT_PRIMARY,ACC}:any){
+const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,TEXT_MUTED,TEXT_PRIMARY,ACC,offlineCount,downloadingLiked,dlProgress,onDownloadLiked,onRemoveLiked,BG,ACC_DIM}:any){
   const[likedQ,setLikedQ]=React.useState('');
   const[likedSearch,setLikedSearch]=React.useState(false);
   const filteredLiked=likedQ.trim()?liked.filter((tr:any)=>tr.title.toLowerCase().includes(likedQ.toLowerCase())||tr.artist.toLowerCase().includes(likedQ.toLowerCase())):liked;
@@ -1157,6 +1157,12 @@ export default function App(){
     <div>
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
         <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+        {(()=>{const total=liked.filter((x:any)=>x.id).length;const allDl=total>0&&offlineCount===total;return(
+        <button onPointerDown={()=>{if(downloadingLiked)return;if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки лайкнутых?':'Remove liked downloads?'))onRemoveLiked();}else onDownloadLiked();}} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,borderRadius:9,color:allDl?ACC:TEXT_PRIMARY,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
+          {downloadingLiked?(<><svg viewBox="0 0 24 24" style={{width:13,height:13,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>{dlProgress.done}/{dlProgress.total}</>)
+          :allDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{lang==='ru'?'Загружено':'Saved'}</>)
+          :(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>{lang==='ru'?'Скачать':'Download'}</>)}
+        </button>);})()}
         <button onPointerDown={()=>{setLikedSearch((s:boolean)=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
@@ -1194,6 +1200,8 @@ export default function App(){
   const [renameArtistVal, setRenameArtistVal] = useState('');
   const [showRenameLocked, setShowRenameLocked] = useState(false);
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
+  const [dlWarnHidden,setDlWarnHidden]=useState<boolean>(()=>{try{return localStorage.getItem('dlwarn47')==='1';}catch{return false;}});
+  const [dlWarnFor,setDlWarnFor]=useState<{type:'pl'|'liked';pl?:Playlist}|null>(null); // открытое предупреждение
   const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
   const [searchSource, setSearchSource] = useState<'soundcloud'|'audiomack'>('soundcloud');
@@ -2210,6 +2218,30 @@ useEffect(()=>{
   // Удалить весь плейлист из офлайна
   const removePlaylistOffline=async(pl:Playlist)=>{
     for(const t of pl.tracks){if(t.id&&offlineIds.has(t.id))await removeOffline(t.id);}
+  };
+
+  // Запустить скачивание плейлиста с предупреждением (если не отключено)
+  const startDownloadPl=(pl:Playlist)=>{
+    if(dlWarnHidden){downloadPlaylist(pl);return;}
+    setDlWarnFor({type:'pl',pl});
+  };
+  // Скачать лайкнутые в офлайн (батчами по 3)
+  const downloadLiked=async()=>{
+    const tracks=liked.filter(t=>t.id&&!offlineIds.has(t.id));
+    if(!tracks.length){setDownloadingPl(null);return;}
+    setDownloadingPl('__liked__');
+    setDownloadProgress({done:0,total:tracks.length});
+    let done=0;const BATCH=3;
+    for(let i=0;i<tracks.length;i+=BATCH){
+      const batch=tracks.slice(i,i+BATCH);
+      await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+    }
+    setDownloadingPl(null);
+  };
+  const removeLikedOffline=async()=>{for(const t of liked){if(t.id&&offlineIds.has(t.id))await removeOffline(t.id);}};
+  const startDownloadLiked=()=>{
+    if(dlWarnHidden){downloadLiked();return;}
+    setDlWarnFor({type:'liked'});
   };
   
 const playDirect=async(track:Track)=>{
@@ -3686,6 +3718,8 @@ return(
     </div>
   </div>
 )}
+
+      
     {showOnboarding&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 20px'}}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:24,padding:'32px 24px 24px',width:'100%',maxWidth:420,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
@@ -4378,7 +4412,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
     )}
  {libTab==='liked'&&(liked.length===0
       ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
-      :<LikedTab liked={liked} lang={lang} t={t} mkTRow={mkTRow} toggleLike={toggleLike} tap={tap} TEXT_MUTED={TEXT_MUTED} TEXT_PRIMARY={TEXT_PRIMARY} ACC={ACC}/>
+      :<LikedTab liked={liked} lang={lang} t={t} mkTRow={mkTRow} toggleLike={toggleLike} tap={tap} TEXT_MUTED={TEXT_MUTED} TEXT_PRIMARY={TEXT_PRIMARY} ACC={ACC} offlineCount={liked.filter((x:Track)=>x.id&&offlineIds.has(x.id)).length} downloadingLiked={downloadingPl==='__liked__'} dlProgress={downloadProgress} onDownloadLiked={startDownloadLiked} onRemoveLiked={removeLikedOffline} BG={BG} ACC_DIM={ACC_DIM}/>
     )}
     {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
     {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
@@ -4582,6 +4616,28 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
       })()}
 
       {addToPl&&!fullPlayer&&<PlModalExt track={addToPl} playlists={playlists.filter(p=>!p.shared)} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
+      {dlWarnFor&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:540,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setDlWarnFor(null)}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,background:'#161616',borderRadius:'20px 20px 0 0',padding:'22px 20px calc(24px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none'}}>
+            <div style={{width:36,height:4,background:'#333',borderRadius:2,margin:'0 auto 18px'}}/>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+              <div style={{fontSize:24}}>📥</div>
+              <div style={{fontSize:16,fontWeight:800,color:TEXT_PRIMARY}}>{lang==='ru'?'Офлайн-загрузка':lang==='uk'?'Офлайн-завантаження':lang==='kk'?'Офлайн жүктеу':lang==='pl'?'Pobieranie offline':lang==='tr'?'Çevrimdışı indirme':'Offline download'}</div>
+            </div>
+            <div style={{fontSize:13,color:TEXT_SEC,lineHeight:1.55,marginBottom:18}}>
+              {lang==='ru'?<>Этот режим работает <b style={{color:TEXT_PRIMARY}}>как для запланированных ситуаций</b> — поездок, перелётов, мест без интернета.<br/><br/>⚠️ <b style={{color:ACC}}>Важно:</b> если вы не заходите в мини-приложение более <b style={{color:TEXT_PRIMARY}}>7 дней</b>, треки придётся скачать заново. При каждом заходе в мини-приложение таймер сбрасывается.</>
+              :lang==='uk'?<>Цей режим працює <b style={{color:TEXT_PRIMARY}}>для запланованих ситуацій</b> — подорожей, перельотів, місць без інтернету.<br/><br/>⚠️ <b style={{color:ACC}}>Важливо:</b> якщо ви не заходите в міні-додаток понад <b style={{color:TEXT_PRIMARY}}>7 днів</b>, треки доведеться завантажити знову. За кожного входу таймер скидається.</>
+              :<>This mode is meant <b style={{color:TEXT_PRIMARY}}>for planned situations</b> — trips, flights, places without internet.<br/><br/>⚠️ <b style={{color:ACC}}>Important:</b> if you don't open the mini app for more than <b style={{color:TEXT_PRIMARY}}>7 days</b>, tracks will need to be downloaded again. Each time you open the mini app, the timer resets.</>}
+            </div>
+            <button onPointerDown={()=>{const f=dlWarnFor;setDlWarnFor(null);if(f.type==='liked')downloadLiked();else if(f.pl)downloadPlaylist(f.pl);}} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:10,...tap}}>
+              {lang==='ru'?'Окей':lang==='uk'?'Гаразд':lang==='kk'?'Жарайды':lang==='pl'?'OK':lang==='tr'?'Tamam':'Okay'}
+            </button>
+            <button onPointerDown={()=>{setDlWarnHidden(true);try{localStorage.setItem('dlwarn47','1');}catch{}const f=dlWarnFor;setDlWarnFor(null);if(f.type==='liked')downloadLiked();else if(f.pl)downloadPlaylist(f.pl);}} style={{width:'100%',padding:'10px',background:'none',border:'none',color:TEXT_MUTED,fontSize:13,cursor:'pointer',...tap}}>
+              {lang==='ru'?'Не показывать снова':lang==='uk'?'Не показувати знову':lang==='kk'?'Қайта көрсетпеу':lang==='pl'?'Nie pokazuj ponownie':lang==='tr'?'Tekrar gösterme':"Don't show again"}
+            </button>
+          </div>
+        </div>
+      )}
       {renameTrack&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',zIndex:520,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setRenameTrack(null)}>
           <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,background:'#161616',borderRadius:'20px 20px 0 0',padding:'20px 18px calc(20px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none'}}>
@@ -5105,8 +5161,8 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
               <button onPointerDown={()=>{
                 if(isDownloading)return;
                 if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки этого плейлиста?':'Remove downloads for this playlist?'))removePlaylistOffline(pl);}
-                else downloadPlaylist(pl);
-              }} style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',background:allDl?ACC_DIM:'#1a1a1a',border:`1px solid ${allDl?ACC+'66':'#2a2a2a'}`,borderRadius:10,color:allDl?ACC:TEXT_PRIMARY,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                else startDownloadPl(pl);
+              }} style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:10,color:allDl?ACC:TEXT_PRIMARY,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
                 {isDownloading?(
                   <>
                     <svg viewBox="0 0 24 24" style={{width:14,height:14,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
