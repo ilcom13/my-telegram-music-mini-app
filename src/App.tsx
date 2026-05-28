@@ -2213,6 +2213,32 @@ useEffect(()=>{
   };
   
 const playDirect=async(track:Track)=>{
+    // ── Офлайн: если трек скачан, играем из IndexedDB без сети ──
+    if(track.id&&offlineIds.has(track.id)){
+      try{
+        const rec=await idbGetTrack(track.id);
+        if(rec&&rec.blob){
+          const a=audio.current;
+          if(!a)return;
+          const callId=Date.now();(playDirect as any)._lastCallId=callId;
+          a.pause();
+          if((a as any)._objUrl){try{URL.revokeObjectURL((a as any)._objUrl);}catch{}}
+          const objUrl=URL.createObjectURL(rec.blob);
+          (a as any)._objUrl=objUrl;
+          a.src=objUrl;a.load();ensureSilence();
+          a.play().then(()=>setPlaying(true)).catch(()=>setTimeout(()=>a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false)),300));
+          if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
+          setCurrent({...track});
+          setPlaybackSpeed(1);setReverbAmount(0);setPitchAmount(1);setBassAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
+          progressRef.current=0;curTimeRef.current='0:00';
+          if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
+          if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
+          if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
+          if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
+          return;
+        }
+      }catch{}
+    }
     let freshMp3=track.mp3;
 if(track.source==='audiomack' && track.amId){
   try{
@@ -5070,6 +5096,36 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             <div style={{fontSize:22,fontWeight:800,color:TEXT_PRIMARY,letterSpacing:-0.5}}>{pl.name}</div>
           )}
           <div style={{fontSize:11,color:TEXT_SEC,marginTop:4}}>{pl.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+          {(()=>{
+            const dlIds=pl.tracks.filter(t=>t.id&&offlineIds.has(t.id)).length;
+            const totalIds=pl.tracks.filter(t=>t.id).length;
+            const allDl=totalIds>0&&dlIds===totalIds;
+            const isDownloading=downloadingPl===pl.id;
+            return(
+              <button onPointerDown={()=>{
+                if(isDownloading)return;
+                if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки этого плейлиста?':'Remove downloads for this playlist?'))removePlaylistOffline(pl);}
+                else downloadPlaylist(pl);
+              }} style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',background:allDl?ACC_DIM:'#1a1a1a',border:`1px solid ${allDl?ACC+'66':'#2a2a2a'}`,borderRadius:10,color:allDl?ACC:TEXT_PRIMARY,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+                {isDownloading?(
+                  <>
+                    <svg viewBox="0 0 24 24" style={{width:14,height:14,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                    {downloadProgress.done}/{downloadProgress.total}
+                  </>
+                ):allDl?(
+                  <>
+                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    {lang==='ru'?'Загружено':lang==='uk'?'Завантажено':'Downloaded'}
+                  </>
+                ):(
+                  <>
+                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                    {lang==='ru'?'Скачать':lang==='uk'?'Завантажити':'Download'}{dlIds>0?` (${dlIds}/${totalIds})`:''}
+                  </>
+                )}
+              </button>
+            );
+          })()}
           {pl.shared&&<div style={{fontSize:11,color:ACC,marginTop:3,display:'flex',alignItems:'center',gap:4}}>
             <svg viewBox="0 0 24 24" style={{width:11,height:11}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             {lang==='ru'?`Плейлист от ${pl.ownerName||'другого пользователя'}`:lang==='uk'?`Плейлист від ${pl.ownerName||'іншого користувача'}`:`Playlist by ${pl.ownerName||'another user'}`}
