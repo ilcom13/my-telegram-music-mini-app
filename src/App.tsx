@@ -2202,10 +2202,11 @@ useEffect(()=>{
     setDownloadingPl(pl.id);
     setDownloadProgress({done:0,total:tracks.length});
     let done=0;
-    const BATCH=3;
+    const BATCH=2; // 2 — баланс скорости и памяти (iPhone давился на 3)
     for(let i=0;i<tracks.length;i+=BATCH){
       const batch=tracks.slice(i,i+BATCH);
       await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+      await new Promise(r=>setTimeout(r,100)); // короткая пауза — UI дышит
     }
     setDownloadingPl(null);
   };
@@ -2225,10 +2226,12 @@ useEffect(()=>{
     if(!tracks.length){setDownloadingPl(null);return;}
     setDownloadingPl('__liked__');
     setDownloadProgress({done:0,total:tracks.length});
-    let done=0;const BATCH=3;
+    let done=0;
+    const BATCH=2;
     for(let i=0;i<tracks.length;i+=BATCH){
       const batch=tracks.slice(i,i+BATCH);
       await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+      await new Promise(r=>setTimeout(r,100));
     }
     setDownloadingPl(null);
   };
