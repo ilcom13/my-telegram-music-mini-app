@@ -999,6 +999,7 @@ interface TRowProps {
   num?: number;
   displayName?: string;
   displayArtistName?: string;
+  sessionDl?: boolean;
   isActive: boolean;
   isPlaying: boolean;
   inQueue: boolean;
@@ -1011,7 +1012,7 @@ interface TRowProps {
   onMenu: (r:DOMRect)=>void;
   onCloseMenu: ()=>void;
 }
-const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isActive,isPlaying,inQueue,menuOpen,onArtistClick,showBlockBtn,onSwipeLeft,onPlay,onToggleQ,onMenu,onCloseMenu}:TRowProps){
+const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isActive,isPlaying,inQueue,menuOpen,onArtistClick,showBlockBtn,onSwipeLeft,onPlay,onToggleQ,onMenu,onCloseMenu,sessionDl}:TRowProps){
   const {wrapRef,innerRef,bgRRef,bgLRef}=useSwipeRow({
     onRight:()=>{if(!track.isArtist&&!track.isAlbum)onToggleQ();},
     onLeft:onSwipeLeft,
@@ -1043,7 +1044,10 @@ const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isA
             {isActive&&!track.isArtist&&!track.isAlbum&&<div style={{position:'absolute',inset:0,borderRadius:8,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>{isPlaying?'⏸':'▶'}</div>}
           </div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:13,fontWeight:500,color:isActive?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{displayName??track.title}</div>
+            <div style={{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,color:isActive?ACC:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',transition:'color 0.2s ease'}}>{displayName??track.title}</div>
+              {sessionDl&&<svg viewBox="0 0 24 24" style={{width:13,height:13,flexShrink:0}} fill="none" stroke={ACC} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>}
+            </div>
             <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
               {!track.isArtist&&!track.isAlbum&&onArtistClick
               ?<button onClick={e=>{e.stopPropagation();if(track.source!=='audiomack')onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{displayArtistName??track.artist}</button>
@@ -1149,9 +1153,7 @@ export default function App(){
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
   const [showLibSettings,setShowLibSettings]=useState(false);
 
-const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,TEXT_MUTED,TEXT_PRIMARY,ACC,offlineCount,downloadingLiked,dlProgress,onDownloadLiked,onRemoveLiked,BG,ACC_DIM}:any){
-  const[likedQ,setLikedQ]=React.useState('');
-  const[likedSearch,setLikedSearch]=React.useState(false);
+  const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,TEXT_MUTED,TEXT_PRIMARY,ACC,offlineCount,downloadingLiked,dlProgress,onDownloadLiked,onRemoveLiked,BG,ACC_DIM}:any){
   const filteredLiked=likedQ.trim()?liked.filter((tr:any)=>tr.title.toLowerCase().includes(likedQ.toLowerCase())||tr.artist.toLowerCase().includes(likedQ.toLowerCase())):liked;
   return(
     <div>
@@ -1176,6 +1178,11 @@ const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,
   const [showStatsNotif, setShowStatsNotif] = useState(false);
   const [showStatsLocked, setShowStatsLocked] = useState(false);
   const [subActive, setSubActive] = useState(false);
+  const [likedQ,setLikedQ]=useState('');
+  const [likedSearch,setLikedSearch]=useState(false);
+  const cancelDownloadRef=useRef(false);
+  const [sessionDownloaded,setSessionDownloaded]=useState<Set<string>>(new Set());
+  const OFFLINE_LIMIT=400;
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set());
   const [downloadingPl, setDownloadingPl] = useState<string|null>(null); // id плейлиста, который качается
   const [downloadProgress, setDownloadProgress] = useState<{done:number;total:number}>({done:0,total:0});
@@ -2173,6 +2180,7 @@ useEffect(()=>{
   // Скачать один трек в IndexedDB
   const downloadTrack=async(track:Track):Promise<boolean>=>{
     if(!track.id||offlineIds.has(track.id))return true; // уже есть
+    if(offlineIds.size>=OFFLINE_LIMIT)return false; // достигнут глобальный лимит
     const url=await resolveStreamUrl(track);
     if(!url)return false;
     // HLS скачать в один файл нельзя (это плейлист сегментов) — пропускаем
@@ -2186,6 +2194,7 @@ useEffect(()=>{
       if(!blob||blob.size<1000)return false; // подозрительно мало — не сохраняем
       await idbPutTrack(track.id,blob,{title:track.title,artist:track.artist,cover:track.cover,duration:track.duration,source:track.source,amId:track.amId});
       setOfflineIds(prev=>{const n=new Set(prev);n.add(track.id);return n;});
+      setSessionDownloaded(prev=>{const n=new Set(prev);n.add(track.id);return n;});
       return true;
     }catch{return false;}
   };
@@ -2199,14 +2208,16 @@ useEffect(()=>{
   const downloadPlaylist=async(pl:Playlist)=>{
     const tracks=pl.tracks.filter(t=>t.id&&!offlineIds.has(t.id));
     if(!tracks.length){setDownloadingPl(null);return;}
+    cancelDownloadRef.current=false;
     setDownloadingPl(pl.id);
     setDownloadProgress({done:0,total:tracks.length});
     let done=0;
-    const BATCH=2; // 2 — баланс скорости и памяти (iPhone давился на 3)
+    const BATCH=2;
     for(let i=0;i<tracks.length;i+=BATCH){
+      if(cancelDownloadRef.current)break;
       const batch=tracks.slice(i,i+BATCH);
       await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
-      await new Promise(r=>setTimeout(r,100)); // короткая пауза — UI дышит
+      await new Promise(r=>setTimeout(r,100));
     }
     setDownloadingPl(null);
   };
@@ -2217,6 +2228,10 @@ useEffect(()=>{
 
   // Запустить скачивание плейлиста с предупреждением (если не отключено)
   const startDownloadPl=(pl:Playlist)=>{
+    if(offlineIds.size>=OFFLINE_LIMIT){
+      alert(lang==='ru'?`Достигнут лимит офлайн-загрузок (${OFFLINE_LIMIT} треков). Удалите часть, чтобы скачать новые.`:lang==='uk'?`Досягнуто ліміт офлайн-завантажень (${OFFLINE_LIMIT} треків). Видаліть частину, щоб завантажити нові.`:`Offline limit reached (${OFFLINE_LIMIT} tracks). Remove some to download more.`);
+      return;
+    }
     if(dlWarnHidden){downloadPlaylist(pl);return;}
     setDlWarnFor({type:'pl',pl});
   };
@@ -2225,6 +2240,7 @@ useEffect(()=>{
     const tracks=liked.filter(t=>t.id&&!offlineIds.has(t.id));
     if(!tracks.length){setDownloadingPl(null);return;}
     setDownloadingPl('__liked__');
+    cancelDownloadRef.current=false;
     setDownloadProgress({done:0,total:tracks.length});
     let done=0;
     const BATCH=2;
@@ -2237,6 +2253,10 @@ useEffect(()=>{
   };
   const removeLikedOffline=async()=>{for(const t of liked){if(t.id&&offlineIds.has(t.id))await removeOffline(t.id);}};
   const startDownloadLiked=()=>{
+    if(offlineIds.size>=OFFLINE_LIMIT){
+      alert(lang==='ru'?`Достигнут лимит офлайн-загрузок (${OFFLINE_LIMIT} треков). Удалите часть, чтобы скачать новые.`:lang==='uk'?`Досягнуто ліміт офлайн-завантажень (${OFFLINE_LIMIT} треків). Видаліть частину, щоб завантажити нові.`:`Offline limit reached (${OFFLINE_LIMIT} tracks). Remove some to download more.`);
+      return;
+    }
     if(dlWarnHidden){downloadLiked();return;}
     setDlWarnFor({type:'liked'});
   };
@@ -3204,6 +3224,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       track,
       displayName:displayTitle(track),
       displayArtistName:displayArtist(track),
+      sessionDl:!!(track.id&&sessionDownloaded.has(track.id)),
       isActive,
       isPlaying:playing,
       inQueue:queue.some(t=>t.id===track.id),
@@ -3215,7 +3236,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       ...extra,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[current?.id,menuId,playing,queue,customTitles]);
+  },[current?.id,menuId,playing,queue,customTitles,sessionDownloaded]);
 
   const NAV=[
     {id:'home',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>,lbl:()=>t('home')},
@@ -4422,7 +4443,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
     )}
  {libTab==='liked'&&(liked.length===0
       ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎵</div><div style={{fontSize:13,color:TEXT_MUTED}}>{t('noLiked')}</div></div>
-      :<LikedTab liked={liked} lang={lang} t={t} mkTRow={mkTRow} toggleLike={toggleLike} tap={tap} TEXT_MUTED={TEXT_MUTED} TEXT_PRIMARY={TEXT_PRIMARY} ACC={ACC} offlineCount={liked.filter((x:Track)=>x.id&&offlineIds.has(x.id)).length} downloadingLiked={downloadingPl==='__liked__'} dlProgress={downloadProgress} onDownloadLiked={startDownloadLiked} onRemoveLiked={removeLikedOffline} BG={BG} ACC_DIM={ACC_DIM}/>
+      :<LikedTab liked={liked} lang={lang} t={t} mkTRow={mkTRow} toggleLike={toggleLike} tap={tap} TEXT_MUTED={TEXT_MUTED} TEXT_PRIMARY={TEXT_PRIMARY} ACC={ACC} offlineCount={liked.filter((x:Track)=>x.id&&offlineIds.has(x.id)).length} downloadingLiked={downloadingPl==='__liked__'} dlProgress={downloadProgress} onDownloadLiked={startDownloadLiked} onRemoveLiked={removeLikedOffline} BG={BG} ACC_DIM={ACC_DIM} likedQ={likedQ} setLikedQ={setLikedQ} likedSearch={likedSearch} setLikedSearch={setLikedSearch}/>
     )}
     {libTab==='artists'&&(<div style={{padding:'0 16px'}}>{favArtists.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>🎤</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных артистов':'No favourite artists'}</div></div>:favArtists.map(a=>(<div key={a.id||a.name} onClick={()=>openArtist(a.permalink||'',a.name,a.avatar||'',a.followers)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={a.avatar||''} size={46} radius={23}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY}}>{a.name}</div>{a.username&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>@{a.username}</div>}{a.followers>0&&<div style={{fontSize:10,color:TEXT_SEC,marginTop:1}}>{fmtP(a.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}</div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
     {libTab==='albums'&&(<div style={{padding:'0 16px'}}>{favAlbums.length===0?<div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:60,animation:'fadeIn 0.3s ease'}}><div style={{fontSize:38,marginBottom:12}}>💿</div><div style={{fontSize:13,color:TEXT_MUTED}}>{lang==='ru'?'Нет избранных альбомов':'No favourite albums'}</div></div>:favAlbums.map(al=>(<div key={al.id} onClick={()=>openAlbum(al.id,al.title,al.artist,al.cover)} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:`1px solid #1e1e1e`,cursor:'pointer',transition:'opacity 0.15s ease',...tap}}><Img src={al.cover} size={50} radius={8}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{al.title}</div><div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{al.artist}</div></div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4a4a4a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>))}</div>)}
@@ -4535,8 +4556,8 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                         const allDl=dl===total;
                         const isDl=downloadingPl==='__liked__';
                         return(
-                          <button onPointerDown={()=>{if(isDl)return;if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки лайкнутых?':'Remove liked downloads?'))removeLikedOffline();}else startDownloadLiked();}} style={{height:34,display:'inline-flex',alignItems:'center',gap:5,padding:'0 12px',borderRadius:17,background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',color:allDl?ACC:TEXT_PRIMARY,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
-                            {isDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>{downloadProgress.done}/{downloadProgress.total}</>)
+                          <button onPointerDown={()=>{if(isDl){cancelDownloadRef.current=true;return;}if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки лайкнутых?':'Remove liked downloads?'))removeLikedOffline();}else startDownloadLiked();}} style={{height:34,display:'inline-flex',alignItems:'center',gap:5,padding:'0 12px',borderRadius:17,background:isDl?'rgba(208,96,96,0.12)':allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${isDl?'#3a2020':allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',color:isDl?'#e06060':allDl?ACC:TEXT_PRIMARY,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
+                            {isDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>{downloadProgress.done}/{downloadProgress.total}<svg viewBox="0 0 24 24" style={{width:12,height:12,marginLeft:2}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></>)
                             :allDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{lang==='ru'?'Загружено':'Saved'}</>)
                             :(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>{lang==='ru'?'Скачать':'Download'}</>)}
                           </button>
@@ -4654,6 +4675,10 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
               :lang==='pl'?<><b style={{color:ACC}}>⚠️ Ważne:</b> ponieważ to bot Telegram, musisz otworzyć mini-aplikację, gdy masz internet (nawet słaby — ważne, żeby wejść do bota). Potem możesz słuchać pobranych utworów bez internetu, ile chcesz.<br/><br/><span style={{color:TEXT_MUTED}}>Na urządzeniach Apple (iPhone, iPad): jeśli nie otworzysz mini-aplikacji przez ponad 7 dni z rzędu, pobrane utwory zostaną usunięte i trzeba będzie pobrać je ponownie. Przy każdym otwarciu licznik jest resetowany. Na Androidzie i komputerze pobrania są przechowywane bez ograniczeń czasowych.</span></>
               :lang==='tr'?<><b style={{color:ACC}}>⚠️ Önemli:</b> bu bir Telegram botu olduğu için, internetiniz varken (zayıf olsa bile — önemli olan bota girmek) mini uygulamayı açmanız gerekir. Bundan sonra indirilen parçaları internetsiz olarak istediğiniz kadar dinleyebilirsiniz.<br/><br/><span style={{color:TEXT_MUTED}}>Apple cihazlarında (iPhone, iPad): mini uygulamayı üst üste 7 günden fazla açmazsanız, indirilen parçalar silinir ve yeniden indirilmesi gerekir. Her açılışta sayaç sıfırlanır. Android ve PC'de indirmeler süre sınırı olmadan saklanır.</span></>
               :<><b style={{color:ACC}}>⚠️ Important:</b> since this is a Telegram bot, you need to open the mini app while you have internet (even a weak connection — the main thing is to open the bot). After that, you can listen to downloaded tracks offline as much as you want.<br/><br/><span style={{color:TEXT_MUTED}}>On Apple devices (iPhone, iPad): if you don't open the mini app for more than 7 days in a row, downloaded tracks will be deleted and you'll need to download them again. Each time you open it, the timer resets. On Android and PC, downloads are kept without a time limit.</span></>}
+            </div>
+            <div style={{fontSize:12,color:offlineIds.size>=OFFLINE_LIMIT?'#e06060':TEXT_MUTED,marginBottom:14,padding:'8px 12px',background:'rgba(255,255,255,0.04)',borderRadius:10,display:'flex',alignItems:'center',gap:7}}>
+              <svg viewBox="0 0 24 24" style={{width:14,height:14,flexShrink:0}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>{lang==='ru'?`Лимит офлайн-загрузок: ${offlineIds.size} / ${OFFLINE_LIMIT} треков`:lang==='uk'?`Ліміт офлайн-завантажень: ${offlineIds.size} / ${OFFLINE_LIMIT} треків`:lang==='kk'?`Офлайн жүктеу шегі: ${offlineIds.size} / ${OFFLINE_LIMIT}`:lang==='pl'?`Limit pobrań offline: ${offlineIds.size} / ${OFFLINE_LIMIT}`:lang==='tr'?`Çevrimdışı indirme limiti: ${offlineIds.size} / ${OFFLINE_LIMIT}`:`Offline limit: ${offlineIds.size} / ${OFFLINE_LIMIT} tracks`}</span>
             </div>
             <button onPointerDown={()=>{const f=dlWarnFor;setDlWarnFor(null);if(f.type==='liked')downloadLiked();else if(f.pl)downloadPlaylist(f.pl);}} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:10,...tap}}>
               {lang==='ru'?'Окей':lang==='uk'?'Гаразд':lang==='kk'?'Жарайды':lang==='pl'?'OK':lang==='tr'?'Tamam':'Okay'}
@@ -5185,14 +5210,15 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             const isDownloading=downloadingPl===pl.id;
             return(
               <button onPointerDown={()=>{
-                if(isDownloading)return;
+                if(isDownloading){cancelDownloadRef.current=true;return;}
                 if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки этого плейлиста?':'Remove downloads for this playlist?'))removePlaylistOffline(pl);}
                 else startDownloadPl(pl);
-              }} style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:10,color:allDl?ACC:TEXT_PRIMARY,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
+              }} style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',background:isDownloading?'rgba(208,96,96,0.12)':allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${isDownloading?'#3a2020':allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderRadius:10,color:isDownloading?'#e06060':allDl?ACC:TEXT_PRIMARY,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
                 {isDownloading?(
                   <>
                     <svg viewBox="0 0 24 24" style={{width:14,height:14,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
                     {downloadProgress.done}/{downloadProgress.total}
+                    <svg viewBox="0 0 24 24" style={{width:13,height:13,marginLeft:2}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </>
                 ):allDl?(
                   <>
