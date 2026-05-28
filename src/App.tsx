@@ -151,7 +151,57 @@ function useSwipeRow(opts: {
   return { wrapRef, innerRef, bgRRef, bgLRef };
 }
 
-
+// ═══════════ OFFLINE STORAGE (IndexedDB) ═══════════
+const IDB_NAME='forty7-offline';
+const IDB_STORE='tracks';
+let _idbPromise:Promise<IDBDatabase>|null=null;
+function idbOpen():Promise<IDBDatabase>{
+  if(_idbPromise)return _idbPromise;
+  _idbPromise=new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+  return _idbPromise;
+}
+async function idbPutTrack(id:string,blob:Blob,meta:any):Promise<void>{
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put({id,blob,meta,savedAt:Date.now()});
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbGetTrack(id:string):Promise<{id:string;blob:Blob;meta:any;savedAt:number}|null>{
+  const db=await idbOpen();
+  return new Promise((resolve)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>resolve(null);
+  });
+}
+async function idbDeleteTrack(id:string):Promise<void>{
+  const db=await idbOpen();
+  return new Promise((resolve)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(id);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>resolve();
+  });
+}
+async function idbAllKeys():Promise<string[]>{
+  const db=await idbOpen();
+  return new Promise((resolve)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).getAllKeys();
+    req.onsuccess=()=>resolve((req.result||[]).map(k=>String(k)));
+    req.onerror=()=>resolve([]);
+  });
+}
+// ═══════════════════════════════════════════════════
 
 interface Track {
   id: string; title: string; artist: string; cover: string;
