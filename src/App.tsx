@@ -1157,11 +1157,6 @@ const LikedTab=React.memo(function LikedTab({liked,lang,t,mkTRow,toggleLike,tap,
     <div>
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 16px',marginBottom:8}}>
         <div style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{liked.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
-        {(()=>{const total=liked.filter((x:any)=>x.id).length;const allDl=total>0&&offlineCount===total;return(
-        <button onPointerDown={()=>{if(downloadingLiked)return;if(allDl){if(window.confirm(lang==='ru'?'Удалить загрузки лайкнутых?':'Remove liked downloads?'))onRemoveLiked();}else onDownloadLiked();}} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',background:allDl?ACC_DIM:'rgba(255,255,255,0.07)',border:`1px solid ${allDl?ACC+'66':'rgba(255,255,255,0.12)'}`,borderRadius:9,color:allDl?ACC:TEXT_PRIMARY,fontSize:11,fontWeight:600,cursor:'pointer',...tap}}>
-          {downloadingLiked?(<><svg viewBox="0 0 24 24" style={{width:13,height:13,animation:'spin 1s linear infinite'}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>{dlProgress.done}/{dlProgress.total}</>)
-          :allDl?(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{lang==='ru'?'Загружено':'Saved'}</>)
-          :(<><svg viewBox="0 0 24 24" style={{width:13,height:13}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>{lang==='ru'?'Скачать':'Download'}</>)}
         </button>);})()}
         <button onPointerDown={()=>{setLikedSearch((s:boolean)=>!s);setLikedQ('');}} style={{background:'none',border:'none',cursor:'pointer',padding:4,...tap}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={likedSearch?ACC:'#666'} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
