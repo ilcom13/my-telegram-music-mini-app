@@ -2204,6 +2204,16 @@ useEffect(()=>{
     setOfflineIds(prev=>{const n=new Set(prev);n.delete(trackId);return n;});
   };
 
+  // Удалить трек из IndexedDB, ТОЛЬКО если он больше не используется нигде (ни в одном плейлисте, ни в лайках)
+  const cleanupOfflineIfOrphan=async(trackId:string)=>{
+    if(!trackId||!offlineIds.has(trackId))return;
+    const inLiked=liked.some(t=>t.id===trackId);
+    const inAnyPl=playlistsRef.current.some(p=>p.tracks.some(t=>t.id===trackId));
+    if(!inLiked&&!inAnyPl){
+      await removeOffline(trackId);
+    }
+  };
+
   // Скачать весь плейлист батчами по 3 (бережём лимиты воркера)
   const downloadPlaylist=async(pl:Playlist)=>{
     const tracks=pl.tracks.filter(t=>t.id&&!offlineIds.has(t.id));
@@ -2659,7 +2669,7 @@ if(track.isArtist&&track.source==='audiomack')return;
   const inQ=(id:string)=>queue.some(t=>t.id===id);
   const setVol=(v:number)=>{setVolume(v);volumeRef.current=v;try{localStorage.setItem('v47',String(v));}catch{}};
   const isLk=(id:string)=>liked.some(t=>t.id===id);
-  const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);return n;});};
+  const toggleLike=(track:Track,e?:React.MouseEvent)=>{e?.stopPropagation();setLiked(prev=>{const has=prev.some(t=>t.id===track.id);const n=has?prev.filter(t=>t.id!==track.id):[track,...prev];try{localStorage.setItem('l47',JSON.stringify(n));}catch{}triggerSync(n,playlists,history,volume,favArtists,favAlbums,blockedArtists,bgCover);if(has)cleanupOfflineIfOrphan(track.id);return n;});};
   const blockArtist=(artist:string)=>{
     setBlockedArtists(prev=>{
       const n=[...new Set([...prev,artist])];
@@ -3171,7 +3181,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   };
   const deletePl=(plId:string)=>{setPlaylists(prev=>{const n=prev.filter(p=>p.id!==plId);playlistsRef.current=n;try{localStorage.setItem('p47',JSON.stringify(n));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();return n;});if(openPlId===plId)setOpenPlId(null);if(pinnedPlId===plId){setPinnedPlId(null);try{localStorage.removeItem('pin47');}catch{}}if(openPlPage===plId)setOpenPlPage(null);};
   const pinPl=(plId:string)=>{const newPin=pinnedPlId===plId?null:plId;setPinnedPlId(newPin);pinnedPlIdRef.current=newPin;try{if(newPin)localStorage.setItem('pin47',newPin);else localStorage.removeItem('pin47');}catch{}doFullSync();};
-  const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();republishIfShared(plId);};
+  const removeFromPl=(plId:string,trackId:string)=>{const updated=playlists.map(p=>p.id===plId?{...p,tracks:p.tracks.filter(t=>t.id!==trackId)}:p);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}doFullSync();republishIfShared(plId);cleanupOfflineIfOrphan(trackId);};
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;});setTimeout(()=>republishIfShared(plId),50);};
   const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();republishIfShared(plId);};
   const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
