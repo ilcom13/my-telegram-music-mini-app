@@ -1476,6 +1476,15 @@ export default function App(){
     }catch{return [];}
   },[]);
 
+  // Открыть чужой профиль (если это не мой uid)
+  const openUserProfile=useCallback((targetUid:string)=>{
+    if(!targetUid||targetUid==='anon')return;
+    if(targetUid===uid){setScreen('profile');return;} // если кликнули на себя — обычный профиль
+    setViewingProfile(targetUid);
+    setScreen('userProfile' as any);
+    loadProfile(targetUid);
+  },[uid,loadProfile]);
+
   useEffect(()=>{
     isPlayingRef.current=playing;
     if('mediaSession' in navigator&&audio.current&&audio.current.duration>0){
@@ -2562,11 +2571,14 @@ playCountRef.current+=1;
   useEffect(()=>{
     const startParam=window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if(!startParam||deepLinkHandled.current)return;
-    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-')&&!startParam.startsWith('amtrack-')&&!startParam.startsWith('pl_'))return;
+    if(!startParam.startsWith('track-')&&!startParam.startsWith('album-')&&!startParam.startsWith('amtrack-')&&!startParam.startsWith('pl_')&&!startParam.startsWith('user_'))return;
     deepLinkHandled.current=true;
     const openAndPlay=async()=>{
       try{
-        if(startParam.startsWith('pl_')){
+        if(startParam.startsWith('user_')){
+          const targetUid=startParam.slice(5);
+          if(targetUid&&targetUid!=='anon'&&targetUid!==uid){openUserProfile(targetUid);}
+        } else if(startParam.startsWith('pl_')){
           // формат: pl_<ownerUid>_<plId>
           const rest=startParam.slice(3);
           const sep=rest.indexOf('_');
@@ -4645,7 +4657,99 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
         )}
  
         {/* ── PROFILE ── */}
-        {screen==='profile'&&(
+        {/* ── Экран чужого профиля ── */}
+        {(screen as any)==='userProfile'&&viewingProfile&&(()=>{
+          const cache=profilesCache[viewingProfile];
+          const p=cache?.profile;
+          const followersCount=cache?.followersCount||0;
+          const followingCount=cache?.followingCount||0;
+          const isFollowing=followingSetRef.current.has(viewingProfile);
+          const loading=!cache;
+          return(
+            <div style={{padding:'12px 16px',paddingBottom:160}}>
+              {/* Шапка с кнопкой назад */}
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
+                <button onPointerDown={()=>{setScreen('home');setViewingProfile(null);}} style={{background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
+                  <svg viewBox="0 0 24 24" style={{width:18,height:18}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY}}>{lang==='ru'?'Профиль':lang==='uk'?'Профіль':lang==='kk'?'Профиль':lang==='pl'?'Profil':lang==='tr'?'Profil':'Profile'}</div>
+              </div>
+
+              {loading?(
+                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>
+              ):!p?(
+                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13}}>{lang==='ru'?'Профиль не найден':lang==='uk'?'Профіль не знайдено':'Profile not found'}</div>
+              ):(
+                <>
+                  {/* Аватар + имя */}
+                  <div style={{display:'flex',flexDirection:'column' as const,alignItems:'center',marginBottom:20}}>
+                    {p.photo?
+                      <img src={p.photo} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',marginBottom:12,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                      :<div style={{width:88,height:88,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12,fontSize:34,fontWeight:700,color:'#fff'}}>{(p.name||'?').charAt(0).toUpperCase()}</div>
+                    }
+                    <div style={{fontSize:19,fontWeight:700,color:TEXT_PRIMARY,marginBottom:2}}>{p.name||'User'}</div>
+                    {p.username&&<div style={{fontSize:12,color:TEXT_MUTED,marginBottom:14}}>@{p.username}</div>}
+
+                    {/* Счётчики подписчиков/подписок */}
+                    <div style={{display:'flex',gap:24,marginBottom:18}}>
+                      <div style={{textAlign:'center' as const}}>
+                        <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{followersCount}</div>
+                        <div style={{fontSize:10,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписчики':lang==='uk'?'Підписники':lang==='kk'?'Жазылушылар':lang==='pl'?'Obserwujący':lang==='tr'?'Takipçi':'Followers'}</div>
+                      </div>
+                      <div style={{textAlign:'center' as const}}>
+                        <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{followingCount}</div>
+                        <div style={{fontSize:10,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписки':lang==='uk'?'Підписки':lang==='kk'?'Жазылулар':lang==='pl'?'Subskrypcje':lang==='tr'?'Takip':'Following'}</div>
+                      </div>
+                    </div>
+
+                    {/* Кнопка подписки */}
+                    <button onPointerDown={()=>{if(isFollowing)unfollowUser(viewingProfile);else followUser(viewingProfile);}} style={{padding:'10px 28px',borderRadius:22,background:isFollowing?'rgba(255,255,255,0.07)':ACC,border:`1px solid ${isFollowing?'rgba(255,255,255,0.12)':ACC}`,color:isFollowing?TEXT_PRIMARY:BG,fontSize:13,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:7,...tap}}>
+                      {isFollowing?(<>
+                        <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        {lang==='ru'?'Вы подписаны':lang==='uk'?'Ви підписані':lang==='kk'?'Жазылдыңыз':lang==='pl'?'Obserwujesz':lang==='tr'?'Takip ediliyor':'Following'}
+                      </>):(<>
+                        <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        {lang==='ru'?'Подписаться':lang==='uk'?'Підписатися':lang==='kk'?'Жазылу':lang==='pl'?'Obserwuj':lang==='tr'?'Takip et':'Follow'}
+                      </>)}
+                    </button>
+                  </div>
+
+                  {/* Любимый трек */}
+                  {p.topTrack&&p.topTrack.id&&(
+                    <div style={{marginBottom:20}}>
+                      <div style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,letterSpacing:0.7,textTransform:'uppercase' as const,marginBottom:10}}>{lang==='ru'?'Любимый трек':lang==='uk'?'Улюблений трек':lang==='kk'?'Сүйікті трек':lang==='pl'?'Ulubiony utwór':lang==='tr'?'Favori parça':'Top track'}</div>
+                      <div style={{background:'rgba(255,255,255,0.04)',borderRadius:12,padding:12,display:'flex',alignItems:'center',gap:12}}>
+                        <Img src={p.topTrack.cover||''} size={52} radius={8}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.title||''}</div>
+                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.artist||''}</div>
+                        </div>
+                        <div style={{textAlign:'right' as const,flexShrink:0}}>
+                          <div style={{fontSize:18,fontWeight:700,color:ACC}}>{p.topTrack.plays||0}</div>
+                          <div style={{fontSize:9,color:TEXT_MUTED,letterSpacing:0.5,marginTop:1}}>{lang==='ru'?'ПЛЕЕВ':'PLAYS'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Поделиться профилем */}
+                  <button onPointerDown={()=>{
+                    const link=`https://t.me/forty7mbot?startapp=user_${viewingProfile}`;
+                    const text=lang==='ru'?`Посмотри профиль ${p.name||'юзера'} в Forty7`:`Check out ${p.name||'this user'}'s profile on Forty7`;
+                    const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+                    const tgApp=(window as any).Telegram?.WebApp;
+                    if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
+                    else if(tgApp?.openLink)tgApp.openLink(shareUrl);
+                    else{try{navigator.clipboard?.writeText(link);}catch{}window.open(shareUrl,'_blank');}
+                  }} style={{width:'100%',padding:'11px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
+                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    {lang==='ru'?'Поделиться профилем':lang==='uk'?'Поділитися':'Share profile'}
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })()}
           <div className="screen-fade">
             {showSettings&&(
               <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowSettings(false)}>
