@@ -1491,17 +1491,6 @@ export default function App(){
     return()=>{clearTimeout(tm);setProfileSearchLoading(false);};
   },[query,searchProfiles]);
 
-  useEffect(()=>{
-    if(searchKind!=='profiles')return;
-    const q=query.trim();
-    if(q.length<2){setProfileResults([]);return;}
-    setProfileSearchLoading(true);
-    const t=setTimeout(()=>{
-      searchProfiles(q).then(res=>{setProfileResults(res);setProfileSearchLoading(false);});
-    },350);
-    return()=>{clearTimeout(t);setProfileSearchLoading(false);};
-  },[query,searchKind,searchProfiles]);
-
   // Открыть чужой профиль (если это не мой uid)
   const openUserProfile=useCallback((targetUid:string)=>{
     if(!targetUid||targetUid==='anon')return;
@@ -4421,11 +4410,6 @@ return(
           </button>
         </div>
       </div>
-      {/* Переключатель Треки/Профили */}
-      <div style={{display:'flex',gap:6,marginBottom:10}}>
-        <button onPointerDown={()=>setSearchKind('tracks')} style={{flex:1,padding:'8px 12px',borderRadius:10,background:searchKind==='tracks'?ACC:'rgba(255,255,255,0.05)',border:`1px solid ${searchKind==='tracks'?ACC:'rgba(255,255,255,0.1)'}`,color:searchKind==='tracks'?BG:TEXT_PRIMARY,fontSize:12,fontWeight:700,cursor:'pointer',...tap}}>{lang==='ru'?'🎵 Треки':lang==='uk'?'🎵 Треки':lang==='kk'?'🎵 Тректер':lang==='pl'?'🎵 Utwory':lang==='tr'?'🎵 Parçalar':'🎵 Tracks'}</button>
-        <button onPointerDown={()=>setSearchKind('profiles')} style={{flex:1,padding:'8px 12px',borderRadius:10,background:searchKind==='profiles'?ACC:'rgba(255,255,255,0.05)',border:`1px solid ${searchKind==='profiles'?ACC:'rgba(255,255,255,0.1)'}`,color:searchKind==='profiles'?BG:TEXT_PRIMARY,fontSize:12,fontWeight:700,cursor:'pointer',...tap}}>{lang==='ru'?'👤 Профили':lang==='uk'?'👤 Профілі':lang==='kk'?'👤 Профильдер':lang==='pl'?'👤 Profile':lang==='tr'?'👤 Profiller':'👤 Profiles'}</button>
-      </div>
       {/* Строка поиска */}
       <div style={{display:'flex',gap:8,marginBottom:10}}>
         <div style={{flex:1,position:'relative' as const,display:'flex',alignItems:'center'}}>
@@ -4443,7 +4427,7 @@ return(
       </div>
 
       {/* Результаты поиска профилей */}
-      {searchKind==='profiles'&&(
+      {query.startsWith('@')&&(
         <div style={{padding:'8px 0'}}>
           {query.trim().length<2?(
             <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'30px 20px',lineHeight:1.5}}>{lang==='ru'?'Введите имя или @username другого пользователя':lang==='uk'?'Введіть ім\'я або @username':lang==='kk'?'Атын немесе @username енгізіңіз':lang==='pl'?'Wpisz imię lub @username':lang==='tr'?'İsim veya @username yazın':'Type a name or @username'}</div>
