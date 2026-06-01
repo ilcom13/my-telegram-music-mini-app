@@ -1416,7 +1416,8 @@ export default function App(){
       cover:(topTrackId[1] as any).cover||'',
       plays:(topTrackId[1] as any).count||0,
     }:null;
-    const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack};
+    const totalPlays=Object.values(trackPlays).reduce((sum:number,t:any)=>sum+(t.count||0),0);
+    const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack,totalPlays};
     const sig=JSON.stringify(payload);
     if(sig===lastProfileSyncRef.current)return; // не отправляем если ничего не изменилось
     lastProfileSyncRef.current=sig;
@@ -4736,80 +4737,114 @@ return(
           const isFollowing=followingSetRef.current.has(viewingProfile);
           const loading=!cache;
           const topCover=p?.topTrack?.cover||'';
+          const totalP=p?.totalPlays||0;
           return(
-            <div style={{position:'relative' as const,padding:'12px 16px',paddingBottom:160}}>
+            <div style={{position:'relative' as const,minHeight:'100vh',paddingBottom:160}}>
+              {/* Размытый баннер с обложкой топ-трека */}
               {topCover&&(
-                <div style={{position:'absolute' as const,top:0,left:0,right:0,height:260,overflow:'hidden',zIndex:0,pointerEvents:'none' as const}}>
-                  <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.6)',transform:'scale(1.05)',transition:'opacity 0.5s ease'}} onError={()=>{}}/>
-                  <div style={{position:'absolute' as const,inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,${BG} 100%)`}}/>
+                <div style={{position:'absolute' as const,top:0,left:0,right:0,height:380,overflow:'hidden',zIndex:0,pointerEvents:'none' as const}}>
+                  <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(8px) saturate(0.7) brightness(0.45)',transform:'scale(1.1)'}} onError={()=>{}}/>
+                  <div style={{position:'absolute' as const,inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.15) 0%,rgba(14,14,14,0.4) 50%,rgba(14,14,14,0.85) 85%,${BG} 100%)`}}/>
                 </div>
               )}
-              {/* Шапка с кнопкой назад */}
-              <div style={{position:'relative' as const,zIndex:1,display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
-                <button onPointerDown={()=>{setScreen('home');setViewingProfile(null);}} style={{background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
-                  <svg viewBox="0 0 24 24" style={{width:18,height:18}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+
+              {/* Кнопка назад */}
+              <div style={{position:'relative' as const,zIndex:2,display:'flex',alignItems:'center',padding:'14px 16px'}}>
+                <button onPointerDown={()=>{setScreen('home');setViewingProfile(null);}} style={{background:'rgba(0,0,0,0.4)',border:'none',width:38,height:38,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...tap}}>
+                  <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
-                <div style={{fontSize:15,fontWeight:600,color:TEXT_PRIMARY}}>{lang==='ru'?'Профиль':lang==='uk'?'Профіль':lang==='kk'?'Профиль':lang==='pl'?'Profil':lang==='tr'?'Profil':'Profile'}</div>
               </div>
 
               {loading?(
-                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>
+                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13,position:'relative',zIndex:1}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>
               ):!p?(
-                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13}}>{lang==='ru'?'Профиль не найден':lang==='uk'?'Профіль не знайдено':'Profile not found'}</div>
+                <div style={{textAlign:'center' as const,padding:'40px 0',color:TEXT_MUTED,fontSize:13,position:'relative',zIndex:1}}>{lang==='ru'?'Профиль не найден':lang==='uk'?'Профіль не знайдено':'Profile not found'}</div>
               ):(
-                <>
-                  {/* Аватар + имя */}
-                  <div style={{position:'relative' as const,zIndex:1,display:'flex',flexDirection:'column' as const,alignItems:'center',marginBottom:20}}>
+                <div style={{position:'relative' as const,zIndex:1,padding:'0 20px'}}>
+                  {/* Аватар по центру */}
+                  <div style={{display:'flex',flexDirection:'column' as const,alignItems:'center',marginTop:30,marginBottom:14}}>
                     {p.photo?
-                      <img src={p.photo} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',marginBottom:12,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                      :<div style={{width:88,height:88,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12,fontSize:34,fontWeight:700,color:'#fff'}}>{(p.name||'?').charAt(0).toUpperCase()}</div>
+                      <img src={p.photo} style={{width:120,height:120,borderRadius:'50%',objectFit:'cover',border:'4px solid rgba(0,0,0,0.4)',boxShadow:'0 8px 32px rgba(0,0,0,0.4)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                      :<div style={{width:120,height:120,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:44,fontWeight:700,color:'#fff',border:'4px solid rgba(0,0,0,0.4)',boxShadow:'0 8px 32px rgba(0,0,0,0.4)'}}>{(p.name||'?').charAt(0).toUpperCase()}</div>
                     }
-                    <div style={{fontSize:19,fontWeight:700,color:TEXT_PRIMARY,marginBottom:2}}>{p.name||'User'}</div>
-                    {p.username&&<div style={{fontSize:12,color:TEXT_MUTED,marginBottom:14}}>@{p.username}</div>}
+                  </div>
 
-                    {/* Счётчики подписчиков/подписок */}
-                    <div style={{display:'flex',gap:24,marginBottom:18}}>
-                      <div style={{textAlign:'center' as const}}>
-                        <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{followersCount}</div>
-                        <div style={{fontSize:10,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписчики':lang==='uk'?'Підписники':lang==='kk'?'Жазылушылар':lang==='pl'?'Obserwujący':lang==='tr'?'Takipçi':'Followers'}</div>
-                      </div>
-                      <div style={{textAlign:'center' as const}}>
-                        <div style={{fontSize:18,fontWeight:700,color:TEXT_PRIMARY}}>{followingCount}</div>
-                        <div style={{fontSize:10,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписки':lang==='uk'?'Підписки':lang==='kk'?'Жазылулар':lang==='pl'?'Subskrypcje':lang==='tr'?'Takip':'Following'}</div>
-                      </div>
+                  {/* Имя + юзернейм */}
+                  <div style={{textAlign:'center' as const,marginBottom:24}}>
+                    <div style={{fontSize:24,fontWeight:800,color:'#fff',display:'inline-flex',alignItems:'center',gap:6,marginBottom:4}}>
+                      {p.name||'User'}
+                      <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill={ACC} stroke="none"><path d="M12 1l2.39 2.85L18 3l.85 3.61L22 8l-1.61 3.61L22 16l-3.15 1.39L18 21l-3.61-.85L12 23l-2.39-2.85L6 21l-.85-3.61L2 16l1.61-4.39L2 8l3.15-1.39L6 3l3.61.85L12 1z"/><path d="M9 12l2 2 4-4" stroke="#0e0e0e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
                     </div>
+                    {p.username&&<div style={{fontSize:14,color:TEXT_MUTED}}>@{p.username}</div>}
+                  </div>
 
-                    {/* Кнопка подписки */}
-                    <button onPointerDown={()=>{if(isFollowing)unfollowUser(viewingProfile);else followUser(viewingProfile);}} style={{padding:'10px 28px',borderRadius:22,background:isFollowing?'rgba(255,255,255,0.07)':ACC,border:`1px solid ${isFollowing?'rgba(255,255,255,0.12)':ACC}`,color:isFollowing?TEXT_PRIMARY:BG,fontSize:13,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:7,...tap}}>
+                  {/* Три категории: Followers / Following / Plays */}
+                  <div style={{display:'flex',justifyContent:'space-around',marginBottom:24,padding:'0 8px'}}>
+                    <div style={{textAlign:'center' as const,flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginBottom:4}}>
+                        <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        <div style={{fontSize:22,fontWeight:800,color:'#fff'}}>{followersCount}</div>
+                      </div>
+                      <div style={{fontSize:11,color:TEXT_MUTED,fontWeight:500}}>{lang==='ru'?'Подписчики':lang==='uk'?'Підписники':lang==='kk'?'Жазылушылар':lang==='pl'?'Obserwujący':lang==='tr'?'Takipçi':'Followers'}</div>
+                    </div>
+                    <div style={{width:1,background:'rgba(255,255,255,0.08)'}}/>
+                    <div style={{textAlign:'center' as const,flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginBottom:4}}>
+                        <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                        <div style={{fontSize:22,fontWeight:800,color:'#fff'}}>{followingCount}</div>
+                      </div>
+                      <div style={{fontSize:11,color:TEXT_MUTED,fontWeight:500}}>{lang==='ru'?'Подписки':lang==='uk'?'Підписки':lang==='kk'?'Жазылулар':lang==='pl'?'Subskrypcje':lang==='tr'?'Takip':'Following'}</div>
+                    </div>
+                    <div style={{width:1,background:'rgba(255,255,255,0.08)'}}/>
+                    <div style={{textAlign:'center' as const,flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginBottom:4}}>
+                        <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        <div style={{fontSize:22,fontWeight:800,color:'#fff'}}>{totalP}</div>
+                      </div>
+                      <div style={{fontSize:11,color:TEXT_MUTED,fontWeight:500}}>{lang==='ru'?'Плеев':lang==='uk'?'Програвань':lang==='kk'?'Ойнатулар':lang==='pl'?'Odtworzeń':lang==='tr'?'Çalma':'Plays'}</div>
+                    </div>
+                  </div>
+
+                  {/* Кнопка Follow */}
+                  <div style={{display:'flex',justifyContent:'center',marginBottom:30}}>
+                    <button onPointerDown={()=>{if(isFollowing)unfollowUser(viewingProfile);else followUser(viewingProfile);}} style={{padding:'13px 50px',borderRadius:30,background:isFollowing?'rgba(255,255,255,0.07)':ACC,border:`1px solid ${isFollowing?'rgba(255,255,255,0.12)':ACC}`,color:isFollowing?TEXT_PRIMARY:BG,fontSize:15,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8,transition:'all 0.25s ease',...tap}}>
                       {isFollowing?(<>
-                        <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        <svg viewBox="0 0 24 24" style={{width:16,height:16}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                         {lang==='ru'?'Вы подписаны':lang==='uk'?'Ви підписані':lang==='kk'?'Жазылдыңыз':lang==='pl'?'Obserwujesz':lang==='tr'?'Takip ediliyor':'Following'}
                       </>):(<>
-                        <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <svg viewBox="0 0 24 24" style={{width:16,height:16}} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         {lang==='ru'?'Подписаться':lang==='uk'?'Підписатися':lang==='kk'?'Жазылу':lang==='pl'?'Obserwuj':lang==='tr'?'Takip et':'Follow'}
                       </>)}
                     </button>
                   </div>
 
-                  {/* Любимый трек */}
+                  {/* Top Track */}
                   {p.topTrack&&p.topTrack.id&&(
-                    <div style={{position:'relative' as const,zIndex:1,marginBottom:20}}>
-                      <div style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,letterSpacing:0.7,textTransform:'uppercase' as const,marginBottom:10}}>{lang==='ru'?'Любимый трек':lang==='uk'?'Улюблений трек':lang==='kk'?'Сүйікті трек':lang==='pl'?'Ulubiony utwór':lang==='tr'?'Favori parça':'Top track'}</div>
-                      <div style={{background:'rgba(255,255,255,0.04)',borderRadius:12,padding:12,display:'flex',alignItems:'center',gap:12}}>
-                        <Img src={p.topTrack.cover||''} size={52} radius={8}/>
+                    <div style={{marginBottom:18}}>
+                      <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:10}}>Top Track</div>
+                      <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,padding:14,display:'flex',alignItems:'center',gap:14}}>
+                        <Img src={p.topTrack.cover||''} size={66} radius={10}/>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.title||''}</div>
-                          <div style={{fontSize:11,color:TEXT_SEC,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.artist||''}</div>
+                          <div style={{fontSize:15,fontWeight:700,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.title||''}</div>
+                          <div style={{fontSize:12,color:TEXT_MUTED,marginTop:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.topTrack.artist||''}</div>
                         </div>
-                        <div style={{textAlign:'right' as const,flexShrink:0}}>
-                          <div style={{fontSize:18,fontWeight:700,color:ACC}}>{p.topTrack.plays||0}</div>
-                          <div style={{fontSize:9,color:TEXT_MUTED,letterSpacing:0.5,marginTop:1}}>{lang==='ru'?'ПЛЕЕВ':'PLAYS'}</div>
+                        <div style={{textAlign:'center' as const,flexShrink:0,marginRight:4}}>
+                          <div style={{fontSize:24,fontWeight:800,color:ACC,lineHeight:1}}>{p.topTrack.plays||0}</div>
+                          <div style={{fontSize:9,color:TEXT_MUTED,letterSpacing:0.6,marginTop:2,fontWeight:600}}>PLAYS</div>
                         </div>
+                        <button onPointerDown={()=>{
+                          const t=p.topTrack;
+                          if(!t||!t.id)return;
+                          const track:Track={id:t.id,title:t.title,artist:t.artist,cover:t.cover,duration:'',plays:t.plays,mp3:null,source:'soundcloud'};
+                          playTrack(track);
+                        }} style={{width:42,height:42,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
+                          <svg viewBox="0 0 24 24" style={{width:20,height:20,marginLeft:2}} fill={BG} stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Поделиться профилем */}
+                  {/* Share profile */}
                   <button onPointerDown={()=>{
                     const link=`https://t.me/forty7mbot?startapp=user_${viewingProfile}`;
                     const text=lang==='ru'?`Посмотри профиль ${p.name||'юзера'} в Forty7`:`Check out ${p.name||'this user'}'s profile on Forty7`;
@@ -4818,11 +4853,11 @@ return(
                     if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
                     else if(tgApp?.openLink)tgApp.openLink(shareUrl);
                     else{try{navigator.clipboard?.writeText(link);}catch{}window.open(shareUrl,'_blank');}
-                  }} style={{position:'relative' as const,zIndex:1,width:'100%',padding:'11px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
-                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                    {lang==='ru'?'Поделиться профилем':lang==='uk'?'Поділитися':'Share profile'}
+                  }} style={{width:'100%',padding:'14px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:14,color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,...tap}}>
+                    <svg viewBox="0 0 24 24" style={{width:15,height:15}} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    Share profile
                   </button>
-                </>
+                </div>
               )}
             </div>
           );
