@@ -4714,10 +4714,17 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
           const followingCount=cache?.followingCount||0;
           const isFollowing=followingSetRef.current.has(viewingProfile);
           const loading=!cache;
+          const topCover=p?.topTrack?.cover||'';
           return(
-            <div style={{padding:'12px 16px',paddingBottom:160}}>
+            <div style={{position:'relative' as const,padding:'12px 16px',paddingBottom:160}}>
+              {topCover&&(
+                <div style={{position:'absolute' as const,top:0,left:0,right:0,height:260,overflow:'hidden',zIndex:0,pointerEvents:'none' as const}}>
+                  <img key={topCover} src={topCover} style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.6)',transform:'scale(1.05)',transition:'opacity 0.5s ease'}} onError={()=>{}}/>
+                  <div style={{position:'absolute' as const,inset:0,background:`linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,${BG} 100%)`}}/>
+                </div>
+              )}
               {/* Шапка с кнопкой назад */}
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
+              <div style={{position:'relative' as const,zIndex:1,display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
                 <button onPointerDown={()=>{setScreen('home');setViewingProfile(null);}} style={{background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
                   <svg viewBox="0 0 24 24" style={{width:18,height:18}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
