@@ -4738,7 +4738,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
               ):(
                 <>
                   {/* Аватар + имя */}
-                  <div style={{display:'flex',flexDirection:'column' as const,alignItems:'center',marginBottom:20}}>
+                  <div style={{position:'relative' as const,zIndex:1,display:'flex',flexDirection:'column' as const,alignItems:'center',marginBottom:20}}>
                     {p.photo?
                       <img src={p.photo} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',marginBottom:12,border:`2px solid ${ACC}33`}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                       :<div style={{width:88,height:88,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:12,fontSize:34,fontWeight:700,color:'#fff'}}>{(p.name||'?').charAt(0).toUpperCase()}</div>
@@ -4772,7 +4772,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
 
                   {/* Любимый трек */}
                   {p.topTrack&&p.topTrack.id&&(
-                    <div style={{marginBottom:20}}>
+                    <div style={{position:'relative' as const,zIndex:1,marginBottom:20}}>
                       <div style={{fontSize:10,color:TEXT_MUTED,fontWeight:600,letterSpacing:0.7,textTransform:'uppercase' as const,marginBottom:10}}>{lang==='ru'?'Любимый трек':lang==='uk'?'Улюблений трек':lang==='kk'?'Сүйікті трек':lang==='pl'?'Ulubiony utwór':lang==='tr'?'Favori parça':'Top track'}</div>
                       <div style={{background:'rgba(255,255,255,0.04)',borderRadius:12,padding:12,display:'flex',alignItems:'center',gap:12}}>
                         <Img src={p.topTrack.cover||''} size={52} radius={8}/>
@@ -4797,7 +4797,7 @@ style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?AC
                     if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
                     else if(tgApp?.openLink)tgApp.openLink(shareUrl);
                     else{try{navigator.clipboard?.writeText(link);}catch{}window.open(shareUrl,'_blank');}
-                  }} style={{width:'100%',padding:'11px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
+                  }} style={{position:'relative' as const,zIndex:1,width:'100%',padding:'11px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
                     <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                     {lang==='ru'?'Поделиться профилем':lang==='uk'?'Поділитися':'Share profile'}
                   </button>
