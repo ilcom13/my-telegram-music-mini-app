@@ -1445,13 +1445,22 @@ export default function App(){
   const loadProfile=useCallback(async(targetUid:string)=>{
     if(!targetUid||targetUid==='anon')return null;
     try{
+      console.log('[loadProfile] START for',targetUid);
       const r=await fetch(`${W}/profile/get?uid=${encodeURIComponent(targetUid)}&t=${Date.now()}`,{cache:'no-store'});
       const d=await r.json();
-      console.log('[loadProfile]',targetUid,'response:',d,'totalPlays:',d.profile?.totalPlays,'topTrack:',d.profile?.topTrack);
+      console.log('[loadProfile] RESPONSE for',targetUid,d);
       const full={profile:d.profile,followersCount:d.followersCount||0,followingCount:d.followingCount||0};
-      setProfilesCache(prev=>{const next={...prev,[targetUid]:full};console.log('[loadProfile] cache updated:',next);return next;});
+      console.log('[loadProfile] SAVING to cache:',full);
+      setProfilesCache(prev=>{
+        const next={...prev,[targetUid]:full};
+        console.log('[loadProfile] CACHE updated:',next);
+        return next;
+      });
       return full;
-    }catch{return null;}
+    }catch(err){
+      console.log('[loadProfile] ERROR:',err);
+      return null;
+    }
   },[]);
 
   const followUser=useCallback(async(targetUid:string)=>{
@@ -4739,6 +4748,7 @@ return(
           const loading=!cache;
           const topCover=p?.topTrack?.cover||'';
           const totalP=p?.totalPlays||0;
+          console.log('[render userProfile]',{viewingProfile,cache,p,totalP,topCover,allCache:profilesCache});
           return(
             <div style={{position:'relative' as const,minHeight:'100vh',paddingBottom:160}}>
               {/* Размытый баннер с обложкой топ-трека */}
