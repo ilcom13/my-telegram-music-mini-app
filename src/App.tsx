@@ -1445,10 +1445,11 @@ export default function App(){
   const loadProfile=useCallback(async(targetUid:string)=>{
     if(!targetUid||targetUid==='anon')return null;
     try{
-      const r=await fetch(`${W}/profile/get?uid=${encodeURIComponent(targetUid)}`);
+      const r=await fetch(`${W}/profile/get?uid=${encodeURIComponent(targetUid)}&t=${Date.now()}`,{cache:'no-store'});
       const d=await r.json();
+      console.log('[loadProfile]',targetUid,'response:',d,'totalPlays:',d.profile?.totalPlays,'topTrack:',d.profile?.topTrack);
       const full={profile:d.profile,followersCount:d.followersCount||0,followingCount:d.followingCount||0};
-      setProfilesCache(prev=>({...prev,[targetUid]:full}));
+      setProfilesCache(prev=>{const next={...prev,[targetUid]:full};console.log('[loadProfile] cache updated:',next);return next;});
       return full;
     }catch{return null;}
   },[]);
