@@ -5037,7 +5037,7 @@ return(
             ):followListProfiles.length===0?(
               <div style={{textAlign:'center' as const,padding:'30px 20px',color:TEXT_MUTED,fontSize:12,lineHeight:1.5}}>
                 {showFollowList==='following'
-                  ?(lang==='ru'?'Вы ни на кого не подписаны':lang==='uk'?'Ви ні на кого не підписані':'You\\'re not following anyone yet')
+                  ?(lang==='ru'?'Вы ни на кого не подписаны':lang==='uk'?'Ви ні на кого не підписані':"You're not following anyone yet")
                   :(lang==='ru'?'У вас пока нет подписчиков':lang==='uk'?'У вас поки немає підписників':'No followers yet')}
               </div>
             ):(
