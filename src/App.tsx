@@ -1153,17 +1153,6 @@ export default function App(){
   const [searchKind,setSearchKind]=useState<'tracks'|'profiles'>('tracks');
   const [profileResults,setProfileResults]=useState<any[]>([]);
   const [profileSearchLoading,setProfileSearchLoading]=useState(false);
-useEffect(()=>{
-    if(searchKind!=='profiles')return;
-    const q=query.trim();
-    if(q.length<2){setProfileResults([]);return;}
-    setProfileSearchLoading(true);
-    const t=setTimeout(()=>{
-      searchProfiles(q).then(res=>{setProfileResults(res);setProfileSearchLoading(false);});
-    },350); // debounce 350мс
-    return()=>{clearTimeout(t);setProfileSearchLoading(false);};
-  },[query,searchKind,searchProfiles]);
-  
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
   const [showLibSettings,setShowLibSettings]=useState(false);
 
@@ -1489,6 +1478,17 @@ useEffect(()=>{
       return Array.isArray(d.results)?d.results:[];
     }catch{return [];}
   },[]);
+
+  useEffect(()=>{
+    if(searchKind!=='profiles')return;
+    const q=query.trim();
+    if(q.length<2){setProfileResults([]);return;}
+    setProfileSearchLoading(true);
+    const t=setTimeout(()=>{
+      searchProfiles(q).then(res=>{setProfileResults(res);setProfileSearchLoading(false);});
+    },350);
+    return()=>{clearTimeout(t);setProfileSearchLoading(false);};
+  },[query,searchKind,searchProfiles]);
 
   // Открыть чужой профиль (если это не мой uid)
   const openUserProfile=useCallback((targetUid:string)=>{
