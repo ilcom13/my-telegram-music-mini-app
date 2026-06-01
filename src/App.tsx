@@ -1400,6 +1400,9 @@ export default function App(){
   // кэш просмотренных чужих профилей (живёт только в сессии)
   const [profilesCache,setProfilesCache]=useState<Record<string,any>>({});
   const [viewingProfile,setViewingProfile]=useState<string|null>(null); // uid чужого профиля для просмотра
+  const [showFollowList,setShowFollowList]=useState<'following'|'followers'|null>(null);
+  const [followListProfiles,setFollowListProfiles]=useState<any[]>([]);
+  const [followListLoading,setFollowListLoading]=useState(false);
 
   // Отправляем свой профиль на сервер (редко — только при изменениях)
   const lastProfileSyncRef=useRef<string>('');
@@ -1463,6 +1466,22 @@ export default function App(){
       setFollowingList(prev=>{const n=prev.filter(x=>x!==targetUid);try{localStorage.setItem('flw47',JSON.stringify(n));}catch{}return n;});
     }
   },[uid,loadProfile]);
+
+  // Загрузить полные профили списка uid-ов
+  const loadProfilesBatch=useCallback(async(uids:string[]):Promise<any[]>=>{
+    if(!uids.length)return [];
+    setFollowListLoading(true);
+    try{
+      const results=await Promise.all(uids.map(async u=>{
+        try{
+          const r=await fetch(`${W}/profile/get?uid=${encodeURIComponent(u)}`);
+          const d=await r.json();
+          return d.profile?{uid:u,...d.profile}:null;
+        }catch{return null;}
+      }));
+      return results.filter(Boolean);
+    }finally{setFollowListLoading(false);}
+  },[]);
 
   const unfollowUser=useCallback(async(targetUid:string)=>{
     if(uid==='anon'||!targetUid)return;
@@ -4880,6 +4899,17 @@ return(
                     }
                     <div style={{fontSize:17,fontWeight:600,color:TEXT_PRIMARY}}>{uName}</div>
                     {uHandle&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{uHandle}</div>}
+                    {/* Счётчики подписок/подписчиков */}
+                    <div style={{display:'flex',gap:20,marginTop:12}}>
+                      <button onPointerDown={()=>{setShowFollowList('followers');loadProfilesBatch(followersList).then(setFollowListProfiles);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'center' as const,...tap}}>
+                        <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY}}>{followersList.length}</div>
+                        <div style={{fontSize:9,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписчики':lang==='uk'?'Підписники':lang==='kk'?'Жазылушылар':lang==='pl'?'Obserwujący':lang==='tr'?'Takipçi':'Followers'}</div>
+                      </button>
+                      <button onPointerDown={()=>{setShowFollowList('following');loadProfilesBatch(followingList).then(setFollowListProfiles);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'center' as const,...tap}}>
+                        <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY}}>{followingList.length}</div>
+                        <div style={{fontSize:9,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.5,marginTop:2}}>{lang==='ru'?'Подписки':lang==='uk'?'Підписки':lang==='kk'?'Жазылулар':lang==='pl'?'Subskrypcje':lang==='tr'?'Takip':'Following'}</div>
+                      </button>
+                    </div>
                   </div>
                   {/* ── MONTHLY STATS BUTTON ── */}
                   <div style={{position:'relative',zIndex:1,padding:'0 16px',paddingBottom:16}}>
@@ -4988,6 +5018,51 @@ return(
             <button onPointerDown={()=>{const f=dlWarnFor;setDlWarnFor(null);if(f.type==='liked')downloadLiked();else if(f.pl)downloadPlaylist(f.pl);}} style={{width:'100%',padding:'14px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:10,...tap}}>
               {lang==='ru'?'Окей':lang==='uk'?'Гаразд':lang==='kk'?'Жарайды':lang==='pl'?'OK':lang==='tr'?'Tamam':'Okay'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка списка подписок/подписчиков */}
+      {showFollowList&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:550,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowFollowList(null)}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'75vh',background:'#161616',borderRadius:'20px 20px 0 0',padding:'20px 16px calc(20px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none',overflow:'auto'}}>
+            <div style={{width:36,height:4,background:'#333',borderRadius:2,margin:'0 auto 16px'}}/>
+            <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,marginBottom:14,textAlign:'center' as const}}>
+              {showFollowList==='following'
+                ?(lang==='ru'?'Подписки':lang==='uk'?'Підписки':lang==='kk'?'Жазылулар':lang==='pl'?'Subskrypcje':lang==='tr'?'Takip':'Following')
+                :(lang==='ru'?'Подписчики':lang==='uk'?'Підписники':lang==='kk'?'Жазылушылар':lang==='pl'?'Obserwujący':lang==='tr'?'Takipçi':'Followers')}
+            </div>
+            {followListLoading?(
+              <div style={{textAlign:'center' as const,padding:'30px 0',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>
+            ):followListProfiles.length===0?(
+              <div style={{textAlign:'center' as const,padding:'30px 20px',color:TEXT_MUTED,fontSize:12,lineHeight:1.5}}>
+                {showFollowList==='following'
+                  ?(lang==='ru'?'Вы ни на кого не подписаны':lang==='uk'?'Ви ні на кого не підписані':'You\\'re not following anyone yet')
+                  :(lang==='ru'?'У вас пока нет подписчиков':lang==='uk'?'У вас поки немає підписників':'No followers yet')}
+              </div>
+            ):(
+              <div style={{display:'flex',flexDirection:'column' as const,gap:6}}>
+                {followListProfiles.map((pr:any)=>(
+                  <div key={pr.uid} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12}}>
+                    <button onPointerDown={()=>{setShowFollowList(null);openUserProfile(pr.uid);}} style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,background:'none',border:'none',padding:0,cursor:'pointer',textAlign:'left' as const,...tap}}>
+                      {pr.photo?
+                        <img src={pr.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                        :<div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#fff',flexShrink:0}}>{(pr.name||'?').charAt(0).toUpperCase()}</div>
+                      }
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pr.name||'User'}</div>
+                        {pr.username&&<div style={{fontSize:11,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>@{pr.username}</div>}
+                      </div>
+                    </button>
+                    {showFollowList==='following'&&followingSetRef.current.has(pr.uid)&&(
+                      <button onPointerDown={()=>{unfollowUser(pr.uid);setFollowListProfiles(prev=>prev.filter(x=>x.uid!==pr.uid));}} style={{padding:'5px 11px',background:'rgba(208,96,96,0.12)',border:'1px solid #3a2020',borderRadius:8,color:'#e06060',fontSize:11,fontWeight:600,cursor:'pointer',flexShrink:0,...tap}}>
+                        {lang==='ru'?'Отписаться':lang==='uk'?'Відписатися':'Unfollow'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -5409,6 +5484,22 @@ importSource={importSource} setImportSource={setImportSource}
                 {lang==='ru'?'Слушай музыку в течение месяца — в конце января покажем все твои итоги':lang==='uk'?'Слухай музику протягом місяця — наприкінці покажемо підсумки':'Listen to music this month — we\'ll show your full recap at the end of the month'}
               </div>
             </div>
+          )}
+
+          {/* Кнопка «Поделиться моим профилем» */}
+          {uid!=='anon'&&(
+            <button onPointerDown={()=>{
+              const link=`https://t.me/forty7mbot?startapp=user_${uid}`;
+              const text=lang==='ru'?'Мой профиль в Forty7':lang==='uk'?'Мій профіль у Forty7':lang==='kk'?'Forty7-дегі профилім':lang==='pl'?'Mój profil w Forty7':lang==='tr'?'Forty7\'deki profilim':'My profile on Forty7';
+              const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+              const tgApp=(window as any).Telegram?.WebApp;
+              if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
+              else if(tgApp?.openLink)tgApp.openLink(shareUrl);
+              else{try{navigator.clipboard?.writeText(link);}catch{}window.open(shareUrl,'_blank');}
+            }} style={{width:'calc(100% - 32px)',margin:'8px 16px 14px',padding:'12px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,...tap}}>
+              <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={TEXT_PRIMARY} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              {lang==='ru'?'Поделиться профилем':lang==='uk'?'Поділитися профілем':lang==='kk'?'Профильмен бөлісу':lang==='pl'?'Udostępnij profil':lang==='tr'?'Profili paylaş':'Share profile'}
+            </button>
           )}
 
           </div>
