@@ -4933,6 +4933,17 @@ return(
                           </button>
                         );
                       })()}
+                      {uid!=='anon'&&<button onPointerDown={()=>{
+                        const link=`https://t.me/forty7mbot?startapp=user_${uid}`;
+                        const text=lang==='ru'?'Мой профиль в Forty7':lang==='uk'?'Мій профіль у Forty7':lang==='kk'?'Forty7-дегі профилім':lang==='pl'?'Mój profil w Forty7':lang==='tr'?"Forty7'deki profilim":'My profile on Forty7';
+                        const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+                        const tgApp=(window as any).Telegram?.WebApp;
+                        if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
+                        else if(tgApp?.openLink)tgApp.openLink(shareUrl);
+                        else{try{navigator.clipboard?.writeText(link);}catch{}window.open(shareUrl,'_blank');}
+                      }} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,marginRight:8,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      </button>}
                       <button onPointerDown={()=>setShowSettings(true)} style={{width:34,height:34,minWidth:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                       </button>
