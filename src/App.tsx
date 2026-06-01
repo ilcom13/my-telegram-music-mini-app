@@ -4414,7 +4414,7 @@ return(
         })()}
         <div style={{marginLeft:'auto'}}>
           <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:incognito?ACC:'transparent',border:`2px solid ${incognito?ACC:'rgba(255,255,255,0.12)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,boxSizing:'border-box' as const,flexShrink:0,transition:'all 0.25s ease',...tap}}>
-            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill={incognito?BG:'none'} stroke={incognito?BG:TEXT_MUTED} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C9 2 6.5 4 6 7l-1 5c-.3 1.5.8 3 2.3 3h.7c.8 0 1.5-.4 2-1l1-1.5c.3-.5 1-.5 1.3 0L13.3 14c.4.6 1.1 1 2 1h.7c1.5 0 2.6-1.5 2.3-3l-1-5C16.8 4 14.3 2 12 2z" opacity="0.85"/><circle cx="9" cy="10" r="1.2" fill={incognito?ACC:'#0e0e0e'} stroke="none"/><circle cx="15" cy="10" r="1.2" fill={incognito?ACC:'#0e0e0e'} stroke="none"/><path d="M3 19h18M5 22h14"/></svg>
+            <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={incognito?BG:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
           </button>
         </div>
       </div>
