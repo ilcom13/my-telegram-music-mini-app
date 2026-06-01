@@ -1379,6 +1379,102 @@ export default function App(){
   const uName=tg?.first_name||tg?.username||'User';
   const uHandle=tg?.username?`@${tg.username}`:'';
   const uInit=uName.charAt(0).toUpperCase();
+  const uUsername=tg?.username||'';
+  const uPhoto=tg?.photo_url||'';
+
+  // ── Профили/подписки ──
+  const [followingList,setFollowingList]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('flw47')||'[]');}catch{return [];}});
+  const [followersList,setFollowersList]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('flwrs47')||'[]');}catch{return [];}});
+  const followingSetRef=useRef<Set<string>>(new Set(followingList));
+  useEffect(()=>{followingSetRef.current=new Set(followingList);},[followingList]);
+  // кэш просмотренных чужих профилей (живёт только в сессии)
+  const [profilesCache,setProfilesCache]=useState<Record<string,any>>({});
+  const [viewingProfile,setViewingProfile]=useState<string|null>(null); // uid чужого профиля для просмотра
+
+  // Отправляем свой профиль на сервер (редко — только при изменениях)
+  const lastProfileSyncRef=useRef<string>('');
+  const syncMyProfile=useCallback(()=>{
+    if(uid==='anon')return;
+    const topTrackId=Object.entries(trackPlays).sort(([,a]:any,[,b]:any)=>b.count-a.count)[0];
+    const topTrack=topTrackId?{
+      id:topTrackId[0],
+      title:(topTrackId[1] as any).title||'',
+      artist:(topTrackId[1] as any).artist||'',
+      cover:(topTrackId[1] as any).cover||'',
+      plays:(topTrackId[1] as any).count||0,
+    }:null;
+    const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack};
+    const sig=JSON.stringify(payload);
+    if(sig===lastProfileSyncRef.current)return; // не отправляем если ничего не изменилось
+    lastProfileSyncRef.current=sig;
+    fetch(`${W}/profile/sync`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(()=>{});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[uid,uName,uUsername,uPhoto,trackPlays]);
+
+  // Синк профиля при старте и каждый час
+  useEffect(()=>{
+    if(uid==='anon')return;
+    syncMyProfile();
+    const i=setInterval(syncMyProfile,60*60*1000); // раз в час
+    return()=>clearInterval(i);
+  },[syncMyProfile,uid]);
+
+  useEffect(()=>{
+    if(uid==='anon')return;
+    fetch(`${W}/profile/lists?uid=${uid}`).then(r=>r.json()).then(d=>{
+      if(Array.isArray(d.following)){setFollowingList(d.following);try{localStorage.setItem('flw47',JSON.stringify(d.following));}catch{}}
+      if(Array.isArray(d.followers)){setFollowersList(d.followers);try{localStorage.setItem('flwrs47',JSON.stringify(d.followers));}catch{}}
+    }).catch(()=>{});
+  },[uid]);
+
+  // Загрузка чужого профиля
+  const loadProfile=useCallback(async(targetUid:string)=>{
+    if(!targetUid||targetUid==='anon')return null;
+    try{
+      const r=await fetch(`${W}/profile/get?uid=${encodeURIComponent(targetUid)}`);
+      const d=await r.json();
+      const full={profile:d.profile,followersCount:d.followersCount||0,followingCount:d.followingCount||0};
+      setProfilesCache(prev=>({...prev,[targetUid]:full}));
+      return full;
+    }catch{return null;}
+  },[]);
+
+  const followUser=useCallback(async(targetUid:string)=>{
+    if(uid==='anon'||!targetUid||targetUid===uid)return;
+    if(followingSetRef.current.has(targetUid))return; // уже подписан
+    // оптимистичное обновление
+    setFollowingList(prev=>{const n=[...prev,targetUid];try{localStorage.setItem('flw47',JSON.stringify(n));}catch{}return n;});
+    try{
+      await fetch(`${W}/profile/follow`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid,targetUid})});
+      // перезагружаем профиль чтобы счётчик обновился
+      loadProfile(targetUid);
+    }catch{
+      // откат при ошибке
+      setFollowingList(prev=>{const n=prev.filter(x=>x!==targetUid);try{localStorage.setItem('flw47',JSON.stringify(n));}catch{}return n;});
+    }
+  },[uid,loadProfile]);
+
+  const unfollowUser=useCallback(async(targetUid:string)=>{
+    if(uid==='anon'||!targetUid)return;
+    setFollowingList(prev=>{const n=prev.filter(x=>x!==targetUid);try{localStorage.setItem('flw47',JSON.stringify(n));}catch{}return n;});
+    try{
+      await fetch(`${W}/profile/unfollow`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid,targetUid})});
+      loadProfile(targetUid);
+    }catch{
+      // откат при ошибке
+      setFollowingList(prev=>{const n=[...prev,targetUid];try{localStorage.setItem('flw47',JSON.stringify(n));}catch{}return n;});
+    }
+  },[uid,loadProfile]);
+
+  // Поиск профилей
+  const searchProfiles=useCallback(async(q:string):Promise<any[]>=>{
+    if(!q||q.trim().length<2)return [];
+    try{
+      const r=await fetch(`${W}/profile/search?q=${encodeURIComponent(q.trim())}`);
+      const d=await r.json();
+      return Array.isArray(d.results)?d.results:[];
+    }catch{return [];}
+  },[]);
 
   useEffect(()=>{
     isPlayingRef.current=playing;
