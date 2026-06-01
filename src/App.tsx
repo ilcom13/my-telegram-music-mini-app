@@ -5490,7 +5490,7 @@ importSource={importSource} setImportSource={setImportSource}
           {uid!=='anon'&&(
             <button onPointerDown={()=>{
               const link=`https://t.me/forty7mbot?startapp=user_${uid}`;
-              const text=lang==='ru'?'Мой профиль в Forty7':lang==='uk'?'Мій профіль у Forty7':lang==='kk'?'Forty7-дегі профилім':lang==='pl'?'Mój profil w Forty7':lang==='tr'?'Forty7\'deki profilim':'My profile on Forty7';
+              const text=lang==='ru'?'Мой профиль в Forty7':lang==='uk'?'Мій профіль у Forty7':lang==='kk'?'Forty7-дегі профилім':lang==='pl'?'Mój profil w Forty7':lang==='tr'?"Forty7'deki profilim":'My profile on Forty7';
               const shareUrl=`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
               const tgApp=(window as any).Telegram?.WebApp;
               if(tgApp?.openTelegramLink)tgApp.openTelegramLink(shareUrl);
