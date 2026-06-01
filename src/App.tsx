@@ -1150,6 +1150,14 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
+  // Автоочистка результатов треков при пустом запросе или при переходе в режим @
+  useEffect(()=>{
+    const q=query.trim();
+    if(q.length===0||q.startsWith('@')){
+      setResults([]);
+      setError('');
+    }
+  },[query]);
   const [profileResults,setProfileResults]=useState<any[]>([]);
   const [profileSearchLoading,setProfileSearchLoading]=useState(false);
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
@@ -4405,8 +4413,8 @@ return(
           );
         })()}
         <div style={{marginLeft:'auto'}}>
-          <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:38,height:38,borderRadius:'50%',background:'transparent',border:`2px solid ${incognito?ACC:'transparent'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,transition:'border-color 0.25s ease',...tap}}>
-            <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke={incognito?ACC:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18h20"/><path d="M5 18l1.5-5h11L19 18"/><circle cx="7.5" cy="18" r="2.5"/><circle cx="16.5" cy="18" r="2.5"/><path d="M9.5 13l.5-2h4l.5 2"/></svg>
+          <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:incognito?ACC:'transparent',border:`2px solid ${incognito?ACC:'rgba(255,255,255,0.12)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,boxSizing:'border-box' as const,flexShrink:0,transition:'all 0.25s ease',...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke={incognito?BG:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18h20"/><path d="M5 18l1.5-5h11L19 18"/><circle cx="7.5" cy="18" r="2.5"/><circle cx="16.5" cy="18" r="2.5"/><path d="M9.5 13l.5-2h4l.5 2"/></svg>
           </button>
         </div>
       </div>
@@ -4455,35 +4463,6 @@ return(
         </div>
       )}
 
-      {/* Результаты поиска профилей (когда query начинается с @) */}
-      {query.startsWith('@')&&(
-        <div style={{padding:'8px 0'}}>
-          {query.trim().slice(1).length<1?(
-            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'30px 20px',lineHeight:1.5}}>{lang==='ru'?'Введите имя или @username другого пользователя':lang==='uk'?'Введіть ім\'я або @username':lang==='kk'?'Атын немесе @username енгізіңіз':lang==='pl'?'Wpisz imię lub @username':lang==='tr'?'İsim veya @username yazın':'Type a name or @username'}</div>
-          ):profileSearchLoading?(
-            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'20px 0'}}>{lang==='ru'?'Поиск...':'Searching...'}</div>
-          ):profileResults.length===0?(
-            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'30px 20px'}}>{lang==='ru'?'Никого не найдено':'No one found'}</div>
-          ):(
-            <div style={{display:'flex',flexDirection:'column' as const,gap:6}}>
-              {profileResults.map(pr=>(
-                <button key={pr.uid} onPointerDown={()=>openUserProfile(pr.uid)} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,...tap}}>
-                  {pr.photo?
-                    <img src={pr.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                    :<div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#fff',flexShrink:0}}>{(pr.name||'?').charAt(0).toUpperCase()}</div>
-                  }
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pr.name||'User'}</div>
-                    {pr.username&&<div style={{fontSize:11,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>@{pr.username}</div>}
-                  </div>
-                  {followingSetRef.current.has(pr.uid)&&<div style={{fontSize:10,padding:'3px 8px',background:ACC_DIM,color:ACC,borderRadius:7,fontWeight:700,flexShrink:0}}>{lang==='ru'?'Подписан':'Following'}</div>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      
       {/* Фильтры SoundCloud — стиль с подчёркиванием как на референсе */}
       {!query.startsWith('@')&&searchSource==='soundcloud'&&(()=>{
         const tabs=['sound','albums','covers','remix','artists'] as const;
