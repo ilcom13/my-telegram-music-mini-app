@@ -4406,14 +4406,16 @@ return(
         {(()=>{
           // Library A/B как одна плашка с выпадашкой
           return(
-            <button onPointerUp={()=>{setSearchSource(searchSource==='soundcloud'?'audiomack':'soundcloud');setResults([]);setError('');}} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'9px 14px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',...tap}}>
-              {searchSource==='soundcloud'?'Library A':'Library B'}
-              <svg viewBox="0 0 24 24" style={{width:13,height:13,opacity:0.6}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <button onPointerUp={()=>{if(searchSource!=='soundcloud'){setSearchSource('soundcloud');setResults([]);setError('');}}} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'9px 16px',background:searchSource==='soundcloud'?'rgba(255,255,255,0.08)':'transparent',border:`1px solid ${searchSource==='soundcloud'?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.08)'}`,borderRadius:22,color:searchSource==='soundcloud'?TEXT_PRIMARY:TEXT_MUTED,fontSize:13,fontWeight:searchSource==='soundcloud'?700:500,cursor:'pointer',transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',transform:searchSource==='soundcloud'?'scale(1)':'scale(0.95)',...tap}}>
+              Library A
+            </button>
+            <button onPointerUp={()=>{if(searchSource!=='audiomack'){setSearchSource('audiomack');setResults([]);setError('');}}} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'9px 16px',background:searchSource==='audiomack'?'rgba(255,255,255,0.08)':'transparent',border:`1px solid ${searchSource==='audiomack'?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.08)'}`,borderRadius:22,color:searchSource==='audiomack'?TEXT_PRIMARY:TEXT_MUTED,fontSize:13,fontWeight:searchSource==='audiomack'?700:500,cursor:'pointer',transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',transform:searchSource==='audiomack'?'scale(1)':'scale(0.95)',...tap}}>
+              Library B
             </button>
           );
         })()}
         <div style={{marginLeft:'auto'}}>
-          <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:incognito?ACC:'transparent',border:`2px solid ${incognito?ACC:'rgba(255,255,255,0.12)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,boxSizing:'border-box' as const,flexShrink:0,transition:'all 0.25s ease',...tap}}>
+          <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:42,height:42,minWidth:42,borderRadius:'50%',background:incognito?ACC:'transparent',border:`2px solid ${incognito?ACC:'rgba(255,255,255,0.12)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,boxSizing:'border-box' as const,flexShrink:0,transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',...tap}}>
             <svg viewBox="0 0 24 24" style={{width:18,height:18,display:'block'}} fill="none" stroke={incognito?BG:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
           </button>
         </div>
