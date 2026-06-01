@@ -1150,7 +1150,6 @@ export default function App(){
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
-  const [searchKind,setSearchKind]=useState<'tracks'|'profiles'>('tracks');
   const [profileResults,setProfileResults]=useState<any[]>([]);
   const [profileSearchLoading,setProfileSearchLoading]=useState(false);
   const [libDefaultTab,setLibDefaultTab]=useState<'liked'|'playlists'|'artists'|'albums'>(()=>{try{return(localStorage.getItem('libdef47')||'playlists') as any;}catch{return 'playlists';}});
@@ -1478,6 +1477,19 @@ export default function App(){
       return Array.isArray(d.results)?d.results:[];
     }catch{return [];}
   },[]);
+
+  useEffect(()=>{
+    const q=query.trim();
+    const isProfileSearch=q.startsWith('@');
+    if(!isProfileSearch){setProfileResults([]);return;}
+    const term=q.slice(1).trim();
+    if(term.length<1){setProfileResults([]);return;}
+    setProfileSearchLoading(true);
+    const tm=setTimeout(()=>{
+      searchProfiles(term).then(res=>{setProfileResults(res);setProfileSearchLoading(false);});
+    },350);
+    return()=>{clearTimeout(tm);setProfileSearchLoading(false);};
+  },[query,searchProfiles]);
 
   useEffect(()=>{
     if(searchKind!=='profiles')return;
@@ -4392,24 +4404,21 @@ return(
     :lang==='tr'?'Library B — yüksek kaliteli resmi çıkışlar, Library A\'yı genişletir'
     :'Library B — official releases in high quality, expands Library A')}
 </div>
-      {/* Переключатель платформы */}
-      <div style={{display:'flex',gap:0,marginBottom:14,background:'#1a1a1a',borderRadius:14,padding:4,border:'1px solid #252525'}}>
-        {(['soundcloud','audiomack'] as const).map(src=>(
-          <button key={src} onPointerUp={()=>{setSearchSource(src);setResults([]);setError('');}}
-            style={{flex:1,padding:'8px 0',borderRadius:10,border:'none',background:searchSource===src?ACC:'transparent',color:searchSource===src?BG:TEXT_SEC,fontSize:13,fontWeight:searchSource===src?700:400,cursor:'pointer',transition:'all 0.2s ease',...TAP}}>
-            {src==='soundcloud'?'Library A':'Library B'}
+      {/* Компактная шапка: Library A/B + Инкогнито */}
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+        {(()=>{
+          // Library A/B как одна плашка с выпадашкой
+          return(
+            <button onPointerUp={()=>{setSearchSource(searchSource==='soundcloud'?'audiomack':'soundcloud');setResults([]);setError('');}} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'9px 14px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',...tap}}>
+              {searchSource==='soundcloud'?'Library A':'Library B'}
+              <svg viewBox="0 0 24 24" style={{width:13,height:13,opacity:0.6}} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          );
+        })()}
+        <div style={{marginLeft:'auto'}}>
+          <button onPointerDown={()=>setIncognito(v=>!v)} title={lang==='ru'?'Режим инкогнито':'Incognito mode'} style={{width:38,height:38,borderRadius:'50%',background:'transparent',border:`2px solid ${incognito?ACC:'transparent'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,transition:'border-color 0.25s ease',...tap}}>
+            <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke={incognito?ACC:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18h20"/><path d="M5 18l1.5-5h11L19 18"/><circle cx="7.5" cy="18" r="2.5"/><circle cx="16.5" cy="18" r="2.5"/><path d="M9.5 13l.5-2h4l.5 2"/></svg>
           </button>
-        ))}
-      </div>
-      {/* Тумблер инкогнито */}
-      <div onPointerDown={()=>setIncognito(v=>!v)} style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'10px 14px',background:incognito?ACC_DIM:'#1a1a1a',border:`1px solid ${incognito?ACC+'66':'#252525'}`,borderRadius:14,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
-        <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={incognito?ACC:TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18h20"/><path d="M5 18l1.5-5h11L19 18"/><circle cx="7.5" cy="18" r="2.5"/><circle cx="16.5" cy="18" r="2.5"/><path d="M9.5 13l.5-2h4l.5 2"/></svg>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13,fontWeight:600,color:incognito?ACC:TEXT_PRIMARY}}>{lang==='ru'?'Режим инкогнито':lang==='uk'?'Режим інкогніто':lang==='kk'?'Жасырын режим':lang==='pl'?'Tryb incognito':lang==='tr'?'Gizli mod':'Incognito mode'}</div>
-          <div style={{fontSize:10,color:TEXT_MUTED,marginTop:1,lineHeight:1.3}}>{lang==='ru'?'Прослушанное не попадёт в историю и статистику':lang==='uk'?'Прослухане не потрапить в історію та статистику':lang==='kk'?'Тыңдалғаны тарихқа және статистикаға енбейді':lang==='pl'?'Odtworzenia nie trafią do historii i statystyk':lang==='tr'?'Dinlenenler geçmişe ve istatistiklere girmez':"Listens won't affect history or stats"}</div>
-        </div>
-        <div style={{width:40,height:24,borderRadius:12,background:incognito?ACC:'#333',position:'relative' as const,flexShrink:0,transition:'background 0.2s ease'}}>
-          <div style={{width:18,height:18,borderRadius:'50%',background:'#fff',position:'absolute' as const,top:3,left:incognito?19:3,transition:'left 0.2s ease'}}/>
         </div>
       </div>
       {/* Переключатель Треки/Профили */}
@@ -4421,7 +4430,7 @@ return(
       <div style={{display:'flex',gap:8,marginBottom:10}}>
         <div style={{flex:1,position:'relative' as const,display:'flex',alignItems:'center'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" style={{position:'absolute' as const,left:12,flexShrink:0}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input className="search-input" type="text" placeholder={t('searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}
+          <input className="search-input" type="text" placeholder={query.startsWith('@')?(lang==='ru'?'@ник пользователя':lang==='uk'?'@нік користувача':'@username'):(t('searchPlaceholder')+' · @user')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!query.startsWith('@'))doSearch();}}
             style={{width:'100%',padding:'12px 14px 12px 36px',fontSize:14,background:'#1a1a1a',border:'1px solid #252525',borderRadius:14,color:TEXT_PRIMARY,outline:'none',boxSizing:'border-box' as const}}/>
         </div>
 <button onPointerDown={()=>doSearch()} disabled={loading}
@@ -4461,22 +4470,55 @@ return(
           )}
         </div>
       )}
-      
-      {/* Фильтры SoundCloud */}
-      {searchKind==='tracks'&&searchSource==='soundcloud'&&(
-        <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
-          {(['sound','albums','covers','remix','artists'] as const).map(m=>(
-            <button key={m} className={`tab-btn${searchMode===m?' tab-active':''}`} onPointerDown={()=>setSearchMode(m)}
-style={{padding:'5px 13px',borderRadius:16,border:`1px solid ${searchMode===m?ACC+'66':'#222'}`,background:searchMode===m?ACC_DIM:'transparent',color:searchMode===m?ACC:TEXT_MUTED,fontSize:11,fontWeight:searchMode===m?600:400,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' as const,...tap}}>
-              {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
-            </button>
-          ))}
+
+      {/* Результаты поиска профилей (когда query начинается с @) */}
+      {query.startsWith('@')&&(
+        <div style={{padding:'8px 0'}}>
+          {query.trim().slice(1).length<1?(
+            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'30px 20px',lineHeight:1.5}}>{lang==='ru'?'Введите имя или @username другого пользователя':lang==='uk'?'Введіть ім\'я або @username':lang==='kk'?'Атын немесе @username енгізіңіз':lang==='pl'?'Wpisz imię lub @username':lang==='tr'?'İsim veya @username yazın':'Type a name or @username'}</div>
+          ):profileSearchLoading?(
+            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'20px 0'}}>{lang==='ru'?'Поиск...':'Searching...'}</div>
+          ):profileResults.length===0?(
+            <div style={{fontSize:12,color:TEXT_MUTED,textAlign:'center' as const,padding:'30px 20px'}}>{lang==='ru'?'Никого не найдено':'No one found'}</div>
+          ):(
+            <div style={{display:'flex',flexDirection:'column' as const,gap:6}}>
+              {profileResults.map(pr=>(
+                <button key={pr.uid} onPointerDown={()=>openUserProfile(pr.uid)} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,...tap}}>
+                  {pr.photo?
+                    <img src={pr.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                    :<div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#fff',flexShrink:0}}>{(pr.name||'?').charAt(0).toUpperCase()}</div>
+                  }
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pr.name||'User'}</div>
+                    {pr.username&&<div style={{fontSize:11,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>@{pr.username}</div>}
+                  </div>
+                  {followingSetRef.current.has(pr.uid)&&<div style={{fontSize:10,padding:'3px 8px',background:ACC_DIM,color:ACC,borderRadius:7,fontWeight:700,flexShrink:0}}>{lang==='ru'?'Подписан':'Following'}</div>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
+      
+      {/* Фильтры SoundCloud — стиль с подчёркиванием как на референсе */}
+      {!query.startsWith('@')&&searchSource==='soundcloud'&&(()=>{
+        const tabs=['sound','albums','covers','remix','artists'] as const;
+        return(
+          <div style={{position:'relative' as const,display:'flex',gap:0,marginTop:8,marginBottom:14,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+            {tabs.map(m=>(
+              <button key={m} onPointerDown={()=>setSearchMode(m)} style={{flex:1,padding:'10px 4px',background:'transparent',border:'none',color:searchMode===m?ACC:TEXT_MUTED,fontSize:13,fontWeight:searchMode===m?700:500,cursor:'pointer',transition:'color 0.25s ease',position:'relative' as const,...tap}}>
+                {m==='sound'?t('sound'):m==='albums'?t('albumsTab'):m==='covers'?'Covers':m==='remix'?t('remix'):t('artists')}
+              </button>
+            ))}
+            {/* Бегущая линия под активным */}
+            <div style={{position:'absolute' as const,bottom:-1,left:0,width:`${100/tabs.length}%`,height:2,background:ACC,borderRadius:1,transform:`translateX(${tabs.indexOf(searchMode)*100}%)`,transition:'transform 0.35s cubic-bezier(0.4,0,0.2,1)'}}/>
+          </div>
+        );
+      })()}
       {error&&<div style={{marginTop:8,padding:'8px 12px',background:'#1a0a0a',borderRadius:9,color:'#d06060',fontSize:12,animation:'fadeIn 0.2s ease'}}>{error}</div>}
     </div>
     {/* Последние поиски — показываем только если нет результатов */}
-    {!results.length&&!loading&&recentSearches.length>0&&(
+    {!query.startsWith('@')&&!results.length&&!loading&&recentSearches.length>0&&(
       <div style={{padding:'0 16px'}}>
         <div style={{fontSize:11,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:10}}>
           {lang==='ru'?'Недавние поиски':lang==='uk'?'Нещодавні пошуки':'Recent searches'}
