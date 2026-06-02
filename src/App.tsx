@@ -1396,6 +1396,9 @@ export default function App(){
   const [followingList,setFollowingList]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('flw47')||'[]');}catch{return [];}});
   const [followersList,setFollowersList]=useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('flwrs47')||'[]');}catch{return [];}});
   const followingSetRef=useRef<Set<string>>(new Set(followingList));
+  const [notifications,setNotifications]=useState<any[]>([]);
+  const [notifUnread,setNotifUnread]=useState(0);
+  const [showNotif,setShowNotif]=useState(false);
   useEffect(()=>{followingSetRef.current=new Set(followingList);},[followingList]);
   // кэш просмотренных чужих профилей (живёт только в сессии)
   const [profilesCache,setProfilesCache]=useState<Record<string,any>>({});
@@ -1440,6 +1443,11 @@ export default function App(){
       if(Array.isArray(d.followers)){setFollowersList(d.followers);try{localStorage.setItem('flwrs47',JSON.stringify(d.followers));}catch{}}
     }).catch(()=>{});
   },[uid]);
+
+  useEffect(()=>{
+    if(uid==='anon')return;
+    loadNotifications();
+  },[uid,loadNotifications]);
 
   // Загрузка чужого профиля
   const loadProfile=useCallback(async(targetUid:string)=>{
@@ -1528,6 +1536,26 @@ export default function App(){
     },350);
     return()=>{clearTimeout(tm);setProfileSearchLoading(false);};
   },[query,searchProfiles]);
+
+  const loadNotifications=useCallback(async()=>{
+    if(uid==='anon')return;
+    try{
+      const r=await fetch(`${W}/notifications/get?uid=${encodeURIComponent(uid)}&t=${Date.now()}`,{cache:'no-store'});
+      const d=await r.json();
+      if(Array.isArray(d.items)){
+        setNotifications(d.items);
+        setNotifUnread(d.unread||0);
+      }
+    }catch{}
+  },[uid]);
+
+  const markNotificationsRead=useCallback(async()=>{
+    if(uid==='anon')return;
+    setNotifUnread(0); // оптимистично
+    try{
+      await fetch(`${W}/notifications/read`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
+    }catch{}
+  },[uid]);
 
   // Открыть чужой профиль (если это не мой uid)
   const openUserProfile=useCallback((targetUid:string)=>{
@@ -3583,7 +3611,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </button>
         <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>{t('nowPlaying')}</span>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 0 8px 8px',position:'relative',display:'flex',justifyContent:'flex-end',transition:'opacity 0.2s ease',...tap}}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#666'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           {queue.length>0&&<span style={{position:'absolute',top:4,right:0,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn 0.2s ease'}}>{queue.length}</span>}
         </button>
       </div>
@@ -4328,10 +4356,13 @@ return(
               </div>
               
               <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 11px',borderRadius:18,background:'rgba(14,14,14,0.35)',backdropFilter:'blur(40px) saturate(1.8)',WebkitBackdropFilter:'blur(40px) saturate(1.8)',border:'1px solid rgba(255,255,255,0.07)',cursor:'pointer',flexShrink:0,maxWidth:140,transition:'background 0.2s ease',...tap}}>
-                {tg?.photo_url
-                  ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                  :<div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC,flexShrink:0}}>{uInit}</div>
-                }
+                <div style={{position:'relative' as const,flexShrink:0}}>
+                  {tg?.photo_url
+                    ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                    :<div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC}}>{uInit}</div>
+                  }
+                  {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,width:9,height:9,borderRadius:'50%',background:'#e74c3c',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}/>}
+                </div>
                 <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
               </button>
             </div>
@@ -4933,6 +4964,10 @@ return(
                           </button>
                         );
                       })()}
+                      {uid!=='anon'&&<button onPointerDown={()=>{setShowNotif(true);if(notifUnread>0)markNotificationsRead();}} style={{position:'relative' as const,width:34,height:34,minWidth:34,borderRadius:'50%',background:'rgba(30,30,30,0.7)',border:'1px solid #2a2a2a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,marginRight:8,transition:'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',...tap}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                        {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,minWidth:14,height:14,padding:'0 3px',borderRadius:7,background:'#e74c3c',color:'#fff',fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}>{notifUnread>9?'9+':notifUnread}</div>}
+                      </button>}
                       {uid!=='anon'&&<button onPointerDown={()=>{
                         const link=`https://t.me/forty7mbot?startapp=user_${uid}`;
                         const text=lang==='ru'?'Мой профиль в Forty7':lang==='uk'?'Мій профіль у Forty7':lang==='kk'?'Forty7-дегі профилім':lang==='pl'?'Mój profil w Forty7':lang==='tr'?"Forty7'deki profilim":'My profile on Forty7';
@@ -5079,6 +5114,65 @@ return(
         </div>
       )}
 
+
+      {/* Панель уведомлений */}
+      {showNotif&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:550,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowNotif(false)}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'75vh',background:'#161616',borderRadius:'20px 20px 0 0',padding:'20px 16px calc(20px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none',overflow:'auto'}}>
+            <div style={{width:36,height:4,background:'#333',borderRadius:2,margin:'0 auto 16px'}}/>
+            <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY,marginBottom:14,textAlign:'center' as const}}>
+              {lang==='ru'?'Уведомления':lang==='uk'?'Сповіщення':lang==='kk'?'Хабарландырулар':lang==='pl'?'Powiadomienia':lang==='tr'?'Bildirimler':'Notifications'}
+            </div>
+            {notifications.length===0?(
+              <div style={{textAlign:'center' as const,padding:'40px 20px',color:TEXT_MUTED,fontSize:13,lineHeight:1.5}}>
+                {lang==='ru'?'Пока ничего нового':lang==='uk'?'Поки нічого нового':lang==='kk'?'Әзірге жаңалық жоқ':lang==='pl'?'Brak nowości':lang==='tr'?'Henüz bir şey yok':'Nothing new yet'}
+              </div>
+            ):(
+              <div style={{display:'flex',flexDirection:'column' as const,gap:6}}>
+                {notifications.map((n:any)=>{
+                  const isFollowingBack=followingSetRef.current.has(n.fromUid);
+                  const ago=(()=>{
+                    const diff=Date.now()-(n.ts||0);
+                    const m=Math.floor(diff/60000);
+                    if(m<1)return lang==='ru'?'только что':'just now';
+                    if(m<60)return lang==='ru'?`${m} мин`:`${m}m`;
+                    const h=Math.floor(m/60);
+                    if(h<24)return lang==='ru'?`${h} ч`:`${h}h`;
+                    const d=Math.floor(h/24);
+                    return lang==='ru'?`${d} дн`:`${d}d`;
+                  })();
+                  return(
+                    <div key={n.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12}}>
+                      <button onPointerDown={()=>{setShowNotif(false);openUserProfile(n.fromUid);}} style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,background:'none',border:'none',padding:0,cursor:'pointer',textAlign:'left' as const,...tap}}>
+                        {n.fromPhoto?
+                          <img src={n.fromPhoto} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                          :<div style={{width:38,height:38,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:700,color:'#fff',flexShrink:0}}>{(n.fromName||'?').charAt(0).toUpperCase()}</div>
+                        }
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                            <b>{n.fromName||'User'}</b> <span style={{color:TEXT_MUTED,fontWeight:400}}>{lang==='ru'?'подписался на вас':lang==='uk'?'підписався на вас':lang==='kk'?'сізге жазылды':lang==='pl'?'zaczął cię obserwować':lang==='tr'?'sizi takip etti':'followed you'}</span>
+                          </div>
+                          <div style={{fontSize:10,color:TEXT_MUTED,marginTop:2}}>{ago}</div>
+                        </div>
+                      </button>
+                      {!isFollowingBack?(
+                        <button onPointerDown={()=>{followUser(n.fromUid);}} style={{padding:'6px 12px',background:ACC,border:'none',borderRadius:8,color:BG,fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,...tap}}>
+                          {lang==='ru'?'Подписаться':lang==='uk'?'Підписатися':'Follow'}
+                        </button>
+                      ):(
+                        <div style={{padding:'6px 10px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:TEXT_MUTED,fontSize:11,fontWeight:600,flexShrink:0}}>
+                          {lang==='ru'?'Подписан':'Following'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       {/* Модалка списка подписок/подписчиков */}
       {showFollowList&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:550,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowFollowList(null)}>
