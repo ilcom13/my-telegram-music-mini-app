@@ -1213,13 +1213,6 @@ export default function App(){
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
   const [dlWarnHidden,setDlWarnHidden]=useState<boolean>(()=>{try{return localStorage.getItem('dlwarn47')==='1';}catch{return false;}});
   const [showPlayerTip,setShowPlayerTip]=useState<boolean>(false);
-  useEffect(()=>{
-    if(!fullPlayer)return;
-    try{
-      if(localStorage.getItem('ptip47')==='1')return;
-      setShowPlayerTip(true);
-    }catch{}
-  },[fullPlayer]);
   const [dlWarnFor,setDlWarnFor]=useState<{type:'pl'|'liked';pl?:Playlist}|null>(null); // открытое предупреждение
   const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
@@ -1321,6 +1314,13 @@ export default function App(){
   const [bassAmount, setBassAmount] = useState(0);
   const [fxProcessing, setFxProcessing] = useState(false);
   const[fullPlayer,setFullPlayer]=useState(false);
+  useEffect(()=>{
+    if(!fullPlayer)return;
+    try{
+      if(localStorage.getItem('ptip47')==='1')return;
+      setShowPlayerTip(true);
+    }catch{}
+  },[fullPlayer]);
   const[showQueue,setShowQueue]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
   // IDs of tracks manually added to queue (not from playlist auto-queue)
