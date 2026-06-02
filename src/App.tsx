@@ -4786,7 +4786,7 @@ return(
           const isFollowing=followingSetRef.current.has(viewingProfile);
           const loading=!cache;
           const topCover=p?.topTrack?.cover||'';
-          const totalP=p?.totalPlays||0;
+          const totalP=p?.listenedCount??p?.totalPlays??0;
           console.log('[render userProfile]',{viewingProfile,cache,p,totalP,topCover,allCache:profilesCache});
           return(
             <div style={{position:'relative' as const,minHeight:'100vh',paddingBottom:160}}>
@@ -4851,7 +4851,7 @@ return(
                         <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                         <div style={{fontSize:22,fontWeight:800,color:'#fff'}}>{totalP}</div>
                       </div>
-                      <div style={{fontSize:11,color:TEXT_MUTED,fontWeight:500}}>{lang==='ru'?'Плеев':lang==='uk'?'Програвань':lang==='kk'?'Ойнатулар':lang==='pl'?'Odtworzeń':lang==='tr'?'Çalma':'Plays'}</div>
+                      <div style={{fontSize:11,color:TEXT_MUTED,fontWeight:500}}>{lang==='ru'?'Прослушано':lang==='uk'?'Прослухано':lang==='kk'?'Тыңдалды':lang==='pl'?'Odsłuchano':lang==='tr'?'Dinlenildi':'Listened'}</div>
                     </div>
                   </div>
 
