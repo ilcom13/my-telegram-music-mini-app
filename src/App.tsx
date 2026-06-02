@@ -1444,11 +1444,6 @@ export default function App(){
     }).catch(()=>{});
   },[uid]);
 
-  useEffect(()=>{
-    if(uid==='anon')return;
-    loadNotifications();
-  },[uid,loadNotifications]);
-
   // Загрузка чужого профиля
   const loadProfile=useCallback(async(targetUid:string)=>{
     if(!targetUid||targetUid==='anon')return null;
@@ -1548,6 +1543,11 @@ export default function App(){
       }
     }catch{}
   },[uid]);
+
+  useEffect(()=>{
+    if(uid==='anon')return;
+    loadNotifications();
+  },[uid,loadNotifications]);
 
   const markNotificationsRead=useCallback(async()=>{
     if(uid==='anon')return;
