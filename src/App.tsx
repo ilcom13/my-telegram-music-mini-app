@@ -1212,6 +1212,14 @@ export default function App(){
   const [showRenameLocked, setShowRenameLocked] = useState(false);
   const [showOnboarding,setShowOnboarding]=useState<boolean>(()=>{try{return localStorage.getItem('ob47')!=='1';}catch{return true;}});
   const [dlWarnHidden,setDlWarnHidden]=useState<boolean>(()=>{try{return localStorage.getItem('dlwarn47')==='1';}catch{return false;}});
+  const [showPlayerTip,setShowPlayerTip]=useState<boolean>(false);
+  useEffect(()=>{
+    if(!fullPlayer)return;
+    try{
+      if(localStorage.getItem('ptip47')==='1')return;
+      setShowPlayerTip(true);
+    }catch{}
+  },[fullPlayer]);
   const [dlWarnFor,setDlWarnFor]=useState<{type:'pl'|'liked';pl?:Playlist}|null>(null); // открытое предупреждение
   const [onboardStep,setOnboardStep]=useState(0);
   const[searchMode,setSearchMode]=useState<'sound'|'albums'|'covers'|'remix'|'artists'>('sound');
@@ -5114,6 +5122,32 @@ return(
         </div>
       )}
 
+      {/* Подсказка про сворачивание плеера тапом по обложке */}
+      {showPlayerTip&&fullPlayer&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20,animation:'fadeIn 0.25s ease'}} onPointerDown={()=>{setShowPlayerTip(false);try{localStorage.setItem('ptip47','1');}catch{}}}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{maxWidth:340,width:'100%',background:'#161616',border:'1px solid #252525',borderRadius:18,padding:'22px 20px 18px',animation:'slideUp 0.3s ease both'}}>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:14}}>
+              <div style={{width:56,height:56,borderRadius:14,background:ACC_DIM,border:`1px solid ${ACC}55`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg viewBox="0 0 24 24" style={{width:30,height:30}} fill="none" stroke={ACC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><polyline points="9 14 12 11 15 14"/></svg>
+              </div>
+            </div>
+            <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,textAlign:'center' as const,marginBottom:8}}>
+              {lang==='ru'?'Подсказка':lang==='uk'?'Підказка':lang==='kk'?'Кеңес':lang==='pl'?'Wskazówka':lang==='tr'?'İpucu':'Quick tip'}
+            </div>
+            <div style={{fontSize:13,color:TEXT_SEC,textAlign:'center' as const,lineHeight:1.55,marginBottom:18}}>
+              {lang==='ru'?'Нажмите на обложку трека в развёрнутом плеере, чтобы быстро его свернуть.'
+              :lang==='uk'?'Натисніть на обкладинку треку в розгорнутому плеєрі, щоб швидко його згорнути.'
+              :lang==='kk'?'Жайылған плеердегі трек мұқабасына басып, оны жылдам жинаңыз.'
+              :lang==='pl'?'Dotknij okładki utworu w rozwiniętym odtwarzaczu, aby szybko go zwinąć.'
+              :lang==='tr'?'Genişletilmiş oynatıcıdaki parça kapağına dokunarak hızlıca küçültebilirsiniz.'
+              :'Tap the track cover in the expanded player to quickly collapse it.'}
+            </div>
+            <button onPointerDown={()=>{setShowPlayerTip(false);try{localStorage.setItem('ptip47','1');}catch{}}} style={{width:'100%',padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Панель уведомлений */}
       {showNotif&&(
