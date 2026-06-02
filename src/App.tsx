@@ -1419,6 +1419,8 @@ export default function App(){
   const lastProfileSyncRef=useRef<string>('');
   const syncMyProfile=useCallback(()=>{
     if(uid==='anon')return;
+    // Защита от затирания: если локальные данные ещё не загружены — не шлём пустой профиль
+    if(Object.keys(trackPlays).length===0&&listenedIds.length===0)return;
     const topTrackId=Object.entries(trackPlays).sort(([,a]:any,[,b]:any)=>b.count-a.count)[0];
     const topTrack=topTrackId?{
       id:topTrackId[0],
