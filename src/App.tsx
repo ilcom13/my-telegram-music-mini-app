@@ -1427,14 +1427,14 @@ export default function App(){
       cover:(topTrackId[1] as any).cover||'',
       plays:(topTrackId[1] as any).count||0,
     }:null;
-    const totalPlays=Object.values(trackPlays).reduce((sum:number,t:any)=>sum+(t.count||0),0);
-    const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack,totalPlays};
+    const listenedCount=listenedIds.length;
+    const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack,listenedCount};
     const sig=JSON.stringify(payload);
     if(sig===lastProfileSyncRef.current)return; // не отправляем если ничего не изменилось
     lastProfileSyncRef.current=sig;
     fetch(`${W}/profile/sync`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(()=>{});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[uid,uName,uUsername,uPhoto,trackPlays]);
+  },[uid,uName,uUsername,uPhoto,trackPlays,listenedIds]);
 
   // Синк профиля при старте и каждый час
   useEffect(()=>{
