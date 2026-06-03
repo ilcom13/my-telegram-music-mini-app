@@ -1195,6 +1195,7 @@ export default function App(){
   const OFFLINE_LIMIT=400;
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set());
   const [downloadingPl, setDownloadingPl] = useState<string|null>(null); // id плейлиста, который качается
+  const [failedDownloads,setFailedDownloads]=useState<Track[]>([]);
   const [downloadProgress, setDownloadProgress] = useState<{done:number;total:number}>({done:0,total:0});
   // при старте: загрузить список офлайн-треков и запросить устойчивое хранилище
   useEffect(()=>{
@@ -2419,14 +2420,21 @@ useEffect(()=>{
     setDownloadingPl(pl.id);
     setDownloadProgress({done:0,total:tracks.length});
     let done=0;
+    const failed:Track[]=[];
     const BATCH=2;
     for(let i=0;i<tracks.length;i+=BATCH){
       if(cancelDownloadRef.current)break;
       const batch=tracks.slice(i,i+BATCH);
-      await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+      await Promise.all(batch.map(async t=>{
+        const ok=await downloadTrack(t);
+        if(!ok)failed.push(t);
+        done++;
+        setDownloadProgress({done,total:tracks.length});
+      }));
       await new Promise(r=>setTimeout(r,100));
     }
     setDownloadingPl(null);
+    if(failed.length&&!cancelDownloadRef.current)setFailedDownloads(failed);
   };
   // Удалить весь плейлист из офлайна
   const removePlaylistOffline=async(pl:Playlist)=>{
@@ -2445,17 +2453,25 @@ useEffect(()=>{
   const downloadLiked=async()=>{
     const tracks=liked.filter(t=>t.id&&!offlineIds.has(t.id));
     if(!tracks.length){setDownloadingPl(null);return;}
-    setDownloadingPl('__liked__');
     cancelDownloadRef.current=false;
+    setDownloadingPl('__liked__');
     setDownloadProgress({done:0,total:tracks.length});
     let done=0;
+    const failed:Track[]=[];
     const BATCH=2;
     for(let i=0;i<tracks.length;i+=BATCH){
+      if(cancelDownloadRef.current)break;
       const batch=tracks.slice(i,i+BATCH);
-      await Promise.all(batch.map(async t=>{await downloadTrack(t);done++;setDownloadProgress({done,total:tracks.length});}));
+      await Promise.all(batch.map(async t=>{
+        const ok=await downloadTrack(t);
+        if(!ok)failed.push(t);
+        done++;
+        setDownloadProgress({done,total:tracks.length});
+      }));
       await new Promise(r=>setTimeout(r,100));
     }
     setDownloadingPl(null);
+    if(failed.length&&!cancelDownloadRef.current)setFailedDownloads(failed);
   };
   const removeLikedOffline=async()=>{for(const t of liked){if(t.id&&offlineIds.has(t.id))await removeOffline(t.id);}};
   const startDownloadLiked=()=>{
@@ -5112,6 +5128,47 @@ return(
         </div>
       )}
 
+
+      {/* Плашка с неудачно скачанными треками */}
+      {failedDownloads.length>0&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:550,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setFailedDownloads([])}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'70vh',background:'#161616',borderRadius:'20px 20px 0 0',padding:'20px 16px calc(20px + env(safe-area-inset-bottom))',animation:'slideUp 0.25s ease both',border:'1px solid #252525',borderBottom:'none',overflow:'auto'}}>
+            <div style={{width:36,height:4,background:'#333',borderRadius:2,margin:'0 auto 16px'}}/>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+              <div style={{fontSize:24}}>⚠️</div>
+              <div style={{fontSize:16,fontWeight:700,color:TEXT_PRIMARY}}>
+                {lang==='ru'?`Не удалось скачать ${failedDownloads.length} ${failedDownloads.length===1?'трек':failedDownloads.length<5?'трека':'треков'}`
+                :lang==='uk'?`Не вдалося завантажити ${failedDownloads.length} ${failedDownloads.length===1?'трек':failedDownloads.length<5?'треки':'треків'}`
+                :lang==='kk'?`${failedDownloads.length} трек жүктелмеді`
+                :lang==='pl'?`Nie udało się pobrać ${failedDownloads.length} ${failedDownloads.length===1?'utworu':'utworów'}`
+                :lang==='tr'?`${failedDownloads.length} parça indirilemedi`
+                :`Couldn't download ${failedDownloads.length} ${failedDownloads.length===1?'track':'tracks'}`}
+              </div>
+            </div>
+            <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:14,lineHeight:1.5}}>
+              {lang==='ru'?'Скорее всего, эти треки были удалены с платформы или временно недоступны.'
+              :lang==='uk'?'Імовірно, ці треки видалили з платформи або вони тимчасово недоступні.'
+              :lang==='kk'?'Бұл тректер платформадан өшірілген немесе уақытша қолжетімсіз.'
+              :lang==='pl'?'Prawdopodobnie te utwory zostały usunięte z platformy lub są chwilowo niedostępne.'
+              :lang==='tr'?'Bu parçalar muhtemelen platformdan kaldırıldı veya geçici olarak kullanılamıyor.'
+              :"These tracks were likely removed from the platform or are temporarily unavailable."}
+            </div>
+            <div style={{display:'flex',flexDirection:'column' as const,gap:6,marginBottom:14}}>
+              {failedDownloads.slice(0,15).map((t,i)=>(
+                <div key={t.id||i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:10}}>
+                  <Img src={t.cover||''} size={32} radius={6}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{t.title||'?'}</div>
+                    <div style={{fontSize:10,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{t.artist||''}</div>
+                  </div>
+                </div>
+              ))}
+              {failedDownloads.length>15&&<div style={{fontSize:11,color:TEXT_MUTED,textAlign:'center' as const,padding:6}}>{lang==='ru'?`...и ещё ${failedDownloads.length-15}`:`...and ${failedDownloads.length-15} more`}</div>}
+            </div>
+            <button onPointerDown={()=>setFailedDownloads([])} style={{width:'100%',padding:'13px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:14,fontWeight:700,cursor:'pointer',...tap}}>OK</button>
+          </div>
+        </div>
+      )}
       {/* Подсказка про сворачивание плеера тапом по обложке */}
       {showPlayerTip&&fullPlayer&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20,animation:'fadeIn 0.25s ease'}} onPointerDown={()=>{setShowPlayerTip(false);try{localStorage.setItem('ptip47','1');}catch{}}}>
@@ -5325,7 +5382,7 @@ importSource={importSource} setImportSource={setImportSource}
         const isFirstEver=monthStats.current.totalSec===0&&monthStats.current.listenedIds.length===0;
         const isCollecting=monthStats.current.totalSec>0||monthStats.current.listenedIds.length>0;
         return(
-        <div id="pl-page-wrap" className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120,transition:'opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1)'}}>
+        <div id="pl-page-wrap" className="screen-fade" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:200,transition:'opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1)'}}>
           {/* Hero */}
           <div style={{position:'relative',overflow:'hidden',marginBottom:0}}>
             {topCover&&<img src={topCover} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(20px) saturate(0.7) brightness(0.35)',transform:'scale(1.1)'}} onError={()=>{}}/>}
@@ -5712,7 +5769,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
   [lang==='ru'?'Я → А':lang==='uk'?'Я → А':'Z → A','za'],
 ];
       return(
-<div id="pl-page-wrap" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:120,animation:'slideInFromRight 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
+<div id="pl-page-wrap" style={{position:'fixed',inset:0,background:BG,zIndex:50,overflowY:'auto',paddingBottom:200,animation:'slideInFromRight 0.25s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
   {/* Header с фоном */}
   <div style={{position:'relative',overflow:'hidden',minHeight:0}}>
     {coverSrc&&<img src={coverSrc} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'blur(32px) brightness(0.45)',transform:'scale(1.15)'}} onError={()=>{}}/>}
