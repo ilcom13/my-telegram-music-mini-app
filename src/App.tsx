@@ -1196,6 +1196,7 @@ export default function App(){
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set());
   const [downloadingPl, setDownloadingPl] = useState<string|null>(null); // id плейлиста, который качается
   const [failedDownloads,setFailedDownloads]=useState<Track[]>([]);
+  const [unavailableTrack,setUnavailableTrack]=useState<Track|null>(null);
   const [downloadProgress, setDownloadProgress] = useState<{done:number;total:number}>({done:0,total:0});
   // при старте: загрузить список офлайн-треков и запросить устойчивое хранилище
   useEffect(()=>{
@@ -2582,7 +2583,11 @@ if(track.source==='audiomack' && track.amId){
         else if(d.error&&!track.mp3)return;
       }catch{}
     }
-if(!freshMp3)return;
+if(!freshMp3){
+      // Трек не получил рабочую ссылку — вероятно удалён с площадки
+      if(track.id&&!track.isArtist&&!track.isAlbum)setUnavailableTrack(track);
+      return;
+    }
     if((playDirect as any)._lastCallId!==callId)return;
     if(!a)return;
 // Один раз: pause → src → load → play. Никаких прерываний.
@@ -5142,6 +5147,43 @@ return(
         </div>
       )}
 
+      {/* Трек недоступен (удалён с площадки) */}
+      {unavailableTrack&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:560,display:'flex',alignItems:'center',justifyContent:'center',padding:20}} onPointerDown={()=>setUnavailableTrack(null)}>
+          <div onPointerDown={e=>e.stopPropagation()} style={{maxWidth:380,width:'100%',background:'#161616',border:'1px solid #252525',borderRadius:18,padding:'22px 20px 18px',animation:'slideUp 0.25s ease both'}}>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:14}}>
+              <div style={{width:56,height:56,borderRadius:14,background:'rgba(208,96,96,0.12)',border:'1px solid #3a2020',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>⚠️</div>
+            </div>
+            <div style={{fontSize:15,fontWeight:700,color:TEXT_PRIMARY,textAlign:'center' as const,marginBottom:6}}>
+              {lang==='ru'?'Трек недоступен':lang==='uk'?'Трек недоступний':lang==='kk'?'Трек қолжетімсіз':lang==='pl'?'Utwór niedostępny':lang==='tr'?'Parça mevcut değil':'Track unavailable'}
+            </div>
+            <div style={{fontSize:13,fontWeight:600,color:ACC,textAlign:'center' as const,marginBottom:4,wordBreak:'break-word' as const}}>{unavailableTrack.title||''}</div>
+            <div style={{fontSize:11,color:TEXT_MUTED,textAlign:'center' as const,marginBottom:16,wordBreak:'break-word' as const}}>{unavailableTrack.artist||''}</div>
+            <div style={{fontSize:13,color:TEXT_SEC,textAlign:'center' as const,lineHeight:1.55,marginBottom:18}}>
+              {lang==='ru'?'Возможно, этот трек был удалён с площадки. Попробуйте найти его в другой библиотеке или от другого автора.'
+              :lang==='uk'?'Можливо, цей трек видалили з платформи. Спробуйте знайти його в іншій бібліотеці або від іншого автора.'
+              :lang==='kk'?'Бұл трек платформадан өшірілген болуы мүмкін. Оны басқа кітапханада немесе басқа автордан іздеп көріңіз.'
+              :lang==='pl'?'Ten utwór mógł zostać usunięty z platformy. Spróbuj znaleźć go w innej bibliotece lub innego autora.'
+              :lang==='tr'?'Bu parça platformdan kaldırılmış olabilir. Başka bir kütüphanede veya farklı bir sanatçıdan aramayı deneyin.'
+              :'This track may have been removed from the platform. Try finding it in another library or from a different artist.'}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onPointerDown={()=>{
+                const tk=unavailableTrack;
+                setUnavailableTrack(null);
+                setScreen('search');
+                setQuery(tk.title||'');
+                setTimeout(()=>doSearch(),50);
+              }} style={{flex:1,padding:'12px',background:ACC,border:'none',borderRadius:12,color:BG,fontSize:13,fontWeight:700,cursor:'pointer',...tap}}>
+                {lang==='ru'?'Найти':lang==='uk'?'Знайти':lang==='kk'?'Іздеу':lang==='pl'?'Szukaj':lang==='tr'?'Ara':'Search'}
+              </button>
+              <button onPointerDown={()=>setUnavailableTrack(null)} style={{flex:1,padding:'12px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:TEXT_PRIMARY,fontSize:13,fontWeight:600,cursor:'pointer',...tap}}>
+                {lang==='ru'?'Закрыть':lang==='uk'?'Закрити':lang==='kk'?'Жабу':lang==='pl'?'Zamknij':lang==='tr'?'Kapat':'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Плашка с неудачно скачанными треками */}
       {failedDownloads.length>0&&(
