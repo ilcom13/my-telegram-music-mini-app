@@ -1304,6 +1304,8 @@ export default function App(){
   const miniTimeRef=useRef<HTMLSpanElement>(null);
   const[volume,setVolume]=useState(1);
   const[loop,setLoop]=useState(false);
+  const loopRef=useRef(loop);
+  useEffect(()=>{loopRef.current=loop;},[loop]);
   const [showFxPanel, setShowFxPanel] = useState(false);
   const originalSrcRef = useRef<string>('');
   const [fxLoading, setFxLoading] = useState(false);
@@ -2791,6 +2793,12 @@ if (!fxResp.ok) throw new Error('FX error');
 
   
 const playPrev=()=>{
+    if(loopRef.current&&current){
+      // повтор одного трека: рестартуем текущий
+      const a=audio.current;
+      if(a){a.currentTime=0;a.play().catch(()=>{});}
+      return;
+    }
     const a=audio.current;
     if(a&&a.currentTime>5){
       a.currentTime=0;
@@ -2837,6 +2845,12 @@ const playPrev=()=>{
   };
 
 const playNext=()=>{
+    if(loopRef.current&&current){
+      // повтор одного трека: рестартуем текущий
+      const a=audio.current;
+      if(a){a.currentTime=0;a.play().catch(()=>{});}
+      return;
+    }
     if(queue.length>0){
       const nxt=queue[0];
       setManualQIds(prev=>{const n=new Set(prev);n.delete(nxt.id);return n;});
