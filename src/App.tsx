@@ -2,6 +2,7 @@ import React,{ useState, useEffect, useRef, useCallback } from 'react';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
+const PINNED_BG_URL = 'https://i.ibb.co/Y4xCdrfg/111-Chat-GPT-Image-4-2026-23-36-08-1.png';
 const ACC = '#EFBF7F';
 const ACC_DIM = 'rgba(239,191,127,0.13)';
 const BG = '#0e0e0e';
@@ -4378,110 +4379,127 @@ return(
         {/* ── HOME ── */}
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
-            {(bgCover||(history.length>0&&history[0]?.cover))&&(
-              <div style={{position:'absolute',top:0,left:0,right:0,height:240,overflow:'hidden',zIndex:0,pointerEvents:'none'}}>
-                <img
-                  key={bgCover||history[0]?.cover}
-                  src={bgCover||history[0]?.cover}
-                  style={{width:'100%',height:'100%',objectFit:'cover',filter:'blur(3px) saturate(0.85) brightness(0.65)',transform:'scale(1.05)',transition:'opacity 0.5s ease'}}
-                  onError={()=>{}}
-                />
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(14,14,14,0.05) 0%,rgba(14,14,14,0.3) 40%,rgba(14,14,14,0.75) 68%,#0e0e0e 100%)'}}/>
+            {/* Бежевый свет от аватарки */}
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:340,background:'radial-gradient(ellipse 60% 50% at 90% 0%,rgba(239,191,127,0.18) 0%,rgba(239,191,127,0.05) 35%,transparent 65%)',zIndex:0,pointerEvents:'none' as const}}/>
+
+            {/* === ШАПКА === */}
+            <div style={{position:'relative' as const,zIndex:1,padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:30,fontWeight:800,color:'#fff',letterSpacing:-0.6,lineHeight:1.1,marginBottom:14}}>{greeting(lang)}</div>
+                <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'5px 12px 5px 5px',borderRadius:18,background:subActive?ACC_DIM:'rgba(255,255,255,0.05)',border:`1px solid ${subActive?ACC+'88':'rgba(255,255,255,0.12)'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:subActive?ACC+'22':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg viewBox="0 0 24 24" style={{width:13,height:13}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
+                  </div>
+                  <span style={{fontSize:13,color:ACC,fontWeight:700,letterSpacing:-0.2}}>{subActive?'Premium':(lang==='ru'?'Premium':'Premium')}</span>
+                </button>
               </div>
-            )}
-            <div style={{position:'relative',zIndex:1,paddingTop:14,paddingLeft:16,paddingRight:16,paddingBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-<div>
-                <div style={{fontSize:21,fontWeight:700,color:TEXT_PRIMARY,letterSpacing:-0.3}}>{greeting(lang)}</div>
-<div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
-<button onPointerDown={()=>setShowPremium(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:14,background:'rgba(30,30,30,0.7)',backdropFilter:'blur(12px)',border:`1px solid ${subActive?ACC+'55':'#333'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
-                    <svg viewBox="0 0 24 24" style={{width:11,height:11,display:'block',flexShrink:0}} fill={subActive?ACC:'none'} stroke={subActive?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span style={{fontSize:10,color:subActive?ACC:'#888',fontWeight:subActive?600:400,whiteSpace:'nowrap' as const}}>{subActive?'Premium':'Upgrade'}</span>
-                  </button>
-                </div>
-              </div>
-              
-              <button onClick={()=>setScreen('profile')} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 11px',borderRadius:18,background:'rgba(14,14,14,0.35)',backdropFilter:'blur(40px) saturate(1.8)',WebkitBackdropFilter:'blur(40px) saturate(1.8)',border:'1px solid rgba(255,255,255,0.07)',cursor:'pointer',flexShrink:0,maxWidth:140,transition:'background 0.2s ease',...tap}}>
-                <div style={{position:'relative' as const,flexShrink:0}}>
-                  {tg?.photo_url
-                    ?<img src={tg.photo_url} style={{width:22,height:22,borderRadius:'50%',objectFit:'cover',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                    :<div style={{width:22,height:22,borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:ACC}}>{uInit}</div>
-                  }
-                  {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,width:9,height:9,borderRadius:'50%',background:'#e74c3c',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}/>}
-                </div>
-                <span style={{fontSize:12,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:88}}>{uHandle||uName}</span>
+              <button onClick={()=>setScreen('profile')} style={{position:'relative' as const,width:46,height:46,minWidth:46,borderRadius:'50%',padding:0,background:'none',border:'2px solid rgba(255,255,255,0.15)',cursor:'pointer',flexShrink:0,overflow:'hidden',...tap}}>
+                {tg?.photo_url
+                  ?<img src={tg.photo_url} style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                  :<div style={{width:'100%',height:'100%',borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700,color:ACC}}>{uInit}</div>
+                }
+                {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,width:13,height:13,borderRadius:'50%',background:'#e74c3c',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}/>}
               </button>
             </div>
-            <div style={{position:'relative',zIndex:1}}>
+
+            {/* === СТРОКА ПОИСКА === */}
+            <div style={{position:'relative' as const,zIndex:1,padding:'4px 16px 18px'}}>
+              <button onPointerDown={()=>setScreen('search')} style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'13px 18px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
+                <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span style={{fontSize:14,color:TEXT_MUTED,flex:1}}>{lang==='ru'?'Поиск музыки, артистов, альбомов…':lang==='uk'?'Пошук музики, артистів, альбомів…':lang==='kk'?'Музыка, әртістер, альбомдар іздеу…':lang==='pl'?'Szukaj muzyki, artystów, albumów…':lang==='tr'?'Müzik, sanatçı, albüm ara…':'Search music, artists, albums…'}</span>
+              </button>
+            </div>
+
+            <div style={{position:'relative' as const,zIndex:1}}>
+
+            {/* === RECENTLY PLAYED === */}
             {history.length>0&&(
-              <div style={{animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-                <div style={{display:'flex',gap:10,padding:'0 16px 12px',overflowX:'auto'}}>
+              <div style={{marginBottom:24,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:12}}>
+                  <div style={{fontSize:18,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
+                  <button onPointerDown={()=>{/* See all — заглушка */}} style={{display:'inline-flex',alignItems:'center',gap:3,background:'none',border:'none',color:ACC,fontSize:13,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
+                    {lang==='ru'?'Все':lang==='uk'?'Усі':lang==='kk'?'Барлығы':lang==='pl'?'Wszystkie':lang==='tr'?'Tümü':'See all'}
+                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                </div>
+                <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
-                    <RecentCard
-                      key={tr.id}
-                      tr={tr}
-                      isActive={current?.id===tr.id}
-                      isPlaying={playing}
-                      inQueue={inQ(tr.id)}
-                      onPlay={()=>playTrack(tr)}
-                      onArtist={()=>openArtist('',tr.artist,tr.cover,0)}
-                      onQueue={e=>addQ(tr,e)}
-                      queueLabel={t('queue')}
-                    />
+                    <div key={tr.id} style={{flexShrink:0,width:165,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
+                      <div style={{position:'relative' as const,width:165,height:165,borderRadius:14,overflow:'hidden',marginBottom:10,background:BG3}}>
+                        <Img src={tr.cover} size={165} radius={0}/>
+                        <button onPointerDown={e=>{e.stopPropagation();addQ(tr,e as any);}} style={{position:'absolute' as const,top:10,right:10,width:36,height:36,borderRadius:10,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
+                          <svg viewBox="0 0 24 24" style={{width:18,height:18}} fill="none" stroke={inQ(tr.id)?ACC:'#fff'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="18" cy="18" r="3"/></svg>
+                        </button>
+                      </div>
+                      <div style={{fontSize:15,fontWeight:600,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:3}}>{tr.title||''}</div>
+                      <div style={{fontSize:13,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist||''}</div>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
-            {/* Pinned playlist */}
+
+            {/* === PINNED PLAYLIST === */}
             {pinnedPlId&&playlists.find(p=>p.id===pinnedPlId)&&(()=>{
               const pp=playlists.find(p=>p.id===pinnedPlId)!;
               return(
-              <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s ease both'}}>
-                <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8,marginBottom:8}}>📌 {lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген':lang==='pl'?'Przypięta playlista':'Pinned playlist'}</div>
-                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{background:BG2,border:`1px solid ${ACC}33`,borderRadius:14,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',...tap}}>
-                  <div style={{width:52,height:52,borderRadius:9,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3}}>
-                    {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={26} radius={0}/></div>)}
-                    {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
+              <div style={{padding:'0 16px',marginBottom:24,animation:'slideUp 0.3s ease both'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
+                  <svg viewBox="0 0 24 24" style={{width:13,height:13,transform:'rotate(45deg)'}} fill={ACC} stroke="none"><path d="M12 2l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1z"/></svg>
+                  <span style={{fontSize:13,color:ACC,fontWeight:600,letterSpacing:-0.2}}>{lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген плейлист':lang==='pl'?'Przypięta playlista':lang==='tr'?'Sabitlenmiş çalma listesi':'Pinned playlist'}</span>
+                </div>
+                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{position:'relative' as const,overflow:'hidden',borderRadius:18,padding:'18px 18px',display:'flex',alignItems:'center',gap:16,cursor:'pointer',background:PINNED_BG_URL?'#1a1a1a':`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:'1px solid rgba(255,255,255,0.06)',minHeight:120,...tap}}>
+                  {PINNED_BG_URL&&<>
+                    <div style={{position:'absolute' as const,inset:0,backgroundImage:`url(${PINNED_BG_URL})`,backgroundSize:'cover',backgroundPosition:'center',zIndex:0}}/>
+                    <div style={{position:'absolute' as const,inset:0,background:'linear-gradient(to right,rgba(14,14,14,0.85) 0%,rgba(14,14,14,0.45) 60%,rgba(14,14,14,0.3) 100%)',zIndex:0}}/>
+                  </>}
+                  <div style={{position:'relative' as const,zIndex:1,width:84,height:84,borderRadius:10,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 4px 16px rgba(0,0,0,0.4)'}}>
+                    {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={42} radius={0}/></div>)}
+                    {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,color:ACC}}>🎵</div>}
                   </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{pp.name}</div>
-                    <div style={{fontSize:11,color:TEXT_SEC,marginTop:2}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+                  <div style={{position:'relative' as const,zIndex:1,flex:1,minWidth:0}}>
+                    <div style={{fontSize:26,fontWeight:800,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.5,marginBottom:4}}>{pp.name}</div>
+                    <div style={{fontSize:14,color:'rgba(255,255,255,0.7)'}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
                   </div>
-                  <div style={{flexShrink:0,padding:'6px 11px',borderRadius:8,border:`1px solid ${ACC}44`,background:'transparent',display:'flex',alignItems:'center',gap:5}}>
-                    <span style={{fontSize:11,color:ACC+'bb',fontWeight:500}}>{lang==='ru'?'Открыть':lang==='uk'?'Відкрити':lang==='kk'?'Ашу':lang==='pl'?'Otwórz':'Open'}</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={ACC+'99'} strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  <div style={{position:'relative' as const,zIndex:1,flexShrink:0,width:48,height:48,borderRadius:'50%',background:ACC,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(239,191,127,0.3)'}}>
+                    <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </div>
                 </div>
               </div>
               );
             })()}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:8,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
-              <div style={{fontSize:10,fontWeight:600,color:TEXT_MUTED,textTransform:'uppercase' as const,letterSpacing:0.8}}>{t('recommended')}</div>
-<button onPointerDown={()=>loadRecommendations()} disabled={recsLoading} style={{background:'none',border:'none',cursor:recsLoading?'default':'pointer',padding:4,...tap,opacity:recsLoading?0.5:1}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2.2" strokeLinecap="round" style={{display:'block',animation:recsLoading?'spin 0.8s linear infinite':undefined,transition:'opacity 0.2s ease'}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-              </button>
-            </div>
-            {recs.length===0&&history.length<1
-              ?<div style={{padding:'0 16px'}}>
-                <div style={{fontSize:12,color:TEXT_MUTED,marginBottom:12}}>{t('noRecommended')}</div>
-                <div style={{background:`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,animation:'slideUp 0.3s ease both'}}>
+
+            {/* === FOR YOU === */}
+            <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                <div style={{fontSize:18,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Для тебя':lang==='uk'?'Для тебе':lang==='kk'?'Сен үшін':lang==='pl'?'Dla Ciebie':lang==='tr'?'Senin için':'For you'}</div>
+                <button onPointerDown={()=>setScreen('trending')} style={{display:'inline-flex',alignItems:'center',gap:3,background:'none',border:'none',color:ACC,fontSize:13,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
+                  {lang==='ru'?'Все':lang==='uk'?'Усі':lang==='kk'?'Барлығы':lang==='pl'?'Wszystkie':lang==='tr'?'Tümü':'See all'}
+                  <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+              {recs.length===0&&history.length<1
+                ?<div style={{background:`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:`1px solid ${ACC}33`,borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,animation:'slideUp 0.3s ease both'}}>
                   <div style={{fontSize:28,flexShrink:0}}>🎵</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,fontWeight:600,color:TEXT_PRIMARY,marginBottom:3}}>
                       {lang==='ru'?'Перенеси свои плейлисты':lang==='uk'?'Перенеси свої плейлисти':lang==='kk'?'Плейлисттеріңді әкел':lang==='pl'?'Przenieś swoje playlisty':lang==='tr'?'Playlistlerini taşı':'Import your playlists'}
                     </div>
                     <div style={{fontSize:11,color:TEXT_SEC}}>
-                      {lang==='ru'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс':lang==='uk'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс':lang==='kk'?'Spotify, YouTube, SoundCloud, Apple Music':lang==='pl'?'Spotify, YouTube, SoundCloud, Apple Music, Yandex':lang==='tr'?'Spotify, YouTube, SoundCloud, Apple Music, Yandex':'Spotify, YouTube, SoundCloud, Apple Music, Yandex'}
+                      {lang==='ru'?'Spotify, YouTube, SoundCloud, Apple Music, Яндекс':'Spotify, YouTube, SoundCloud, Apple Music, Yandex'}
                     </div>
                   </div>
                   <button onPointerDown={()=>{setScreen('library');setLibTab('playlists');setTimeout(()=>{setShowImport(true);setImportStep('idle');setImportUrl('');setImportError('');setImportPreview(null);setImportResults([]);},100);}} style={{flexShrink:0,padding:'8px 14px',background:ACC,border:'none',borderRadius:9,color:BG,fontSize:12,fontWeight:600,cursor:'pointer',...tap}}>
-                    {lang==='ru'?'Импорт':lang==='uk'?'Імпорт':'Import'}
+                    {lang==='ru'?'Импорт':'Import'}
                   </button>
                 </div>
-              </div>
-              :recsLoading&&recs.length===0
-                ?<div style={{padding:'0 16px 8px'}}><Spinner/></div>
-                :<div style={{padding:'0 4px'}}>{(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,showBlockBtn:true})}/>)}</div>
-            }
+                :recsLoading&&recs.length===0
+                  ?<Spinner/>
+                  :<div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,padding:'6px 4px',overflow:'hidden'}}>
+                    {(recs.length>0?recs:history.filter(tr=>tr.mp3)).slice(0,10).map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:undefined,showBlockBtn:true})}/>)}
+                  </div>
+              }
+            </div>
             </div>
           </div>
         )}
