@@ -4380,33 +4380,33 @@ return(
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
             {/* Бежевый свет от аватарки */}
-            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:340,background:'radial-gradient(ellipse 60% 50% at 90% 0%,rgba(239,191,127,0.18) 0%,rgba(239,191,127,0.05) 35%,transparent 65%)',zIndex:0,pointerEvents:'none' as const}}/>
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:450,background:'radial-gradient(ellipse 90% 70% at 85% -5%,rgba(239,191,127,0.28) 0%,rgba(239,191,127,0.12) 30%,rgba(239,191,127,0.04) 55%,transparent 75%)',zIndex:0,pointerEvents:'none' as const}}/>
 
             {/* === ШАПКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:30,fontWeight:800,color:'#fff',letterSpacing:-0.6,lineHeight:1.1,marginBottom:14}}>{greeting(lang)}</div>
-                <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'5px 12px 5px 5px',borderRadius:18,background:subActive?ACC_DIM:'rgba(255,255,255,0.05)',border:`1px solid ${subActive?ACC+'88':'rgba(255,255,255,0.12)'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
-                  <div style={{width:22,height:22,borderRadius:'50%',background:subActive?ACC+'22':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                    <svg viewBox="0 0 24 24" style={{width:13,height:13}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
+                <div style={{fontSize:24,fontWeight:800,color:'#fff',letterSpacing:-0.5,lineHeight:1.1,marginBottom:10}}>{greeting(lang)}</div>
+                <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px 4px 4px',borderRadius:14,background:subActive?ACC_DIM:'rgba(255,255,255,0.05)',border:`1px solid ${subActive?ACC+'88':'rgba(255,255,255,0.12)'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:subActive?ACC+'22':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg viewBox="0 0 24 24" style={{width:10,height:10}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
                   </div>
-                  <span style={{fontSize:13,color:ACC,fontWeight:700,letterSpacing:-0.2}}>{subActive?'Premium':(lang==='ru'?'Premium':'Premium')}</span>
+                  <span style={{fontSize:11,color:ACC,fontWeight:700,letterSpacing:-0.2}}>Premium</span>
                 </button>
               </div>
-              <button onClick={()=>setScreen('profile')} style={{position:'relative' as const,width:46,height:46,minWidth:46,borderRadius:'50%',padding:0,background:'none',border:'2px solid rgba(255,255,255,0.15)',cursor:'pointer',flexShrink:0,overflow:'hidden',...tap}}>
+              <button onClick={()=>setScreen('profile')} style={{position:'relative' as const,width:38,height:38,minWidth:38,borderRadius:'50%',padding:0,background:'none',border:'1.5px solid rgba(255,255,255,0.18)',cursor:'pointer',flexShrink:0,overflow:'hidden',...tap}}>
                 {tg?.photo_url
                   ?<img src={tg.photo_url} style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                   :<div style={{width:'100%',height:'100%',borderRadius:'50%',background:ACC_DIM,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700,color:ACC}}>{uInit}</div>
                 }
-                {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,width:13,height:13,borderRadius:'50%',background:'#e74c3c',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}/>}
+                {notifUnread>0&&<div style={{position:'absolute' as const,top:-2,right:-2,width:10,height:10,borderRadius:'50%',background:'#e74c3c',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}/>}
               </button>
             </div>
 
             {/* === СТРОКА ПОИСКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'4px 16px 18px'}}>
-              <button onPointerDown={()=>setScreen('search')} style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'13px 18px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
-                <svg viewBox="0 0 24 24" style={{width:18,height:18,flexShrink:0}} fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span style={{fontSize:14,color:TEXT_MUTED,flex:1}}>{lang==='ru'?'Поиск музыки, артистов, альбомов…':lang==='uk'?'Пошук музики, артистів, альбомів…':lang==='kk'?'Музыка, әртістер, альбомдар іздеу…':lang==='pl'?'Szukaj muzyki, artystów, albumów…':lang==='tr'?'Müzik, sanatçı, albüm ara…':'Search music, artists, albums…'}</span>
+              <button onPointerDown={()=>setScreen('search')} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
+                <svg viewBox="0 0 24 24" style={{width:15,height:15,flexShrink:0}} fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{lang==='ru'?'Поиск музыки, артистов, альбомов…':lang==='uk'?'Пошук музики, артистів, альбомів…':lang==='kk'?'Музыка, әртістер, альбомдар іздеу…':lang==='pl'?'Szukaj muzyki, artystów, albumów…':lang==='tr'?'Müzik, sanatçı, albüm ara…':'Search music, artists, albums…'}</span>
               </button>
             </div>
 
@@ -4416,23 +4416,23 @@ return(
             {history.length>0&&(
               <div style={{marginBottom:24,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:12}}>
-                  <div style={{fontSize:18,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
-                  <button onPointerDown={()=>{/* See all — заглушка */}} style={{display:'inline-flex',alignItems:'center',gap:3,background:'none',border:'none',color:ACC,fontSize:13,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
+                  <div style={{fontSize:15,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
+                  <button onPointerDown={()=>{}} style={{display:'inline-flex',alignItems:'center',gap:2,background:'none',border:'none',color:ACC,fontSize:11,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
                     {lang==='ru'?'Все':lang==='uk'?'Усі':lang==='kk'?'Барлығы':lang==='pl'?'Wszystkie':lang==='tr'?'Tümü':'See all'}
-                    <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <svg viewBox="0 0 24 24" style={{width:11,height:11}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
-                    <div key={tr.id} style={{flexShrink:0,width:165,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
-                      <div style={{position:'relative' as const,width:165,height:165,borderRadius:14,overflow:'hidden',marginBottom:10,background:BG3}}>
-                        <Img src={tr.cover} size={165} radius={0}/>
-                        <button onPointerDown={e=>{e.stopPropagation();addQ(tr,e as any);}} style={{position:'absolute' as const,top:10,right:10,width:36,height:36,borderRadius:10,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
-                          <svg viewBox="0 0 24 24" style={{width:18,height:18}} fill="none" stroke={inQ(tr.id)?ACC:'#fff'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="18" cy="18" r="3"/></svg>
+                    <div key={tr.id} style={{flexShrink:0,width:128,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
+                      <div style={{position:'relative' as const,width:128,height:128,borderRadius:11,overflow:'hidden',marginBottom:7,background:BG3}}>
+                        <Img src={tr.cover} size={128} radius={0}/>
+                        <button onPointerDown={e=>{e.stopPropagation();addQ(tr,e as any);}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
+                          <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={inQ(tr.id)?ACC:'#fff'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="18" cy="18" r="3"/></svg>
                         </button>
                       </div>
-                      <div style={{fontSize:15,fontWeight:600,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:3}}>{tr.title||''}</div>
-                      <div style={{fontSize:13,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist||''}</div>
+                      <div style={{fontSize:12,fontWeight:600,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2}}>{tr.title||''}</div>
+                      <div style={{fontSize:10,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist||''}</div>
                     </div>
                   ))}
                 </div>
@@ -4448,21 +4448,21 @@ return(
                   <svg viewBox="0 0 24 24" style={{width:13,height:13,transform:'rotate(45deg)'}} fill={ACC} stroke="none"><path d="M12 2l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1z"/></svg>
                   <span style={{fontSize:13,color:ACC,fontWeight:600,letterSpacing:-0.2}}>{lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген плейлист':lang==='pl'?'Przypięta playlista':lang==='tr'?'Sabitlenmiş çalma listesi':'Pinned playlist'}</span>
                 </div>
-                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{position:'relative' as const,overflow:'hidden',borderRadius:18,padding:'18px 18px',display:'flex',alignItems:'center',gap:16,cursor:'pointer',background:PINNED_BG_URL?'#1a1a1a':`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:'1px solid rgba(255,255,255,0.06)',minHeight:120,...tap}}>
+                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{position:'relative' as const,overflow:'hidden',borderRadius:14,padding:'13px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:PINNED_BG_URL?'#1a1a1a':`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:'1px solid rgba(255,255,255,0.06)',minHeight:88,...tap}}>
                   {PINNED_BG_URL&&<>
                     <div style={{position:'absolute' as const,inset:0,backgroundImage:`url(${PINNED_BG_URL})`,backgroundSize:'cover',backgroundPosition:'center',zIndex:0}}/>
                     <div style={{position:'absolute' as const,inset:0,background:'linear-gradient(to right,rgba(14,14,14,0.85) 0%,rgba(14,14,14,0.45) 60%,rgba(14,14,14,0.3) 100%)',zIndex:0}}/>
                   </>}
-                  <div style={{position:'relative' as const,zIndex:1,width:84,height:84,borderRadius:10,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 4px 16px rgba(0,0,0,0.4)'}}>
-                    {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={42} radius={0}/></div>)}
-                    {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,color:ACC}}>🎵</div>}
+                  <div style={{position:'relative' as const,zIndex:1,width:62,height:62,borderRadius:8,overflow:'hidden',flexShrink:0,display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:BG3,boxShadow:'0 3px 12px rgba(0,0,0,0.4)'}}>
+                    {getPlCovers(pp).map((tr,i)=><div key={i} style={{overflow:'hidden'}}><Img src={tr.cover} size={31} radius={0}/></div>)}
+                    {pp.tracks.length===0&&<div style={{gridColumn:'span 2',gridRow:'span 2',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:ACC}}>🎵</div>}
                   </div>
                   <div style={{position:'relative' as const,zIndex:1,flex:1,minWidth:0}}>
-                    <div style={{fontSize:26,fontWeight:800,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.5,marginBottom:4}}>{pp.name}</div>
-                    <div style={{fontSize:14,color:'rgba(255,255,255,0.7)'}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
+                    <div style={{fontSize:20,fontWeight:800,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:-0.4,marginBottom:2}}>{pp.name}</div>
+                    <div style={{fontSize:11,color:'rgba(255,255,255,0.7)'}}>{pp.tracks.length} {lang==='ru'?'треков':lang==='uk'?'треків':'tracks'}</div>
                   </div>
-                  <div style={{position:'relative' as const,zIndex:1,flexShrink:0,width:48,height:48,borderRadius:'50%',background:ACC,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(239,191,127,0.3)'}}>
-                    <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  <div style={{position:'relative' as const,zIndex:1,flexShrink:0,width:36,height:36,borderRadius:'50%',background:ACC,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 10px rgba(239,191,127,0.3)'}}>
+                    <svg viewBox="0 0 24 24" style={{width:16,height:16}} fill="none" stroke={BG} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </div>
                 </div>
               </div>
@@ -4472,10 +4472,10 @@ return(
             {/* === FOR YOU === */}
             <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                <div style={{fontSize:18,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Для тебя':lang==='uk'?'Для тебе':lang==='kk'?'Сен үшін':lang==='pl'?'Dla Ciebie':lang==='tr'?'Senin için':'For you'}</div>
-                <button onPointerDown={()=>setScreen('trending')} style={{display:'inline-flex',alignItems:'center',gap:3,background:'none',border:'none',color:ACC,fontSize:13,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
+                <div style={{fontSize:15,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Для тебя':lang==='uk'?'Для тебе':lang==='kk'?'Сен үшін':lang==='pl'?'Dla Ciebie':lang==='tr'?'Senin için':'For you'}</div>
+                <button onPointerDown={()=>setScreen('trending')} style={{display:'inline-flex',alignItems:'center',gap:2,background:'none',border:'none',color:ACC,fontSize:11,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
                   {lang==='ru'?'Все':lang==='uk'?'Усі':lang==='kk'?'Барлығы':lang==='pl'?'Wszystkie':lang==='tr'?'Tümü':'See all'}
-                  <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg viewBox="0 0 24 24" style={{width:11,height:11}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
               </div>
               {recs.length===0&&history.length<1
