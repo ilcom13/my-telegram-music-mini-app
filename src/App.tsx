@@ -3537,7 +3537,14 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   ];
 
   if(fullPlayer&&current)return(
-    <div style={{background:`linear-gradient(160deg, ${fpColors.dark} 0%, ${fpColors.mid} 40%, #0e0e0e 100%)`,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',transition:'background 0.8s ease',animation:'fadeIn 0.3s ease'}}>
+    <div style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+      {/* Размытая обложка-фон */}
+      {current.cover&&<>
+        <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
+          <img key={current.cover} src={current.cover} style={{position:'absolute' as const,inset:-40,width:'calc(100% + 80px)',height:'calc(100% + 80px)',objectFit:'cover',filter:'blur(60px) saturate(1.4) brightness(0.55)',transform:'scale(1.15)'}} alt="" onError={()=>{}}/>
+        </div>
+        <div style={{position:'absolute' as const,inset:0,zIndex:0,pointerEvents:'none' as const,background:`linear-gradient(to bottom,transparent 0%,transparent 30%,rgba(14,14,14,0.5) 65%,${BG} 100%)`}}/>
+      </>}
       <audio ref={audio}/>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -3650,52 +3657,41 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           </div>
         </div>
       )}
-      <div style={{width:'100%',display:'grid',gridTemplateColumns:'44px 1fr 44px',alignItems:'center',paddingTop:16,paddingBottom:6,flexShrink:0}}>
-        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}} style={{background:'none',border:'none',cursor:'pointer',padding:'10px 4px 10px 0',display:'flex',alignItems:'center',gap:4,transition:'opacity 0.2s ease',...tap}}>
-          <svg viewBox="0 0 24 24" style={{width:20,height:20,display:'block'}} fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          <span style={{fontSize:11,color:'#888'}}>{lang==='ru'?'Назад':'Back'}</span>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',paddingTop:20,paddingBottom:10,flexShrink:0}}>
+        <button onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px 8px 0',display:'flex',alignItems:'center',gap:6,justifySelf:'start',transition:'opacity 0.2s ease',...tap}}>
+          <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block'}} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          <span style={{fontSize:15,fontWeight:500,color:'#fff'}}>{lang==='ru'?'Назад':lang==='uk'?'Назад':lang==='kk'?'Артқа':lang==='pl'?'Wstecz':lang==='tr'?'Geri':'Back'}</span>
         </button>
-        <span style={{fontSize:10,color:TEXT_MUTED,letterSpacing:1.5,textTransform:'uppercase',textAlign:'center'}}>{t('nowPlaying')}</span>
-        <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 0 8px 8px',position:'relative',display:'flex',justifyContent:'flex-end',transition:'opacity 0.2s ease',...tap}}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          {queue.length>0&&<span style={{position:'absolute',top:4,right:0,background:ACC,color:BG,fontSize:8,fontWeight:700,borderRadius:'50%',width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn 0.2s ease'}}>{queue.length}</span>}
+        <span style={{fontSize:11,color:'rgba(255,255,255,0.5)',letterSpacing:2.5,textTransform:'uppercase',fontWeight:600,whiteSpace:'nowrap'}}>{t('nowPlaying')}</span>
+        <button onPointerDown={()=>setShowQueue(true)} style={{background:'rgba(255,255,255,0.06)',border:`1.5px solid ${queue.length>0?ACC+'88':'rgba(255,255,255,0.15)'}`,cursor:'pointer',width:40,height:40,borderRadius:'50%',position:'relative' as const,display:'flex',alignItems:'center',justifyContent:'center',justifySelf:'end',padding:0,transition:'all 0.2s ease',...tap}}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {queue.length>0&&<span style={{position:'absolute',top:-3,right:-3,background:ACC,color:BG,fontSize:9,fontWeight:700,borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}>{queue.length}</span>}
         </button>
       </div>
-      <div style={{width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginBottom:'2vh'}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginTop:'2vh',marginBottom:'3vh'}}>
         <div
           className="full-player-cover"
-          style={{borderRadius:16,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.6)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
+          style={{borderRadius:22,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,0.5)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
           onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}}
         >
-          <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.38, 380)} radius={0}/>
+          <Img src={current.cover} size={Math.min(window.innerWidth-60, window.innerHeight*0.4, 360)} radius={0}/>
         </div>
       </div>
-      <div style={{width:'100%',flexShrink:0,marginBottom:10,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-        <div style={{fontSize:'clamp(15px,4.5vw,20px)',fontWeight:600,color:TEXT_PRIMARY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{displayTitle(current)}</div>
-        <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,...tap}}>
-          <span style={{fontSize:'clamp(11px,3.5vw,15px)',color:ACC}}>{displayArtist(current)}</span>
-        </button>
-        {current.plays>0&&<div style={{fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:2}}>{fmtP(current.plays)} {t('plays')}</div>}
-      </div>
-      <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,marginBottom:8,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
-        <div style={{display:'flex',alignItems:'center'}}>
-          <HBtn track={current} sz={22}/>
-          <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:'clamp(20px,6vw,30px)',fontWeight:800,color:'#fff',lineHeight:1.15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:3,letterSpacing:-0.5}}>{displayTitle(current)}</div>
+          <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,maxWidth:'100%',...tap}}>
+            <span style={{fontSize:'clamp(13px,4vw,17px)',color:ACC,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}}>{displayArtist(current)}</span>
           </button>
         </div>
-        <div style={{display:'flex',alignItems:'center'}}>
-          <button onPointerDown={()=>{if(!showFxPanel)fetch('https://eqq.onrender.com/health').catch(()=>{});setShowFxPanel(v=>!v);}} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={showFxPanel?ACC:'#888'} strokeWidth="2" strokeLinecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-          </button>
-          <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-          </button>
-          <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',padding:5,transition:'opacity 0.2s ease',...tap}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+          <HBtn track={current} sz={28}/>
+          <button onPointerDown={()=>setAddToPl(current)} style={{background:'rgba(255,255,255,0.08)',border:'none',cursor:'pointer',width:38,height:38,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',padding:0,transition:'background 0.2s ease',...tap}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
           </button>
         </div>
       </div>
+      {copied&&<div style={{position:'relative' as const,zIndex:1,fontSize:11,color:ACC,alignSelf:'flex-start',marginBottom:6,marginTop:-10,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
 {showFxPanel&&(
   <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end'}} onPointerDown={()=>setShowFxPanel(false)}>
@@ -3837,29 +3833,57 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
               if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${v*100}%`;
             }
           }}>
-          <div style={{width:'100%',height:4,background:'rgba(255,255,255,0.15)',borderRadius:4,position:'relative'}}>
-            <div ref={seekBarFillRef} style={{height:'100%',background:ACC,borderRadius:4,width:'0%',pointerEvents:'none'}}/>
-            <div ref={seekBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:14,height:14,background:ACC,borderRadius:'50%',pointerEvents:'none',boxShadow:`0 0 4px ${ACC}88`}}/>
+          <div style={{width:'100%',height:4,background:'rgba(255,255,255,0.18)',borderRadius:2,position:'relative'}}>
+            <div ref={seekBarFillRef} style={{height:'100%',background:ACC,borderRadius:2,width:'0%',pointerEvents:'none'}}/>
+            <div ref={seekBarThumbRef} style={{position:'absolute',top:'50%',left:'0%',transform:'translate(-50%,-50%)',width:14,height:14,background:'#fff',borderRadius:'50%',pointerEvents:'none',boxShadow:'0 2px 6px rgba(0,0,0,0.4)'}}/>
           </div>
         </div>
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'rgba(240,240,240,0.5)',marginTop:4}}>
+        <div style={{position:'relative' as const,zIndex:1,display:'flex',justifyContent:'space-between',fontSize:13,color:'rgba(255,255,255,0.55)',marginTop:8,fontWeight:500}}>
           <span ref={curTimeDisplayRef}>0:00</span>
           <span ref={durDisplayRef}>{current.duration}</span>
         </div>
       </div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(20px,7vw,36px)',flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
-        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:fxLoading?0.2:playHistory.length>0?1:0.35,...tap}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+
+      {/* Главный ряд кнопок: FX-микшер, prev, play, next, repeat-track */}
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,marginTop:'2.5vh',marginBottom:'3vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
+        <button onPointerDown={()=>{if(!showFxPanel)fetch('https://eqq.onrender.com/health').catch(()=>{});setShowFxPanel(v=>!v);}} style={{background:'none',border:'none',cursor:'pointer',padding:8,transition:'opacity 0.2s ease',...tap}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={showFxPanel?ACC:'rgba(255,255,255,0.85)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </button>
-        <button className="play-btn" onPointerDown={togglePlay} style={{width:'clamp(52px,14vw,70px)',height:'clamp(52px,14vw,70px)',borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 4px 20px ${ACC}55`,...tap}}><PP sz="lg"/></button>
-        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:4,opacity:fxLoading?0.2:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playPrev();}} style={{background:'none',border:'none',cursor:'pointer',padding:8,opacity:fxLoading?0.2:playHistory.length>0?1:0.4,...tap}}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M19 20L9 12L19 4V20Z"/><rect x="4" y="5" width="2" height="14" rx="1"/></svg>
+        </button>
+        <button className="play-btn" onPointerDown={togglePlay} style={{width:'clamp(64px,18vw,80px)',height:'clamp(64px,18vw,80px)',borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,boxShadow:`0 6px 24px ${ACC}66`,transition:'transform 0.15s ease',...tap}}>
+          <PP sz="lg"/>
+        </button>
+        <button className="prev-next-btn" onPointerDown={e=>{e.preventDefault();if(fxLoading)return;playNext();}} style={{background:'none',border:'none',cursor:'pointer',padding:8,opacity:fxLoading?0.2:(queue.length>0||recs.length>0||history.length>0)?1:0.4,...tap}}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4L15 12L5 20V4Z"/><rect x="18" y="5" width="2" height="14" rx="1"/></svg>
+        </button>
+        <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:8,transition:'opacity 0.2s ease',...tap}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'rgba(255,255,255,0.85)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
       </div>
-      <div style={{width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'3vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both'}}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+
+      {/* Громкость */}
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'2.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both'}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
         <SliderTrack sp={volSP} h={3}/>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+      </div>
+
+      {/* Нижний ряд: Playlists / Queue / Share */}
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'space-around',alignItems:'center',flexShrink:0,marginBottom:'2vh',paddingBottom:'env(safe-area-inset-bottom)',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.26s both'}}>
+        <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 12px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':lang==='kk'?'Плейлисттер':lang==='pl'?'Playlisty':lang==='tr'?'Listeler':'Playlists'}</span>
+        </button>
+        <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 12px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Очередь':lang==='uk'?'Черга':lang==='kk'?'Кезек':lang==='pl'?'Kolejka':lang==='tr'?'Sıra':'Queue'}</span>
+        </button>
+        <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 12px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>
+          <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Поделиться':lang==='uk'?'Поділитися':lang==='kk'?'Бөлісу':lang==='pl'?'Udostępnij':lang==='tr'?'Paylaş':'Share'}</span>
+        </button>
       </div>
       {addToPl&&<PlModalExt track={addToPl} playlists={playlists.filter(p=>!p.shared)} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
     </div>
