@@ -3536,7 +3536,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
     {id:'trending',icon:(a:boolean)=><svg width="21" height="21" viewBox="0 0 24 24" fill={a?ACC:'none'} stroke={a?ACC:'#606060'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease,fill 0.2s ease'}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,lbl:()=>t('trending')},
   ];
 
-  if(fullPlayer&&current)return(
+  const renderFullPlayer=()=>fullPlayer&&current?(
     <div style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
       {/* Размытая обложка-фон */}
       {current.cover&&<>
@@ -3887,11 +3887,13 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       </div>
       {addToPl&&<PlModalExt track={addToPl} playlists={playlists.filter(p=>!p.shared)} onClose={()=>setAddToPl(null)} onAdd={addToPl2} lang={lang} t={t}/>}
     </div>
-  );
+  ):null;
 
 return(
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
     <audio ref={audio}/>
+    {/* Полноэкранный плеер как оверлей — основное дерево не размонтируется */}
+    {fullPlayer&&current&&<div style={{position:'fixed',inset:0,zIndex:300,background:BG}}>{renderFullPlayer()}</div>}
       {showPremiumBenefits&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:510,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremiumBenefits(false)}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
