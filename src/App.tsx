@@ -3631,6 +3631,12 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .tcard:active{transform:scale(0.975);}
         .tplay{transition:box-shadow 0.2s,transform 0.15s;}
         .tplay:active{transform:scale(0.88);}
+        .fp-desktop .fp-title-row{margin-bottom:12px!important}
+        .fp-desktop .fp-controls{margin-top:1vh!important;margin-bottom:1.5vh!important}
+        .fp-desktop .fp-volume{margin-bottom:1vh!important}
+        .fp-desktop .fp-bottom-row{margin-bottom:4px!important}
+        .fp-desktop .fp-bottom-row button{padding:6px 10px!important;gap:4px!important}
+        .fp-desktop .fp-bottom-row button span{font-size:12px!important}
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
