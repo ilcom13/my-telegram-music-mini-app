@@ -1063,10 +1063,10 @@ const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isA
             <button onPointerDown={e=>{e.stopPropagation();onToggleQ();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...TAP}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </button>
+            <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right',padding:'0 4px'}}>{track.duration}</div>
             <button onPointerDown={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();if(menuOpen)onCloseMenu();else onMenu(r);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...TAP}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill={ACC} stroke="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
             </button>
-            <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right'}}>{track.duration}</div>
           </div>
         )}
         {(track.isArtist||track.isAlbum)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
@@ -4203,6 +4203,8 @@ return(
         .tplay:active{transform:scale(0.88);}
         .full-player-cover{transition:transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease}
         .full-player-cover:active{transform:scale(0.97)}
+        .press-scale { transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1); }
+        .press-scale:active { transform: scale(0.97); }
       `}</style>
       <div style={{paddingBottom:current?NAV_H+5+96+8:NAV_H+6,minHeight:'100vh'}}>
 
@@ -4380,17 +4382,17 @@ return(
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
             {/* Бежевый свет от аватарки */}
-            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:450,background:'radial-gradient(ellipse 90% 70% at 85% -5%,rgba(239,191,127,0.28) 0%,rgba(239,191,127,0.12) 30%,rgba(239,191,127,0.04) 55%,transparent 75%)',zIndex:0,pointerEvents:'none' as const}}/>
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:400,background:'radial-gradient(circle 280px at 92% 8%,rgba(239,191,127,0.55) 0%,rgba(239,191,127,0.25) 25%,rgba(239,191,127,0.08) 55%,transparent 80%)',zIndex:0,pointerEvents:'none' as const}}/>
 
             {/* === ШАПКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:24,fontWeight:800,color:'#fff',letterSpacing:-0.5,lineHeight:1.1,marginBottom:10}}>{greeting(lang)}</div>
-                <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px 4px 4px',borderRadius:14,background:subActive?ACC_DIM:'rgba(255,255,255,0.05)',border:`1px solid ${subActive?ACC+'88':'rgba(255,255,255,0.12)'}`,cursor:'pointer',transition:'all 0.2s ease',...tap}}>
-                  <div style={{width:18,height:18,borderRadius:'50%',background:subActive?ACC+'22':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                    <svg viewBox="0 0 24 24" style={{width:10,height:10}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
+                <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 9px 3px 3px',borderRadius:12,background:ACC_DIM,border:'none',cursor:'pointer',transition:'all 0.2s ease',...tap}}>
+                  <div style={{width:15,height:15,borderRadius:'50%',background:ACC+'22',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg viewBox="0 0 24 24" style={{width:9,height:9}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
                   </div>
-                  <span style={{fontSize:11,color:ACC,fontWeight:700,letterSpacing:-0.2}}>Premium</span>
+                  <span style={{fontSize:10,color:ACC,fontWeight:700,letterSpacing:-0.1}}>Premium</span>
                 </button>
               </div>
               <button onClick={()=>setScreen('profile')} style={{position:'relative' as const,width:38,height:38,minWidth:38,borderRadius:'50%',padding:0,background:'none',border:'1.5px solid rgba(255,255,255,0.18)',cursor:'pointer',flexShrink:0,overflow:'hidden',...tap}}>
@@ -4404,7 +4406,7 @@ return(
 
             {/* === СТРОКА ПОИСКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'4px 16px 18px'}}>
-              <button onPointerDown={()=>setScreen('search')} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
+              <button onClick={(e)=>{e.stopPropagation();setScreen('search');}} className="press-scale" style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
                 <svg viewBox="0 0 24 24" style={{width:15,height:15,flexShrink:0}} fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <span style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{lang==='ru'?'Поиск музыки, артистов, альбомов…':lang==='uk'?'Пошук музики, артистів, альбомів…':lang==='kk'?'Музыка, әртістер, альбомдар іздеу…':lang==='pl'?'Szukaj muzyki, artystów, albumów…':lang==='tr'?'Müzik, sanatçı, albüm ara…':'Search music, artists, albums…'}</span>
               </button>
@@ -4424,10 +4426,10 @@ return(
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
-                    <div key={tr.id} style={{flexShrink:0,width:128,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
-                      <div style={{position:'relative' as const,width:128,height:128,borderRadius:11,overflow:'hidden',marginBottom:7,background:BG3}}>
+                    <div key={tr.id} className="press-scale" style={{flexShrink:0,width:128,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
+                      <div style={{position:'relative' as const,width:128,height:128,borderRadius:11,overflow:'hidden',marginBottom:7,background:BG3,border:'1px solid rgba(255,255,255,0.06)',boxShadow:'0 2px 10px rgba(0,0,0,0.25)'}}>
                         <Img src={tr.cover} size={128} radius={0}/>
-                        <button onPointerDown={e=>{e.stopPropagation();addQ(tr,e as any);}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
+                        <button onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} onPointerDown={e=>{e.stopPropagation();}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
                           <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={inQ(tr.id)?ACC:'#fff'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="18" cy="18" r="3"/></svg>
                         </button>
                       </div>
@@ -4448,7 +4450,7 @@ return(
                   <svg viewBox="0 0 24 24" style={{width:13,height:13,transform:'rotate(45deg)'}} fill={ACC} stroke="none"><path d="M12 2l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1z"/></svg>
                   <span style={{fontSize:13,color:ACC,fontWeight:600,letterSpacing:-0.2}}>{lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген плейлист':lang==='pl'?'Przypięta playlista':lang==='tr'?'Sabitlenmiş çalma listesi':'Pinned playlist'}</span>
                 </div>
-                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} style={{position:'relative' as const,overflow:'hidden',borderRadius:14,padding:'13px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:PINNED_BG_URL?'#1a1a1a':`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:'1px solid rgba(255,255,255,0.06)',minHeight:88,...tap}}>
+                <div onClick={()=>{setScreen('library');setLibTab('playlists');setOpenPlPage(pp.id);}} className="press-scale" style={{position:'relative' as const,overflow:'hidden',borderRadius:14,padding:'13px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:PINNED_BG_URL?'#1a1a1a':`linear-gradient(135deg,${ACC_DIM},rgba(239,191,127,0.06))`,border:'1px solid rgba(255,255,255,0.06)',minHeight:88,...tap}}>
                   {PINNED_BG_URL&&<>
                     <div style={{position:'absolute' as const,inset:0,backgroundImage:`url(${PINNED_BG_URL})`,backgroundSize:'cover',backgroundPosition:'center',zIndex:0}}/>
                     <div style={{position:'absolute' as const,inset:0,background:'linear-gradient(to right,rgba(14,14,14,0.85) 0%,rgba(14,14,14,0.45) 60%,rgba(14,14,14,0.3) 100%)',zIndex:0}}/>
