@@ -4382,12 +4382,12 @@ return(
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
             {/* Бежевый свет от аватарки */}
-            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:400,background:'radial-gradient(circle 280px at 92% 8%,rgba(239,191,127,0.55) 0%,rgba(239,191,127,0.25) 25%,rgba(239,191,127,0.08) 55%,transparent 80%)',zIndex:0,pointerEvents:'none' as const}}/>
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:280,background:'radial-gradient(ellipse 320px 220px at 78% -10%,rgba(239,191,127,0.55) 0%,rgba(239,191,127,0.22) 28%,rgba(239,191,127,0.06) 55%,transparent 78%)',zIndex:0,pointerEvents:'none' as const}}/>
 
             {/* === ШАПКА === */}
-            <div style={{position:'relative' as const,zIndex:1,padding:'18px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+            <div style={{position:'relative' as const,zIndex:1,padding:'14px 16px 6px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:24,fontWeight:800,color:'#fff',letterSpacing:-0.5,lineHeight:1.1,marginBottom:10}}>{greeting(lang)}</div>
+                <div style={{fontSize:24,fontWeight:800,color:'#fff',letterSpacing:-0.5,lineHeight:1.1,marginBottom:7}}>{greeting(lang)}</div>
                 <button onPointerDown={()=>setShowPremium(true)} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 9px 3px 3px',borderRadius:12,background:ACC_DIM,border:'none',cursor:'pointer',transition:'all 0.2s ease',...tap}}>
                   <div style={{width:15,height:15,borderRadius:'50%',background:ACC+'22',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                     <svg viewBox="0 0 24 24" style={{width:9,height:9}} fill={ACC} stroke="none"><path d="M2 8l4 4 6-8 6 8 4-4-2 12H4L2 8z"/></svg>
@@ -4405,7 +4405,7 @@ return(
             </div>
 
             {/* === СТРОКА ПОИСКА === */}
-            <div style={{position:'relative' as const,zIndex:1,padding:'4px 16px 18px'}}>
+            <div style={{position:'relative' as const,zIndex:1,padding:'2px 16px 14px'}}>
               <button onClick={(e)=>{e.stopPropagation();setScreen('search');}} className="press-scale" style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,cursor:'pointer',textAlign:'left' as const,transition:'background 0.2s ease',...tap}}>
                 <svg viewBox="0 0 24 24" style={{width:15,height:15,flexShrink:0}} fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <span style={{fontSize:12,color:TEXT_MUTED,flex:1}}>{lang==='ru'?'Поиск музыки, артистов, альбомов…':lang==='uk'?'Пошук музики, артистів, альбомів…':lang==='kk'?'Музыка, әртістер, альбомдар іздеу…':lang==='pl'?'Szukaj muzyki, artystów, albumów…':lang==='tr'?'Müzik, sanatçı, albüm ara…':'Search music, artists, albums…'}</span>
@@ -4426,15 +4426,15 @@ return(
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
                   {history.slice(0,8).map(tr=>(
-                    <div key={tr.id} className="press-scale" style={{flexShrink:0,width:128,cursor:'pointer'}} onClick={()=>playTrack(tr)}>
-                      <div style={{position:'relative' as const,width:128,height:128,borderRadius:11,overflow:'hidden',marginBottom:7,background:BG3,border:'1px solid rgba(255,255,255,0.06)',boxShadow:'0 2px 10px rgba(0,0,0,0.25)'}}>
+                    <div key={tr.id} className="press-scale" style={{flexShrink:0,width:148,cursor:'pointer',padding:10,borderRadius:14,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
+                      <div style={{position:'relative' as const,width:128,height:128,borderRadius:10,overflow:'hidden',marginBottom:8,background:BG3}}>
                         <Img src={tr.cover} size={128} radius={0}/>
-                        <button onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} onPointerDown={e=>{e.stopPropagation();}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
+                        <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
                           <svg viewBox="0 0 24 24" style={{width:14,height:14}} fill="none" stroke={inQ(tr.id)?ACC:'#fff'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="18" cy="18" r="3"/></svg>
                         </button>
                       </div>
-                      <div style={{fontSize:12,fontWeight:600,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2}}>{tr.title||''}</div>
-                      <div style={{fontSize:10,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{tr.artist||''}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2,padding:'0 2px'}}>{tr.title||''}</div>
+                      <div style={{fontSize:11,color:TEXT_MUTED,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',padding:'0 2px'}}>{tr.artist||''}</div>
                     </div>
                   ))}
                 </div>
