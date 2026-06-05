@@ -3548,7 +3548,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       {/* Размытая обложка-фон */}
       {current.cover&&<>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
-          <img key={current.cover} src={current.cover} style={{position:'absolute' as const,inset:-40,width:'calc(100% + 80px)',height:'calc(100% + 80px)',objectFit:'cover',filter:'blur(5px) saturate(1.7) brightness(0.5)',transform:'scale(1.15)'}} alt="" onError={()=>{}}/>
+          <img key={current.cover} src={current.cover} style={{position:'absolute' as const,inset:-40,width:'calc(100% + 80px)',height:'calc(100% + 80px)',objectFit:'cover',filter:'blur(8px) saturate(1.7) brightness(0.5)',transform:'scale(1.15)'}} alt="" onError={()=>{}}/>
         </div>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,pointerEvents:'none' as const,background:`linear-gradient(to bottom,transparent 0%,rgba(14,14,14,0.15) 25%,rgba(14,14,14,0.4) 50%,rgba(14,14,14,0.75) 75%,rgba(14,14,14,0.95) 88%,${BG} 100%)`}}/>
       </>}
