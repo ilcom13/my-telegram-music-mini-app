@@ -4382,7 +4382,7 @@ return(
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
             {/* Бежевый свет от аватарки */}
-            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:280,background:'radial-gradient(ellipse 320px 220px at 78% -10%,rgba(239,191,127,0.55) 0%,rgba(239,191,127,0.22) 28%,rgba(239,191,127,0.06) 55%,transparent 78%)',zIndex:0,pointerEvents:'none' as const}}/>
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:280,background:'radial-gradient(ellipse 320px 220px at 78% -10%,rgba(239,191,127,0.95) 0%,rgba(239,191,127,0.55) 15%,rgba(239,191,127,0.22) 35%,rgba(239,191,127,0.06) 60%,transparent 80%)',zIndex:0,pointerEvents:'none' as const}}/>
 
             {/* === ШАПКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'14px 16px 6px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
