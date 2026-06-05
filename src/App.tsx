@@ -3544,7 +3544,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   ];
 
   const renderFullPlayer=()=>fullPlayer&&current?(
-    <div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+    <div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}><div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
       {/* Размытая обложка-фон */}
       {current.cover&&<>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
@@ -3631,30 +3631,6 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .tcard:active{transform:scale(0.975);}
         .tplay{transition:box-shadow 0.2s,transform 0.15s;}
         .tplay:active{transform:scale(0.88);}
-
-        /* ── Компактный режим для Telegram Desktop (низкое окно) ──
-           На мобильных экранах (height >= 780px) этот блок НЕ применяется,
-           поэтому отображение на телефонах остаётся точно таким же.        */
-        @media (max-height: 779px) {
-          .fp-root { padding: 0 18px !important; }
-          .fp-header { padding-top: 10px !important; padding-bottom: 4px !important; }
-          .fp-cover-wrap { margin-top: 4px !important; margin-bottom: 10px !important; }
-          .fp-title-row { margin-bottom: 10px !important; }
-          .fp-progress { margin-bottom: 0 !important; }
-          .fp-controls { margin-top: 8px !important; margin-bottom: 10px !important; }
-          .fp-volume { margin-bottom: 8px !important; }
-          .fp-bottom-row { margin-bottom: 4px !important; }
-          .fp-bottom-row button { padding: 6px 10px !important; gap: 4px !important; }
-          .fp-bottom-row button span { font-size: 12px !important; }
-        }
-        @media (max-height: 679px) {
-          .fp-header { padding-top: 8px !important; padding-bottom: 2px !important; }
-          .fp-cover-wrap { margin-top: 2px !important; margin-bottom: 6px !important; }
-          .fp-title-row { margin-bottom: 6px !important; gap: 8px !important; }
-          .fp-controls { margin-top: 4px !important; margin-bottom: 6px !important; }
-          .fp-volume { margin-bottom: 4px !important; }
-          .fp-bottom-row { margin-bottom: 2px !important; }
-        }
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
@@ -3705,7 +3681,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           style={{borderRadius:18,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.5)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
           onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}}
         >
-          <Img src={current.cover} size={window.innerHeight<780 ? Math.min(window.innerWidth-44, window.innerHeight*0.34, 300) : Math.min(window.innerWidth-44, window.innerHeight*0.42, 360)} radius={0}/>
+          <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.42, 360)} radius={0}/>
         </div>
       </div>
       <div className="fp-title-row" style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
