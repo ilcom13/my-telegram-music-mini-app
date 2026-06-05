@@ -1319,6 +1319,12 @@ export default function App(){
   const [bassAmount, setBassAmount] = useState(0);
   const [fxProcessing, setFxProcessing] = useState(false);
   const[fullPlayer,setFullPlayer]=useState(false);
+  useEffect(()=>{
+    const update=()=>{const h=window.innerHeight;document.documentElement.style.setProperty('--app-vh',`${h}px`);};
+    update();
+    window.addEventListener('resize',update);
+    return()=>window.removeEventListener('resize',update);
+  },[]);
   const [volSliderEnabled,setVolSliderEnabled]=useState(false);
   useEffect(()=>{
     if(!fullPlayer){setVolSliderEnabled(false);return;}
@@ -3544,7 +3550,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   ];
 
   const renderFullPlayer=()=>fullPlayer&&current?(
-    <div style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+    <div style={{position:'relative' as const,background:BG,height:'var(--app-vh,100vh)',width:'100%',maxWidth:480,margin:'0 auto',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
       {/* Размытая обложка-фон */}
       {current.cover&&<>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
@@ -3675,13 +3681,13 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           {queue.length>0&&<span style={{position:'absolute',top:-3,right:-3,background:ACC,color:BG,fontSize:9,fontWeight:700,borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}>{queue.length}</span>}
         </button>
       </div>
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginTop:'2vh',marginBottom:'3vh'}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'center',flexShrink:0,marginTop:'calc(var(--app-vh,100vh) * 0.02)',marginBottom:'calc(var(--app-vh,100vh) * 0.03)'}}>
         <div
           className="full-player-cover"
           style={{borderRadius:18,overflow:'hidden',boxShadow:'0 16px 48px rgba(0,0,0,0.5)',position:'relative',cursor:'pointer',transition:'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94),box-shadow 0.3s ease'}}
           onClick={()=>{const p=progressRef.current;if(miniBarFillRef.current)miniBarFillRef.current.style.width=`${p}%`;if(miniBarThumbRef.current)miniBarThumbRef.current.style.left=`${p}%`;setFullPlayer(false);requestAnimationFrame(()=>requestAnimationFrame(()=>{window.scrollTo(0,savedScrollY.current);const plw=document.getElementById('pl-page-wrap');if(plw)plw.scrollTop=savedPlScrollY.current;}));}}
         >
-          <Img src={current.cover} size={Math.min(window.innerWidth-44, window.innerHeight*0.42, 360)} radius={0}/>
+          <Img src={current.cover} size={Math.min(window.innerWidth-44, 480-44, window.innerHeight*0.4, 360)} radius={0}/>
         </div>
       </div>
       <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
@@ -3851,7 +3857,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       </div>
 
       {/* Главный ряд кнопок: FX-микшер, prev, play, next, repeat-track */}
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,marginTop:'2vh',marginBottom:'2.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,marginTop:'calc(var(--app-vh,100vh) * 0.02)',marginBottom:'calc(var(--app-vh,100vh) * 0.025)',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.18s both'}}>
         <button onPointerDown={()=>{if(!showFxPanel)fetch('https://eqq.onrender.com/health').catch(()=>{});setShowFxPanel(v=>!v);}} style={{background:'none',border:'none',cursor:'pointer',padding:6,transition:'opacity 0.2s ease',...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={showFxPanel?ACC:'rgba(255,255,255,0.95)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </button>
@@ -3870,14 +3876,14 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       </div>
 
       {/* Громкость */}
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'2vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both',pointerEvents:volSliderEnabled?'auto':'none' as const,opacity:volSliderEnabled?1:0.7}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'calc(var(--app-vh,100vh) * 0.02)',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both',pointerEvents:volSliderEnabled?'auto':'none' as const,opacity:volSliderEnabled?1:0.7}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
         <SliderTrack sp={volSP} h={3}/>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
       </div>
 
       {/* Нижний ряд: Playlists / Queue / Share */}
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'space-around',alignItems:'center',flexShrink:0,marginBottom:'1.5vh',paddingBottom:'env(safe-area-inset-bottom)',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.26s both'}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',justifyContent:'space-around',alignItems:'center',flexShrink:0,marginBottom:'calc(var(--app-vh,100vh) * 0.015)',paddingBottom:'env(safe-area-inset-bottom)',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.26s both'}}>
         <button onPointerDown={()=>setAddToPl(current)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 14px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':lang==='kk'?'Плейлисттер':lang==='pl'?'Playlisty':lang==='tr'?'Listeler':'Playlists'}</span>
