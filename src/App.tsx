@@ -4382,7 +4382,20 @@ return(
         {screen==='home'&&(
           <div className="screen-fade" style={{position:'relative'}}>
             {/* Бежевый свет от аватарки */}
-            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:280,background:'radial-gradient(ellipse 320px 220px at 78% -10%,rgba(239,191,127,0.95) 0%,rgba(239,191,127,0.55) 15%,rgba(239,191,127,0.22) 35%,rgba(239,191,127,0.06) 60%,transparent 80%)',zIndex:0,pointerEvents:'none' as const}}/>
+            <div style={{position:'absolute' as const,top:0,left:0,right:0,height:260,zIndex:0,pointerEvents:'none' as const,background:`
+              radial-gradient(ellipse 260px 180px at 86% -8%,
+                rgba(239,191,127,0.95) 0%,
+                rgba(239,191,127,0.78) 8%,
+                rgba(239,191,127,0.55) 18%,
+                rgba(239,191,127,0.36) 30%,
+                rgba(239,191,127,0.22) 42%,
+                rgba(239,191,127,0.12) 55%,
+                rgba(239,191,127,0.05) 70%,
+                rgba(239,191,127,0.015) 82%,
+                transparent 92%
+              ),
+              url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")
+            `,backgroundBlendMode:'screen'}}/>
 
             {/* === ШАПКА === */}
             <div style={{position:'relative' as const,zIndex:1,padding:'14px 16px 6px',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
