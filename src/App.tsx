@@ -3638,7 +3638,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .fp-desktop .fp-controls .play-btn{width:52px!important;height:52px!important}
         .fp-desktop .fp-controls .play-btn svg{width:20px!important;height:20px!important}
         .fp-desktop .fp-controls .prev-next-btn svg{width:22px!important;height:22px!important}
-        .fp-desktop .fp-controls>button:first-child,.fp-desktop .fp-controls>button:last-child{transform:scale(0.95)!important}
+        .fp-desktop .fp-controls>button:first-child,.fp-desktop .fp-controls>button:last-child{transform:scale(0.92)!important}
         .fp-desktop .fp-volume{margin-bottom:-2px!important}
         .fp-desktop .fp-bottom-row{margin-bottom:12px!important}
         .fp-desktop .fp-bottom-row button{padding:3px 6px!important;gap:2px!important}
