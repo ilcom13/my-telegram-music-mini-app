@@ -3692,7 +3692,6 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           </button>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-          <HBtn track={current} sz={24}/>
           <button onPointerDown={e=>{e.stopPropagation();toggleLike(current);}} style={{background:'none',border:'none',cursor:'pointer',padding:6,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',...tap}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isLk(current.id)?ACC:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           </button>
@@ -3866,7 +3865,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4L15 12L5 20V4Z"/><rect x="18" y="5" width="2" height="14" rx="1"/></svg>
         </button>
         <button onPointerDown={()=>setLoop(!loop)} style={{background:'none',border:'none',cursor:'pointer',padding:6,transition:'opacity 0.2s ease',...tap}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'rgba(255,255,255,0.55)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={loop?ACC:'rgba(255,255,255,0.95)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
       </div>
 
