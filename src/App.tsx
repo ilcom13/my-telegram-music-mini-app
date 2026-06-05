@@ -3692,7 +3692,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </div>
       </div>
       <div style={{flex:'1 1 0',minHeight:8}}/>
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:'clamp(22px,6.5vw,32px)',fontWeight:800,color:'#fff',lineHeight:1.15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2,letterSpacing:-0.4}}>{displayTitle(current)}</div>
           <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,maxWidth:'100%',...tap}}>
@@ -3706,7 +3706,6 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </div>
       </div>
       {copied&&<div style={{position:'relative' as const,zIndex:1,fontSize:11,color:ACC,alignSelf:'flex-start',marginBottom:6,marginTop:-10,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
-      {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
 {showFxPanel&&(
   <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end'}} onPointerDown={()=>setShowFxPanel(false)}>
     <div style={{background:'#141414',borderRadius:'24px 24px 0 0',padding:'20px 20px 40px',width:'100%',maxHeight:'85vh',overflowY:'auto' as const,border:'1px solid #252525'}} onPointerDown={e=>e.stopPropagation()}>
