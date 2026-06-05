@@ -3544,7 +3544,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   ];
 
   const renderFullPlayer=()=>fullPlayer&&current?(
-    <div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}><div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+    <div className="fp-root" style={{position:'relative' as const,background:BG,height:'100vh',width:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',alignItems:'center',padding:'0 22px',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
       {/* Размытая обложка-фон */}
       {current.cover&&<>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
