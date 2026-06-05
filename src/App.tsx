@@ -1319,6 +1319,13 @@ export default function App(){
   const [bassAmount, setBassAmount] = useState(0);
   const [fxProcessing, setFxProcessing] = useState(false);
   const[fullPlayer,setFullPlayer]=useState(false);
+  const [volSliderEnabled,setVolSliderEnabled]=useState(false);
+  useEffect(()=>{
+    if(!fullPlayer){setVolSliderEnabled(false);return;}
+    const t=setTimeout(()=>setVolSliderEnabled(true),350);
+    return()=>clearTimeout(t);
+  },[fullPlayer]);
+  const fullPlayerOpenedAt=useRef<number>(0);
   useEffect(()=>{
     if(!fullPlayer)return;
     try{
@@ -3864,7 +3871,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       </div>
 
       {/* Громкость */}
-      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both'}}>
+      <div style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',gap:10,flexShrink:0,marginBottom:'1.5vh',animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.22s both',pointerEvents:volSliderEnabled?'auto':'none' as const,opacity:volSliderEnabled?1:0.7}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
         <SliderTrack sp={volSP} h={3}/>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
@@ -6136,7 +6143,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
               type="button"
               key={current.id+'-c'}
               className="mini-cover"
-              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;fullPlayerOpenedAt.current=Date.now();setFullPlayer(true);}}
               style={{background:'none',border:'none',padding:0,margin:0,cursor:'pointer',borderRadius:10,overflow:'hidden',flexShrink:0,display:'block',animation:'popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both',...tap}}
             >
               <Img src={current.cover} size={52} radius={10}/>
@@ -6144,7 +6151,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
  
             <button
               type="button"
-              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;setFullPlayer(true);}}
+              onPointerDown={(e)=>{e.stopPropagation();savedScrollY.current=window.scrollY||document.documentElement.scrollTop||0;const plw=document.getElementById('pl-page-wrap');if(plw)savedPlScrollY.current=plw.scrollTop;const pct=progressRef.current;if(seekBarFillRef.current)seekBarFillRef.current.style.width=`${pct}%`;if(seekBarThumbRef.current)seekBarThumbRef.current.style.left=`${pct}%`;fullPlayerOpenedAt.current=Date.now();setFullPlayer(true);}}
               style={{flex:1,minWidth:0,background:'none',border:'none',padding:0,margin:0,cursor:'pointer',textAlign:'left' as const,display:'block',...tap}}
             >
               <div key={current.id+'-t'} style={{fontSize:14,fontWeight:700,color:TEXT_PRIMARY,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,pointerEvents:'none' as const,animation:'trackIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both'}}>
