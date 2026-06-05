@@ -3641,9 +3641,9 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .fp-desktop .fp-controls>button:first-child svg,.fp-desktop .fp-controls>button:last-child svg{width:18px!important;height:18px!important}
         .fp-desktop .fp-volume{margin-bottom:-2px!important}
         .fp-desktop .fp-bottom-row{margin-bottom:12px!important}
-        .fp-desktop .fp-bottom-row button{padding:4px 8px!important;gap:3px!important}
+        .fp-desktop .fp-bottom-row button{padding:3px 6px!important;gap:2px!important}
         .fp-desktop .fp-bottom-row button span{font-size:11px!important}
-        .fp-desktop .fp-bottom-row svg{width:20px!important;height:20px!important}
+        .fp-desktop .fp-bottom-row svg{width:17px!important;height:17px!important}
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
