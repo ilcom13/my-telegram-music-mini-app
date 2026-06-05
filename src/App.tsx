@@ -1320,10 +1320,18 @@ export default function App(){
   const [fxProcessing, setFxProcessing] = useState(false);
   const[fullPlayer,setFullPlayer]=useState(false);
   useEffect(()=>{
-    const update=()=>{const h=window.innerHeight;document.documentElement.style.setProperty('--app-vh',`${h}px`);};
+    const tgApp=(window as any).Telegram?.WebApp;
+    const update=()=>{
+      const h=tgApp?.viewportStableHeight||tgApp?.viewportHeight||window.innerHeight;
+      document.documentElement.style.setProperty('--app-vh',`${h}px`);
+    };
     update();
     window.addEventListener('resize',update);
-    return()=>window.removeEventListener('resize',update);
+    if(tgApp?.onEvent)tgApp.onEvent('viewportChanged',update);
+    return()=>{
+      window.removeEventListener('resize',update);
+      if(tgApp?.offEvent)tgApp.offEvent('viewportChanged',update);
+    };
   },[]);
   const [volSliderEnabled,setVolSliderEnabled]=useState(false);
   useEffect(()=>{
@@ -3550,7 +3558,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   ];
 
   const renderFullPlayer=()=>fullPlayer&&current?(
-    <div style={{position:'relative' as const,background:BG,height:'var(--app-vh,100vh)',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px calc(env(safe-area-inset-bottom,0px) + 8px)',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
+    <div style={{position:'relative' as const,background:BG,height:'100%',width:'100%',display:'flex',flexDirection:'column',alignItems:'center',padding:'0 22px calc(env(safe-area-inset-bottom,0px) + 8px)',fontFamily:"-apple-system,'SF Pro Display',sans-serif",boxSizing:'border-box',overflow:'hidden',animation:'fadeIn 0.3s ease'}}>
       {/* Размытая обложка-фон */}
       {current.cover&&<>
         <div style={{position:'absolute' as const,inset:0,zIndex:0,overflow:'hidden',pointerEvents:'none' as const}}>
@@ -3907,7 +3915,7 @@ return(
     <div onPointerDown={()=>{if(menuId){setMenuId(null);setMenuAnchor(null);}if(plMenuId)setPlMenuId(null);if(trackMenuPlId){setTrackMenuPlId(null);setTrackMenuTr(null);}}} style={{background:BG,minHeight:'100vh',width:'100%',fontFamily:"-apple-system,'SF Pro Display',sans-serif",position:'relative',boxSizing:'border-box'}}>
     <audio ref={audio}/>
     {/* Полноэкранный плеер как оверлей — основное дерево не размонтируется */}
-    {fullPlayer&&current&&<div style={{position:'fixed',inset:0,zIndex:300,background:BG}}>{renderFullPlayer()}</div>}
+    {fullPlayer&&current&&<div style={{position:'fixed',top:0,left:0,right:0,height:'var(--app-vh,100vh)',zIndex:300,background:BG,overflow:'hidden'}}>{renderFullPlayer()}</div>}
       {showPremiumBenefits&&(
   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:510,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onPointerDown={()=>setShowPremiumBenefits(false)}>
     <div style={{background:'#141414',border:'1px solid #252525',borderRadius:'24px 24px 0 0',padding:'28px 20px 40px',width:'100%',maxWidth:480,animation:'slideUp 0.3s ease both'}} onPointerDown={e=>{e.stopPropagation();e.preventDefault();}}>
