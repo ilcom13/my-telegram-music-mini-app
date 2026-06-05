@@ -4416,7 +4416,7 @@ return(
 
             {/* === RECENTLY PLAYED === */}
             {history.length>0&&(
-              <div style={{marginBottom:24,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
+              <div style={{marginBottom:14,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:12}}>
                   <div style={{fontSize:15,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
                   <button onPointerDown={()=>{}} style={{display:'inline-flex',alignItems:'center',gap:2,background:'none',border:'none',color:ACC,fontSize:11,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
@@ -4445,7 +4445,7 @@ return(
             {pinnedPlId&&playlists.find(p=>p.id===pinnedPlId)&&(()=>{
               const pp=playlists.find(p=>p.id===pinnedPlId)!;
               return(
-              <div style={{padding:'0 16px',marginBottom:24,animation:'slideUp 0.3s ease both'}}>
+              <div style={{padding:'0 16px',marginBottom:14,animation:'slideUp 0.3s ease both'}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10}}>
                   <svg viewBox="0 0 24 24" style={{width:13,height:13,transform:'rotate(45deg)'}} fill={ACC} stroke="none"><path d="M12 2l3 5 5 1-4 4 1 6-5-3-5 3 1-6-4-4 5-1z"/></svg>
                   <span style={{fontSize:13,color:ACC,fontWeight:600,letterSpacing:-0.2}}>{lang==='ru'?'Закреплённый плейлист':lang==='uk'?'Закріплений плейлист':lang==='kk'?'Бекітілген плейлист':lang==='pl'?'Przypięta playlista':lang==='tr'?'Sabitlenmiş çalma listesi':'Pinned playlist'}</span>
