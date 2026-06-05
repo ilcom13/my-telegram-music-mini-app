@@ -3631,16 +3631,19 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .tcard:active{transform:scale(0.975);}
         .tplay{transition:box-shadow 0.2s,transform 0.15s;}
         .tplay:active{transform:scale(0.88);}
-        .fp-desktop .fp-title-row{margin-bottom:10px!important}
-        .fp-desktop .fp-controls{margin-top:4px!important;margin-bottom:6px!important}
-        .fp-desktop .fp-controls .play-btn{width:56px!important;height:56px!important}
-        .fp-desktop .fp-controls .play-btn svg{width:22px!important;height:22px!important}
-        .fp-desktop .fp-controls .prev-next-btn svg{width:24px!important;height:24px!important}
-        .fp-desktop .fp-controls>button:first-child svg,.fp-desktop .fp-controls>button:last-child svg{width:19px!important;height:19px!important}
-        .fp-desktop .fp-volume{margin-bottom:6px!important}
-        .fp-desktop .fp-bottom-row{margin-bottom:2px!important}
-        .fp-desktop .fp-bottom-row button{padding:6px 10px!important;gap:4px!important}
-        .fp-desktop .fp-bottom-row button span{font-size:12px!important}
+        .fp-desktop .fp-cover-wrap{margin-bottom:8px!important}
+        .fp-desktop .fp-title-row{margin-bottom:6px!important}
+        .fp-desktop .fp-progress{margin-bottom:-4px!important}
+        .fp-desktop .fp-controls{margin-top:-2px!important;margin-bottom:-2px!important}
+        .fp-desktop .fp-controls .play-btn{width:52px!important;height:52px!important}
+        .fp-desktop .fp-controls .play-btn svg{width:20px!important;height:20px!important}
+        .fp-desktop .fp-controls .prev-next-btn svg{width:22px!important;height:22px!important}
+        .fp-desktop .fp-controls>button:first-child svg,.fp-desktop .fp-controls>button:last-child svg{width:18px!important;height:18px!important}
+        .fp-desktop .fp-volume{margin-bottom:-2px!important}
+        .fp-desktop .fp-bottom-row{margin-bottom:0!important}
+        .fp-desktop .fp-bottom-row button{padding:4px 8px!important;gap:3px!important}
+        .fp-desktop .fp-bottom-row button span{font-size:11px!important}
+        .fp-desktop .fp-bottom-row svg{width:20px!important;height:20px!important}
       `}</style>
       {showQueue&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
