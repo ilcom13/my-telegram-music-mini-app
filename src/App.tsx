@@ -669,8 +669,8 @@ lang: string;
 
 const PlModalExt = React.memo(({track, playlists, onClose, onAdd, lang, t}: PlModalProps) => {
   return (
-   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:300}} onPointerDown={onClose}>
-  <div className="modal-sheet" style={{background:'#1a1a1a',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px'}} onClick={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}>
+   <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'flex-end',zIndex:300,animation:'fadeIn 0.2s ease'}} onPointerDown={onClose}>
+  <div className="modal-sheet" style={{background:'rgba(14,14,14,0.55)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',width:'100%',borderRadius:'18px 18px 0 0',padding:'18px 16px 36px',border:'1px solid rgba(255,255,255,0.07)',borderBottom:'none'}} onClick={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}>
         <div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY,marginBottom:12}}>{t('addToPlaylist')}</div>
         {playlists.length===0
           ? <div style={{color:TEXT_MUTED,fontSize:12,textAlign:'center',padding:'16px 0'}}>{t('noPlaylists')}</div>
@@ -3648,8 +3648,8 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .fp-desktop .fp-bottom-row svg{width:17px!important;height:17px!important}
       `}</style>
       {showQueue&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
-          <div className="modal-sheet" style={{background:'#242424',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto'}} onPointerDown={e=>e.stopPropagation()}>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:200,display:'flex',alignItems:'flex-end',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowQueue(false)}>
+          <div className="modal-sheet" style={{background:'rgba(14,14,14,0.55)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',width:'100%',borderRadius:'18px 18px 0 0',padding:'16px 16px 32px',maxHeight:'68vh',overflowY:'auto',border:'1px solid rgba(255,255,255,0.07)',borderBottom:'none'}} onPointerDown={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div><div style={{fontSize:14,fontWeight:600,color:TEXT_PRIMARY}}>{t('queue')}</div><div style={{fontSize:10,color:TEXT_MUTED,marginTop:1}}>{queue.length} {lang==='ru'?'треков':'tracks'}</div></div>
               <button onPointerDown={()=>setQueue([])} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:TEXT_SEC,...tap}}>{lang==='ru'?'Очистить':'Clear'}</button>
@@ -3715,8 +3715,8 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       {copied&&<div style={{position:'relative' as const,zIndex:1,fontSize:11,color:ACC,alignSelf:'flex-start',marginBottom:6,marginTop:-10,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
       {copied&&<div style={{fontSize:10,color:ACC,alignSelf:'flex-start',marginBottom:4,marginTop:-4,animation:'fadeIn 0.2s ease'}}>{t('copied')}</div>}
 {showFxPanel&&(
-  <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end'}} onPointerDown={()=>setShowFxPanel(false)}>
-    <div style={{background:'#141414',borderRadius:'24px 24px 0 0',padding:'20px 20px 40px',width:'100%',maxHeight:'85vh',overflowY:'auto' as const,border:'1px solid #252525'}} onPointerDown={e=>e.stopPropagation()}>
+  <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end',background:'rgba(0,0,0,0.4)',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowFxPanel(false)}>
+    <div style={{background:'rgba(14,14,14,0.55)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',borderRadius:'24px 24px 0 0',padding:'20px 20px 40px',width:'100%',maxHeight:'85vh',overflowY:'auto' as const,border:'1px solid rgba(255,255,255,0.07)',borderBottom:'none'}} onPointerDown={e=>e.stopPropagation()}>
       <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 20px'}}/>
       {!subActive&&(
         <div style={{background:'rgba(14,14,14,0.95)',borderRadius:16,padding:'20px',marginBottom:16,display:'flex',flexDirection:'column' as const,alignItems:'center',gap:8,border:'1px solid #252525'}}>
