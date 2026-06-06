@@ -3647,7 +3647,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         .tcard:active{transform:scale(0.975);}
         .tplay{transition:box-shadow 0.2s,transform 0.15s;}
         .tplay:active{transform:scale(0.88);}
-        .fp-desktop .fp-cover-wrap{margin-bottom:8px!important}
+        .fp-desktop .fp-cover-wrap{margin-bottom:8px!important;margin-top:6px!important}
         .fp-desktop .fp-title-row{margin-bottom:6px!important}
         .fp-desktop .fp-progress{margin-bottom:-4px!important}
         .fp-desktop .fp-controls{margin-top:-2px!important;margin-bottom:-2px!important}
