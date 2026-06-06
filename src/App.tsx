@@ -1334,7 +1334,6 @@ export default function App(){
     }catch{}
   },[fullPlayer]);
   const[showQueue,setShowQueue]=useState(false);
-  const[titleExpanded,setTitleExpanded]=useState(false);
   const[queue,setQueue]=useState<Track[]>([]);
   // IDs of tracks manually added to queue (not from playlist auto-queue)
   const[manualQIds,setManualQIds]=useState<Set<string>>(new Set());
@@ -3701,11 +3700,8 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </div>
       </div>
       <div className="fp-title-row" style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
-        <div style={{flex:1,minWidth:0,position:'relative' as const}}>
-          <div onClick={()=>{setTitleExpanded(true);setTimeout(()=>setTitleExpanded(false),2500);}} style={{fontSize:'clamp(22px,6.5vw,32px)',fontWeight:800,color:'#fff',lineHeight:1.15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2,letterSpacing:-0.4,cursor:'pointer',...tap}}>{displayTitle(current)}</div>
-          {titleExpanded&&(
-            <div style={{position:'absolute' as const,left:-6,top:-6,maxWidth:'calc(100vw - 60px)',fontSize:'clamp(22px,6.5vw,32px)',fontWeight:800,color:'#fff',lineHeight:1.15,letterSpacing:-0.4,whiteSpace:'normal' as const,wordBreak:'break-word' as const,background:'rgba(14,14,14,0.85)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',borderRadius:10,padding:'6px 12px',zIndex:20,animation:'fadeIn 0.2s ease',pointerEvents:'none' as const,boxShadow:'0 8px 24px rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.08)'}}>{displayTitle(current)}</div>
-          )}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:'clamp(22px,6.5vw,32px)',fontWeight:800,color:'#fff',lineHeight:1.15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2,letterSpacing:-0.4}}>{displayTitle(current)}</div>
           <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,maxWidth:'100%',...tap}}>
             <span style={{fontSize:'clamp(14px,4vw,18px)',color:ACC,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}}>{displayArtist(current)}</span>
           </button>
