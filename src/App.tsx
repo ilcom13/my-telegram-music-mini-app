@@ -609,7 +609,7 @@ function RecentCard({tr,isActive,isPlaying,inQueue,onPlay,onArtist,onQueue,queue
       <button
         onPointerDown={e=>{e.stopPropagation();onQueue(e);}}
         style={{width:'100%',padding:'4px 7px',background:inQueue?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
+        <svg width="10" height="10" viewBox="0 0 147 112" fill={inQueue?ACC:'#5a5a5a'}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
         <span style={{fontSize:8,color:inQueue?ACC:'#5a5a5a'}}>{queueLabel}</span>
       </button>
     </div>
@@ -1061,7 +1061,7 @@ const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isA
         {!track.isArtist&&!track.isAlbum&&(
           <div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
             <button onPointerDown={e=>{e.stopPropagation();onToggleQ();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...TAP}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 147 112" fill={inQueue?ACC:'#5a5a5a'} style={{transition:'fill 0.2s ease'}}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
             </button>
             <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right',padding:'0 4px'}}>{track.duration}</div>
             <button onPointerDown={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();if(menuOpen)onCloseMenu();else onMenu(r);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...TAP}}>
@@ -3686,7 +3686,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </button>
         <span style={{fontSize:10,color:'rgba(255,255,255,0.5)',letterSpacing:2.2,textTransform:'uppercase',fontWeight:600,whiteSpace:'nowrap'}}>{t('nowPlaying')}</span>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'rgba(255,255,255,0.06)',border:`1.5px solid ${queue.length>0?ACC+'88':'rgba(255,255,255,0.15)'}`,cursor:'pointer',width:34,height:34,borderRadius:'50%',position:'relative' as const,display:'flex',alignItems:'center',justifyContent:'center',justifySelf:'end',padding:0,transition:'all 0.2s ease',...tap}}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
+          <svg width="17" height="17" viewBox="0 0 147 112" fill={queue.length>0?ACC:'#fff'} style={{transition:'fill 0.2s ease'}}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
           {queue.length>0&&<span style={{position:'absolute',top:-3,right:-3,background:ACC,color:BG,fontSize:9,fontWeight:700,borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}>{queue.length}</span>}
         </button>
       </div>
@@ -3898,7 +3898,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':lang==='kk'?'Плейлисттер':lang==='pl'?'Playlisty':lang==='tr'?'Listeler':'Playlists'}</span>
         </button>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 14px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="2" width="13" height="8" rx="1.5"/><rect x="5" y="6" width="13" height="8" rx="1.5"/><rect x="9" y="10" width="13" height="8" rx="1.5"/></svg>
+          <svg width="22" height="22" viewBox="0 0 147 112" fill="currentColor"><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
           <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Очередь':lang==='uk'?'Черга':lang==='kk'?'Кезек':lang==='pl'?'Kolejka':lang==='tr'?'Sıra':'Queue'}</span>
         </button>
         <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 14px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
