@@ -6179,12 +6179,12 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
             <div style={{display:'flex',alignItems:'center',gap:0,flexShrink:0,marginTop:2}}>
               <button className="prev-next-btn"
                 onPointerDown={(e)=>{e.stopPropagation();playPrev();}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:playHistory.length>0?1:0.35,...tap}}>
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',justifyContent:'center',opacity:playHistory.length>0?1:0.35,...tap}}>
                 <svg width={['tdesktop','macos','weba','webk'].includes(window.Telegram?.WebApp?.platform??'')?21:18} height={['tdesktop','macos','weba','webk'].includes(window.Telegram?.WebApp?.platform??'')?21:18} viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
               </button>
               <button className="prev-next-btn"
                 onPointerDown={(e)=>{e.stopPropagation();playNext();}}
-                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
+                style={{background:'none',border:'none',cursor:'pointer',padding:'8px 6px',display:'flex',alignItems:'center',justifyContent:'center',opacity:(queue.length>0||recs.length>0||history.length>0)?1:0.35,...tap}}>
                 <svg width={['tdesktop','macos','weba','webk'].includes(window.Telegram?.WebApp?.platform??'')?21:18} height={['tdesktop','macos','weba','webk'].includes(window.Telegram?.WebApp?.platform??'')?21:18} viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
               </button>
             </div>
