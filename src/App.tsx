@@ -609,7 +609,7 @@ function RecentCard({tr,isActive,isPlaying,inQueue,onPlay,onArtist,onQueue,queue
       <button
         onPointerDown={e=>{e.stopPropagation();onQueue(e);}}
         style={{width:'100%',padding:'4px 7px',background:inQueue?ACC_DIM:'transparent',border:'none',borderTop:'1px solid #252525',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,...tap}}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
         <span style={{fontSize:8,color:inQueue?ACC:'#5a5a5a'}}>{queueLabel}</span>
       </button>
     </div>
@@ -1061,7 +1061,7 @@ const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isA
         {!track.isArtist&&!track.isAlbum&&(
           <div onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:1,flexShrink:0}}>
             <button onPointerDown={e=>{e.stopPropagation();onToggleQ();}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',transition:'transform 0.15s ease',...TAP}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={inQueue?ACC:'#5a5a5a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
             </button>
             <div style={{fontSize:10,color:TEXT_SEC,flexShrink:0,minWidth:28,textAlign:'right',padding:'0 4px'}}>{track.duration}</div>
             <button onPointerDown={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();if(menuOpen)onCloseMenu();else onMenu(r);}} style={{background:'none',border:'none',cursor:'pointer',padding:'6px 4px',...TAP}}>
@@ -3686,7 +3686,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
         </button>
         <span style={{fontSize:10,color:'rgba(255,255,255,0.5)',letterSpacing:2.2,textTransform:'uppercase',fontWeight:600,whiteSpace:'nowrap'}}>{t('nowPlaying')}</span>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'rgba(255,255,255,0.06)',border:`1.5px solid ${queue.length>0?ACC+'88':'rgba(255,255,255,0.15)'}`,cursor:'pointer',width:34,height:34,borderRadius:'50%',position:'relative' as const,display:'flex',alignItems:'center',justifyContent:'center',justifySelf:'end',padding:0,transition:'all 0.2s ease',...tap}}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={queue.length>0?ACC:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transition:'stroke 0.2s ease'}}><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
           {queue.length>0&&<span style={{position:'absolute',top:-3,right:-3,background:ACC,color:BG,fontSize:9,fontWeight:700,borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid #0e0e0e',boxSizing:'border-box' as const}}>{queue.length}</span>}
         </button>
       </div>
