@@ -3898,7 +3898,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
           <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Плейлисты':lang==='uk'?'Плейлисти':lang==='kk'?'Плейлисттер':lang==='pl'?'Playlisty':lang==='tr'?'Listeler':'Playlists'}</span>
         </button>
         <button onPointerDown={()=>setShowQueue(true)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 14px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="14" height="8" rx="2"/><rect x="5" y="8" width="14" height="8" rx="2"/><rect x="7" y="13" width="14" height="8" rx="2"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="2" width="13" height="8" rx="1.5"/><rect x="5" y="6" width="13" height="8" rx="1.5"/><rect x="9" y="10" width="13" height="8" rx="1.5"/></svg>
           <span style={{fontSize:13,fontWeight:500}}>{lang==='ru'?'Очередь':lang==='uk'?'Черга':lang==='kk'?'Кезек':lang==='pl'?'Kolejka':lang==='tr'?'Sıra':'Queue'}</span>
         </button>
         <button onPointerDown={()=>shareTrack(current)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column' as const,alignItems:'center',gap:6,padding:'8px 14px',color:'rgba(255,255,255,0.55)',transition:'color 0.2s ease',...tap}}>
