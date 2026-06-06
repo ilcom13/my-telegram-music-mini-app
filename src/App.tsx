@@ -2267,6 +2267,20 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
 
+  useEffect(()=>{
+    if(!current?.id)return;
+    setQueue(prev=>{
+      if(!prev.some(t=>t.id===current.id))return prev;
+      const n=prev.filter(t=>t.id!==current.id);
+      try{localStorage.setItem('q47',JSON.stringify(n));}catch{}
+      return n;
+    });
+    setManualQIds(prev=>{
+      if(!prev.has(current.id))return prev;
+      const n=new Set(prev);n.delete(current.id);return n;
+    });
+  },[current?.id]);
+
   useEffect(()=>{if(audio.current)audio.current.playbackRate=playbackSpeed;},[playbackSpeed]);
 
   const statsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
