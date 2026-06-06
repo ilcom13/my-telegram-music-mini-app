@@ -1193,7 +1193,7 @@ export default function App(){
   const [likedSearch,setLikedSearch]=useState(false);
   const cancelDownloadRef=useRef(false);
   const [sessionDownloaded,setSessionDownloaded]=useState<Set<string>>(new Set());
-  const OFFLINE_LIMIT=400;
+  const OFFLINE_LIMIT=500;
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set());
   const [downloadingPl, setDownloadingPl] = useState<string|null>(null); // id плейлиста, который качается
   const [failedDownloads,setFailedDownloads]=useState<Track[]>([]);
@@ -2039,7 +2039,8 @@ useEffect(()=>{
       navigator.mediaSession.playbackState='none';
       return;
     }
-const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
+    let cancelled=false;
+    const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
     const artwork:MediaImage[]=artworkUrl?[
       {src:artworkUrl.replace('t500x500','t120x120'),sizes:'120x120',type:'image/jpeg'},
       {src:artworkUrl.replace('t500x500','t300x300'),sizes:'300x300',type:'image/jpeg'},
@@ -2047,7 +2048,7 @@ const artworkUrl=current.cover?current.cover.replace('t300x300','t500x500'):'';
       {src:artworkUrl,sizes:'512x512',type:'image/jpeg'},
     ]:[];
     navigator.mediaSession.metadata=new MediaMetadata({title:(subActive?(customTitlesRef.current[current.id]?.t||current.title):current.title)||'',artist:(subActive?(customTitlesRef.current[current.id]?.a||current.artist):current.artist)||'',album:'',artwork});
-    if(artworkUrl){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{try{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx2d=c.getContext('2d');if(ctx2d){ctx2d.drawImage(img,0,0,256,256);c.toBlob(blob=>{if(!blob)return;const burl=URL.createObjectURL(blob);navigator.mediaSession.metadata=new MediaMetadata({title:(subActive?(customTitlesRef.current[current.id]?.t||current.title):current.title)||'',artist:(subActive?(customTitlesRef.current[current.id]?.a||current.artist):current.artist)||'',album:'',artwork:[{src:burl,sizes:'256x256',type:blob.type}]});});}}catch{}};img.src=artworkUrl;}
+    if(artworkUrl){const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{if(cancelled)return;try{const c=document.createElement('canvas');c.width=256;c.height=256;const ctx2d=c.getContext('2d');if(ctx2d){ctx2d.drawImage(img,0,0,256,256);c.toBlob(blob=>{if(cancelled||!blob)return;const burl=URL.createObjectURL(blob);navigator.mediaSession.metadata=new MediaMetadata({title:(subActive?(customTitlesRef.current[current.id]?.t||current.title):current.title)||'',artist:(subActive?(customTitlesRef.current[current.id]?.a||current.artist):current.artist)||'',album:'',artwork:[{src:burl,sizes:'256x256',type:blob.type}]});});}}catch{}};img.src=artworkUrl;}
     navigator.mediaSession.playbackState=playing?'playing':'paused';
 navigator.mediaSession.setActionHandler('play',()=>{
       ensureSilence();
@@ -2078,6 +2079,7 @@ navigator.mediaSession.setActionHandler('seekto',(details)=>{
         navigator.mediaSession.setPositionState({duration:audio.current.duration,playbackRate:1,position:audio.current.currentTime||0});
       }
     }catch{}
+    return()=>{cancelled=true;};
   },[current,playing,customTitles,subActive]);
 
 
