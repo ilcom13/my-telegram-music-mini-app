@@ -1133,10 +1133,10 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,displayName,displayArtistN
           </div>
         ):(
           <>
-            <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onQueue();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
+            <button onPointerDown={e=>{e.stopPropagation();onQueue();}} onPointerCancel={e=>e.stopPropagation()} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 4px',flexShrink:0}}>
               <svg width="17" height="17" viewBox="0 0 147 112" fill={isManualQ?ACC:TEXT_MUTED} style={{transition:'fill 0.2s ease'}}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
             </button>
-            <button onPointerDown={e=>e.stopPropagation()} onPointerUp={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
+            <button onPointerDown={e=>{e.stopPropagation();onMenu();}} onPointerCancel={e=>e.stopPropagation()} style={{background:'none',border:'none',cursor:'pointer',padding:'8px 3px',flexShrink:0}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="12" r="2" fill={TEXT_MUTED}/><circle cx="12" cy="19" r="2" fill={TEXT_MUTED}/></svg>
             </button>
           </>
@@ -2309,6 +2309,12 @@ a.addEventListener('volumechange',onVol);
  useEffect(()=>{
   const onFocus=()=>{
     if(document.visibilityState!=='visible')return;
+    // Сбрасываем возможный «зависший» pointer-capture после блокировки экрана
+    try{
+      document.querySelectorAll<HTMLElement>('[data-row]').forEach(el=>{
+        try{el.releasePointerCapture?.(0);}catch{}
+      });
+    }catch{}
     if(audioCtx.current?.state==='suspended'){
       audioCtx.current.resume().catch(()=>{});
     }
