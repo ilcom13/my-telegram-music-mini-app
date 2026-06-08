@@ -2319,10 +2319,10 @@ const a=audio.current;
       setPlaying(true);
     }
     // Если должен играть но встал — пробуем через 500мс
-    if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0){
+    if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0&&navigator.mediaSession?.playbackState!=='paused'){
       setTimeout(()=>{
         ensureSilence();
-        if(a.paused&&isPlayingRef.current)a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
+        if(a.paused&&isPlayingRef.current&&navigator.mediaSession?.playbackState!=='paused')a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
       },500);
     }
   };
