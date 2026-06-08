@@ -2229,15 +2229,6 @@ const onVisible=()=>{
             }
           }
         }catch{}
-        // Silence играет в начале (0-5%) и конце (95-100%) трека, чтобы покрыть гэп загрузки
-        // между треками. В стабильной середине silence остановлен — это убирает мигание timeline
-        // на виджете iOS (один активный audio вместо двух).
-        const sil=silenceRef.current;
-        if(sil){
-          const inGap=pct<5||pct>95;
-          if(!a.paused&&!inGap&&!sil.paused){try{sil.pause();}catch{}}
-          else if(!a.paused&&inGap&&sil.paused){sil.play().catch(()=>{});}
-        }
       }
     };
 const onE=()=>{
@@ -2270,23 +2261,8 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
         else setPlaying(false);
       }
     };
-    let pauseTimer:ReturnType<typeof setTimeout>|null=null;
-    const onPauseDelayed=()=>{
-      if(pauseTimer)clearTimeout(pauseTimer);
-      pauseTimer=setTimeout(()=>{
-        const sil=silenceRef.current;
-        if(sil&&sil.paused&&a.paused){sil.play().catch(()=>{});}
-        pauseTimer=null;
-      },1000);
-    };
-    const onPlayClearTimer=()=>{if(pauseTimer){clearTimeout(pauseTimer);pauseTimer=null;}};
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
-    a.addEventListener('pause',onPauseDelayed);a.addEventListener('play',onPlayClearTimer);
-    return()=>{
-      if(pauseTimer)clearTimeout(pauseTimer);
-      a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);
-      a.removeEventListener('pause',onPauseDelayed);a.removeEventListener('play',onPlayClearTimer);
-    };
+    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
   },[current,loop]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
