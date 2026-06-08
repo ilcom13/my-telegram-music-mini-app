@@ -3293,7 +3293,7 @@ const openArtist=async(permalink:string,name:string,avatar:string,followers:numb
           permalink:'',
           tracks:allTracks.slice(0,5),
           albums:[],
-          latestRelease:null,
+          latestRelease:d.latestRelease||null,
           source:'audiomack',
         });
         setArtistTracks(allTracks);
