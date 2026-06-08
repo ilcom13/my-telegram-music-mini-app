@@ -1147,7 +1147,7 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,displayName,displayArtistN
 });
 
 export default function App(){
-  const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'>('home');
+  const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'|'recent_all'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
   const[query,setQuery]=useState('');
@@ -4492,13 +4492,13 @@ return(
               <div style={{marginBottom:14,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 16px',marginBottom:12}}>
                   <div style={{fontSize:15,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
-                  <button onPointerDown={()=>{}} style={{display:'inline-flex',alignItems:'center',gap:2,background:'none',border:'none',color:ACC,fontSize:11,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
+                  <button onPointerDown={()=>setScreen('recent_all')} style={{display:'inline-flex',alignItems:'center',gap:2,background:'none',border:'none',color:ACC,fontSize:11,fontWeight:500,cursor:'pointer',padding:0,...tap}}>
                     {lang==='ru'?'Все':lang==='uk'?'Усі':lang==='kk'?'Барлығы':lang==='pl'?'Wszystkie':lang==='tr'?'Tümü':'See all'}
                     <svg viewBox="0 0 24 24" style={{width:11,height:11}} fill="none" stroke={ACC} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
-                  {history.slice(0,8).map(tr=>(
+                  {history.slice(0,12).map(tr=>(
                     <div key={tr.id} className="press-scale" style={{flexShrink:0,width:148,cursor:'pointer',padding:10,borderRadius:14,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
                       <div style={{position:'relative' as const,width:128,height:128,borderRadius:10,overflow:'hidden',marginBottom:8,background:BG3}}>
                         <Img src={tr.cover} size={128} radius={0}/>
@@ -5499,6 +5499,32 @@ onClose={()=>{setShowImport(false);setImportSource('none');setImportSizeQ('none'
 importSource={importSource} setImportSource={setImportSource}
         importSizeQ={importSizeQ} setImportSizeQ={setImportSizeQ}
       />}
+
+
+      {screen==='recent_all'&&(
+        <div id="pl-page-wrap" className="screen-fade" style={{position:'fixed' as const,inset:0,background:BG,zIndex:50,overflowY:'auto' as const,paddingBottom:200,transition:'opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1)'}}>
+          <div style={{position:'sticky' as const,top:0,zIndex:10,background:'rgba(14,14,14,0.92)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',padding:'12px 16px',display:'flex',alignItems:'center',gap:12,borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+            <button onPointerDown={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px 4px 0',display:'flex',alignItems:'center',...tap}}>
+              <svg viewBox="0 0 24 24" style={{width:22,height:22,display:'block'}} fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div style={{fontSize:17,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
+          </div>
+          <div style={{padding:'14px 12px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+            {history.map(tr=>(
+              <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:8,borderRadius:12,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
+                <div style={{position:'relative' as const,width:'100%',aspectRatio:'1/1',borderRadius:8,overflow:'hidden' as const,marginBottom:6,background:BG3}}>
+                  <Img src={tr.cover} size={120} radius={0}/>
+                  <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:5,right:5,width:26,height:26,borderRadius:7,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
+                    <svg viewBox="0 0 147 112" style={{width:12,height:12,transition:'fill 0.2s ease'}} fill={inQ(tr.id)?ACC:'#fff'}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
+                  </button>
+                </div>
+                <div style={{fontSize:11,fontWeight:600,color:'#fff',whiteSpace:'nowrap' as const,overflow:'hidden' as const,textOverflow:'ellipsis' as const,marginBottom:2,padding:'0 2px'}}>{tr.title||''}</div>
+                <div style={{fontSize:9,color:TEXT_MUTED,whiteSpace:'nowrap' as const,overflow:'hidden' as const,textOverflow:'ellipsis' as const,padding:'0 2px'}}>{tr.artist||''}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
  
       {/* ── MONTH STATS SCREEN ── */}
       {screen==='monthstats'&&(()=>{
