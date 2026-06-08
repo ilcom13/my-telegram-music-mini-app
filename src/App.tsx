@@ -5509,9 +5509,9 @@ importSource={importSource} setImportSource={setImportSource}
             </button>
             <div style={{fontSize:17,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>{lang==='ru'?'Недавно играло':lang==='uk'?'Нещодавно грало':lang==='kk'?'Жақында ойнатылды':lang==='pl'?'Ostatnio odtwarzane':lang==='tr'?'Son çalınan':'Recently played'}</div>
           </div>
-          <div style={{padding:'14px 12px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-            {history.map(tr=>(
-              <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:8,borderRadius:12,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
+          <div style={{padding:'12px 10px',display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>
+            {history.slice(0,12).map(tr=>(
+              <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:6,borderRadius:10,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)',minWidth:0,overflow:'hidden'}} onClick={()=>playTrack(tr)}>
                 <div style={{position:'relative' as const,width:'100%',paddingBottom:'100%',borderRadius:8,overflow:'hidden' as const,marginBottom:6,background:BG3}}>
                   {tr.cover?<img src={tr.cover} alt="" style={{position:'absolute' as const,inset:0,width:'100%',height:'100%',objectFit:'cover' as const,display:'block'}} onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>:<div style={{position:'absolute' as const,inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,color:ACC}}>🎵</div>}
                   <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:5,right:5,width:26,height:26,borderRadius:7,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
