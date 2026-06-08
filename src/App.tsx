@@ -5512,8 +5512,8 @@ importSource={importSource} setImportSource={setImportSource}
           <div style={{padding:'14px 12px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
             {history.map(tr=>(
               <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:8,borderRadius:12,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
-                <div style={{position:'relative' as const,width:'100%',aspectRatio:'1/1',borderRadius:8,overflow:'hidden' as const,marginBottom:6,background:BG3}}>
-                  <Img src={tr.cover} size={120} radius={0}/>
+                <div style={{position:'relative' as const,width:'100%',borderRadius:8,overflow:'hidden' as const,marginBottom:6,background:BG3}}>
+                  <AlbumImg src={tr.cover} radius={0}/>
                   <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:5,right:5,width:26,height:26,borderRadius:7,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
                     <svg viewBox="0 0 147 112" style={{width:12,height:12,transition:'fill 0.2s ease'}} fill={inQ(tr.id)?ACC:'#fff'}><path d="M80.5 0C86.299 0 91 4.70101 91 10.5V18H29.5C23.701 18 19 22.701 19 28.5V56H10.5C4.70101 56 0 51.299 0 45.5V10.5C0 4.70101 4.70101 0 10.5 0H80.5Z"/><path d="M108.5 28C114.299 28 119 32.701 119 38.5V46H58.5C52.701 46 48 50.701 48 56.5V84H38.5C32.701 84 28 79.299 28 73.5V38.5C28 32.701 32.701 28 38.5 28H108.5Z"/><path d="M136.5 56H66.5C60.701 56 56 60.701 56 66.5V101.5C56 107.299 60.701 112 66.5 112H136.5C142.299 112 147 107.299 147 101.5V66.5C147 60.701 142.299 56 136.5 56Z"/></svg>
                   </button>
