@@ -217,6 +217,7 @@ interface ArtistInfo {
   id: string; name: string; username: string; avatar: string; banner: string;
   followers: number; permalink: string; tracks: Track[];
   albums: AlbumInfo[]; latestRelease: Track | null;
+  source?: string;
 }
 
 const T: Record<string,Record<string,string>> = {
@@ -1005,7 +1006,7 @@ interface TRowProps {
   isPlaying: boolean;
   inQueue: boolean;
   menuOpen: boolean;
-  onArtistClick?: (n:string,c:string,id?:string)=>void;
+  onArtistClick?: (n:string,c:string,id?:string,src?:string)=>void;
   showBlockBtn?: boolean;
   onSwipeLeft?: ()=>void;
   onPlay: ()=>void;
@@ -1051,7 +1052,7 @@ const TRow=React.memo(function TRow({track,num,displayName,displayArtistName,isA
             </div>
             <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
               {!track.isArtist&&!track.isAlbum&&onArtistClick
-              ?<button onClick={e=>{e.stopPropagation();if(track.source!=='audiomack')onArtistClick(track.artist,track.cover,track.artistId);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{displayArtistName??track.artist}</button>
+              ?<button onClick={e=>{e.stopPropagation();onArtistClick(track.artist,track.cover,track.artistId,track.source);}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:11,color:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130,textAlign:'left',...TAP}}>{displayArtistName??track.artist}</button>
                 :<span style={{fontSize:11,color:track.isArtist?ACC:TEXT_SEC,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{track.isAlbum?`${track.trackCount||0} треков`:(displayArtistName??track.artist)}</span>
               }
               {!track.isArtist&&!track.isAlbum&&track.plays>0&&<span style={{fontSize:10,color:TEXT_MUTED,flexShrink:0}}>· {fmtP(track.plays)}</span>}
@@ -2914,7 +2915,7 @@ const playNext=()=>{
 
   const playTrack=(track:Track)=>{
     if(track.isArtist&&track.source!=='audiomack'){openArtist(track.id||'',track.title,track.cover,track.plays);return;}
-if(track.isArtist&&track.source==='audiomack')return;
+    if(track.isArtist&&track.source==='audiomack'){openArtist('',track.title,track.cover,track.plays,'audiomack');return;}
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
     if(!track.id)return;
     if(current?.id===track.id){togglePlay();return;}
@@ -3264,16 +3265,48 @@ if(trimmedUrl.includes('soundcloud.com')||trimmedUrl.includes('on.soundcloud.com
     finally{setLoading(false);}
   };
 
-const openArtist=async(permalink:string,name:string,avatar:string,followers:number)=>{
+const openArtist=async(permalink:string,name:string,avatar:string,followers:number,source?:string)=>{
     setArtistLoading(true);
     if(screen!=='artist'&&screen!=='album'){preArtistScreen.current=screen as typeof preArtistScreen.current;}
     prevScreen.current=screen as typeof prevScreen.current;
     screenStack.current.push(screen as any);
     setScreen('artist');
     setArtistPage(null);setArtistAlbums([]);setArtistTracks([]);
-    setArtistTracksHasMore(false);setArtistTab('albums');
+    setArtistTracksHasMore(false);
+    setArtistTab(source==='audiomack'?'tracks':'albums');
     setArtistTracksLoading(true);
     artistUserId.current='';artistTracksCursor.current=null;
+    // === AM-ветка: один запрос на виртуальный профиль ===
+    if(source==='audiomack'){
+      try{
+        const r=await fetch(`${W}/audiomack-artist?name=${encodeURIComponent(name)}`);
+        const d=await r.json();
+        const art=d.artist||{};
+        const allTracks:Track[]=d.tracks||[];
+        setArtistPage({
+          id:art.id||'am_'+name,
+          name:art.name||name,
+          username:'',
+          avatar:art.avatar||avatar||'',
+          banner:'',
+          followers:0,
+          permalink:'',
+          tracks:allTracks.slice(0,5),
+          albums:[],
+          latestRelease:null,
+          source:'audiomack',
+        });
+        setArtistTracks(allTracks);
+        setArtistTracksHasMore(false);
+        setArtistAlbums([]);
+      }catch{
+        setArtistPage({id:'',name,username:'',avatar,banner:'',followers:0,permalink:'',tracks:[],albums:[],latestRelease:null,source:'audiomack'});
+        setArtistTracks([]);
+      }
+      setArtistTracksLoading(false);
+      setArtistLoading(false);
+      return;
+    }
     try{
       // Если permalink — числовой userId, ищем напрямую по id
       const isUserId=/^\d+$/.test(permalink);
@@ -3537,7 +3570,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
 
   const tap:React.CSSProperties={outline:'none',WebkitTapHighlightColor:'transparent' as any};
   const volSP=useSlider(volume,v=>setVol(v));
-  const mkTRow=useCallback((track:Track,extra?:{num?:number;onArtistClick?:(n:string,c:string,id?:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
+  const mkTRow=useCallback((track:Track,extra?:{num?:number;onArtistClick?:(n:string,c:string,id?:string,src?:string)=>void;showBlockBtn?:boolean;onSwipeLeft?:()=>void})=>{
     const isActive=current?.id===track.id;
     const mOpen=menuId===track.id;
     return{
@@ -3721,7 +3754,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
       <div className="fp-title-row" style={{position:'relative' as const,zIndex:1,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexShrink:0,marginBottom:18,animation:'slideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94) 0.05s both'}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:'clamp(22px,6.5vw,32px)',fontWeight:800,color:'#fff',lineHeight:1.15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:2,letterSpacing:-0.4}}>{displayTitle(current)}</div>
-          <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,maxWidth:'100%',...tap}}>
+          <button onClick={()=>{setFullPlayer(false);openArtist(current.permalink||'',current.artist,current.cover,0,current.source);}} style={{background:'none',border:'none',cursor:'pointer',padding:0,display:'block',textAlign:'left' as const,maxWidth:'100%',...tap}}>
             <span style={{fontSize:'clamp(14px,4vw,18px)',color:ACC,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}}>{displayArtist(current)}</span>
           </button>
         </div>
@@ -4302,10 +4335,10 @@ return(
                       {artistPage.username&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>@{artistPage.username}</div>}
                       {artistPage.followers>0&&<div style={{fontSize:11,color:TEXT_SEC,marginTop:1}}>{fmtP(artistPage.followers)} {lang==='ru'?'подписчиков':'followers'}</div>}
                     </div>
-                    <button className="follow-btn" onPointerDown={()=>artistPage&&toggleFavA(artistPage)}
+                    {artistPage.source!=='audiomack'&&<button className="follow-btn" onPointerDown={()=>artistPage&&toggleFavA(artistPage)}
                       style={{flexShrink:0,padding:'7px 14px',borderRadius:18,border:`1px solid ${isFavA(artistPage)?ACC:'#333'}`,background:isFavA(artistPage)?ACC_DIM:'transparent',color:isFavA(artistPage)?ACC:'#888',fontSize:12,cursor:'pointer',fontWeight:500,marginBottom:2,...tap}}>
                       {isFavA(artistPage)?t('removeFav'):t('addFav')}
-                    </button>
+                    </button>}
                   </div>
 
                   {artistPage.latestRelease&&(
@@ -4341,7 +4374,7 @@ return(
                     <div style={{marginBottom:12,animation:'slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both'}}>
                       <SL text={t('popular')}/>
                       <div style={{padding:'0 4px'}}>
-                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})}/>)}
+                        {artistPage.tracks.slice(0,5).map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id,src)=>openArtist(id||'',n,c,0,src)})}/>)}
                       </div>
                     </div>
                   )}
@@ -4358,6 +4391,7 @@ return(
                     </div>
 
                     {artistTab==='albums'&&(
+                      artistPage?.source==='audiomack'?<div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{lang==='ru'?'Альбомы недоступны для этого источника':'Albums not available for this source'}</div>:
                       artistAlbumsLoading&&artistAlbums.length===0?<Spinner/>:
                       artistAlbums.length===0?<div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{lang==='ru'?'Альбомы не найдены':'No albums found'}</div>:
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
@@ -4377,7 +4411,7 @@ return(
                         {artistTracks.length===0
                           ? <div style={{textAlign:'center',color:TEXT_MUTED,fontSize:12,padding:'16px 0'}}>{t('noTracks')}</div>
                           : <div style={{padding:'0 4px'}}>
-                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{
+                              {artistTracks.map((tr,i)=><TRow key={tr.id+'t'+i} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id,src)=>openArtist(id||'',n,c,0,src)})} onPlay={()=>{
   const rest=artistTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id);
   setQueue(rest);
   playTrack(tr);
@@ -4437,7 +4471,7 @@ return(
                   </button>
                 </div>
                 {albumPage.tracks.length===0?<div style={{textAlign:'center',padding:'24px',color:TEXT_MUTED,fontSize:12}}>{lang==='ru'?'Загрузка...':'Loading...'}</div>:
-                  <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})}/>)}</div>
+                  <div style={{padding:'0 4px'}}>{albumPage.tracks.map((tr,i)=><TRow key={tr.id} {...mkTRow(tr,{num:i+1,onArtistClick:(n,c,id,src)=>openArtist(id||'',n,c,0,src)})}/>)}</div>
                 }
               </div>
             )}
@@ -4899,7 +4933,7 @@ return(
             ):(
               <div style={{padding:'0 4px 16px'}}>
 {forYouTracks.map((tr,i)=>(
-  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id)=>openArtist(id||'',n,c,0)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
+  <TRow key={tr.id+'fy'+i} {...mkTRow(tr,{num:i+1,showBlockBtn:true,onArtistClick:(n,c,id,src)=>openArtist(id||'',n,c,0,src)})} onPlay={()=>{playTrack(tr);setQueue(forYouTracks.slice(i+1).filter(t=>t.mp3&&t.id!==tr.id));}} onMenu={(r:DOMRect)=>{setMenuAnchor({top:r.bottom+6,right:window.innerWidth-r.right+r.width/2,showBlock:true});setMenuId(tr.id);}} onCloseMenu={()=>{setMenuId(null);setMenuAnchor(null);}}/>
 ))}
                 <div style={{display:'flex',justifyContent:'center',padding:'16px 0 8px'}}>
                   <button onPointerDown={()=>loadForYou(false)} disabled={forYouLoading}
@@ -5204,7 +5238,7 @@ return(
                 {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),fn:()=>{setAddToPl(tr);setMenuId(null);setMenuAnchor(null);}},
                 {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:t('share'),fn:()=>{shareTrack(tr);setMenuId(null);setMenuAnchor(null);}},
                 {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={subActive?ACC:'#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,label:(lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':lang==='kk'?'Атын өзгерту':lang==='pl'?'Zmień nazwę':lang==='tr'?'Yeniden adlandır':'Rename')+(subActive?'':' ⭐'),fn:()=>{setMenuId(null);setMenuAnchor(null);if(!subActive){setShowRenameLocked(true);return;}setRenameTrack(tr);setRenameVal(displayTitle(tr));setRenameArtistVal(tr.artist||'');}},
-                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist(tr.artistId||'',tr.artist,'',0);setMenuId(null);setMenuAnchor(null);}},
+                {icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',fn:()=>{openArtist(tr.artistId||'',tr.artist,'',0,tr.source);setMenuId(null);setMenuAnchor(null);}},
                 ...(tr.albumId?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,label:t('goToAlbum'),fn:()=>{openAlbum(tr.albumId!,tr.albumTitle||'',tr.artist,tr.cover);setMenuId(null);setMenuAnchor(null);}}]:[]),
                 ...(menuAnchor?.showBlock?[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d06060" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>,label:t('blockArtist'),fn:()=>{blockArtist(tr.artist);setMenuId(null);setMenuAnchor(null);}}]:[]),
               ].map((item,i,arr)=>(
@@ -6124,7 +6158,7 @@ const SORTS:[string,'default'|'az'|'za'|'artist'|'newest'|'oldest'][]=[
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,label:t('addToPlaylist'),color:TEXT_PRIMARY,fn:()=>{const tk=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setAddToPl(tk);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,label:lang==='ru'?'Поделиться':'Share',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);shareTrack(t);}},
                   {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={subActive?ACC:TEXT_SEC} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,label:(lang==='ru'?'Переименовать':lang==='uk'?'Перейменувати':lang==='kk'?'Атын өзгерту':lang==='pl'?'Zmień nazwę':lang==='tr'?'Yeniden adlandır':'Rename')+(subActive?'':' ⭐'),color:TEXT_PRIMARY,fn:()=>{const tk=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);if(!subActive){setShowRenameLocked(true);return;}setRenameTrack(tk);setRenameVal(displayTitle(tk));setRenameArtistVal(tk.artist||'');}},
-                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist(t.artistId||'',t.artist,t.cover,0);}},
+                  {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_SEC} strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,label:lang==='ru'?'К артисту':'Go to artist',color:TEXT_PRIMARY,fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);setFullPlayer(false);openArtist(t.artistId||'',t.artist,t.cover,0,t.source);}},
                   ...(pl.shared?[]:[{icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e06060" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>,label:lang==='ru'?'Удалить из плейлиста':'Remove',color:'#e06060',fn:()=>{const t=trackMenuTr;setTrackMenuPlId(null);setTrackMenuTr(null);removeFromPl(pl.id,t.id);}}]),
                 ].map((item,ii,arr)=>(
                   <button key={ii} onPointerDown={item.fn} style={{width:'100%',padding:'11px 12px',background:'none',border:'none',borderBottom:ii<arr.length-1?'1px solid #1a1a1a':'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,color:item.color,fontSize:12,textAlign:'left' as const,...tap}}>
