@@ -1627,6 +1627,7 @@ export default function App(){
   },[]);
 
   const ensureSilence=()=>{
+    if(window.Telegram?.WebApp?.platform==='android')return;
     const s=silenceRef.current;if(!s)return;
     if(s.paused)s.play().catch(()=>{});
   };
