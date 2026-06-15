@@ -1614,8 +1614,16 @@ export default function App(){
   useEffect(()=>{
     const s=new Audio(`${W}/silence.mp3`);
     s.loop=true;s.volume=0.01;
+    (s as any).playsInline=true;
     silenceRef.current=s;
-    return()=>{s.pause();s.src='';};
+    const onSilPause=()=>{
+      // Если основной аудио должен играть, а тишина встала — поднимаем её
+      if(isPlayingRef.current&&document.visibilityState==='visible'){
+        s.play().catch(()=>{});
+      }
+    };
+    s.addEventListener('pause',onSilPause);
+    return()=>{s.removeEventListener('pause',onSilPause);s.pause();s.src='';};
   },[]);
 
   const ensureSilence=()=>{
@@ -2262,8 +2270,21 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
         else setPlaying(false);
       }
     };
+    const onPauseEv=()=>{
+      // Синхронизируем MediaSession state с реальностью (UI кнопки оставляем как есть —
+      // isPlayingRef хранит "намерение" пользователя, чтобы visibility-резюм мог сработать)
+      if('mediaSession' in navigator){
+        try{navigator.mediaSession.playbackState=isPlayingRef.current?'playing':'paused';}catch{}
+      }
+    };
+    const onPlayEv=()=>{
+      if('mediaSession' in navigator){
+        try{navigator.mediaSession.playbackState='playing';}catch{}
+      }
+    };
     a.addEventListener('timeupdate',onT);a.addEventListener('ended',onE);
-    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);};
+    a.addEventListener('pause',onPauseEv);a.addEventListener('play',onPlayEv);
+    return()=>{a.removeEventListener('timeupdate',onT);a.removeEventListener('ended',onE);a.removeEventListener('pause',onPauseEv);a.removeEventListener('play',onPlayEv);};
   },[current,loop]);
   
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
@@ -2326,15 +2347,29 @@ const a=audio.current;
       setPlaying(true);
     }
     // Если должен играть но встал — пробуем через 500мс
-    if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0&&navigator.mediaSession?.playbackState!=='paused'){
-      setTimeout(()=>{
-        ensureSilence();
-        if(a.paused&&isPlayingRef.current&&navigator.mediaSession?.playbackState!=='paused')a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
-      },500);
+    if(a&&a.paused&&isPlayingRef.current&&a.src&&a.currentTime>0){
+      // Сразу пробуем — без задержки, на случай быстрого возврата
+      ensureSilence();
+      a.play().then(()=>{
+        setPlaying(true);
+        if('mediaSession' in navigator)try{navigator.mediaSession.playbackState='playing';}catch{}
+      }).catch(()=>{
+        // Повторная попытка через 500мс
+        setTimeout(()=>{
+          ensureSilence();
+          if(a.paused&&isPlayingRef.current)a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
+        },500);
+      });
     }
   };
   document.addEventListener('visibilitychange',onFocus);
-  return()=>document.removeEventListener('visibilitychange',onFocus);
+  window.addEventListener('focus',onFocus);
+  window.addEventListener('pageshow',onFocus);
+  return()=>{
+    document.removeEventListener('visibilitychange',onFocus);
+    window.removeEventListener('focus',onFocus);
+    window.removeEventListener('pageshow',onFocus);
+  };
 },[]);
 
   useEffect(()=>{if(query.trim()&&screen==='search')doSearch(searchMode);},[searchMode]);
@@ -2343,8 +2378,12 @@ useEffect(()=>{
   const interval=setInterval(()=>{
     const a=audio.current;
     if(!a||!isPlayingRef.current)return;
-    // Не трогаем если вкладка невидима — браузер сам управляет
-    if(document.visibilityState==='hidden')return;
+    // При hidden пробуем тихо разбудить только тишину — это часто оживляет сессию на Android
+    if(document.visibilityState==='hidden'){
+      const sil=silenceRef.current;
+      if(sil&&sil.paused)sil.play().catch(()=>{});
+      return;
+    }
 if(a.ended&&a.src){
       if(queueRef.current.length>0){
         const nxt=queueRef.current[0];
