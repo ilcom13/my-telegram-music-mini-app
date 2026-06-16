@@ -1151,8 +1151,8 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,displayName,displayArtistN
 export default function App(){
   useEffect(() => {
     telegramAnalytics.init({
-      token: 'eyJhcHBfbmFtZSI6ImZvcnR5NyIsImFwcF91cmwiOiJodHRwczovL3QubWUvZm9ydHk3bWJvdCIsImFwcF9kb21haW4iOiJodHRwczovL3NxdWFyZS1xdWVlbi1lNzAzLnNoYXBvdmFsaWx1aGEud29ya2Vycy5kZXYvIn0=!T5iNHAuw6Oy2Yazr9p88k0q85LrUjYwKJglc6Bd6mLU=',
-      appName: 'forty7',
+      token: 'eyJhcHBfbmFtZSI6ImZvcnR5N211c2ljIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9mb3J0eTdtYm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vbXktdGVsZWdyYW0tbXVzaWMtbWluaS1hcHAucGFnZXMuZGV2LyJ9!VFb2osRpPyTsckRd52kuxtTCKe2UOkzMkuTUdxTs1U4=',
+      appName: 'forty7music',
     });
   }, []);
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'|'recent_all'>('home');
