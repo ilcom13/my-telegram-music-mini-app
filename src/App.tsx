@@ -1,4 +1,5 @@
 import React,{ useState, useEffect, useRef, useCallback } from 'react';
+import telegramAnalytics from '@telegram-apps/analytics';
 declare global { interface Window { Telegram: any; } }
 
 const W = 'https://square-queen-e703.shapovaliluha.workers.dev';
@@ -1148,6 +1149,12 @@ const PlTrackRow=React.memo(function PlTrackRow({tr,i,displayName,displayArtistN
 });
 
 export default function App(){
+  useEffect(() => {
+    telegramAnalytics.init({
+      token: 'ВСТАВЬ_ТОКЕН_ОТ_DataChief_bot',
+      appName: 'ВСТАВЬ_APPNAME_ОТ_DataChief_bot',
+    });
+  }, []);
   const[screen,setScreen]=useState<'home'|'search'|'library'|'trending'|'profile'|'artist'|'album'|'monthstats'|'recent_all'>('home');
   const[lang,setLang]=useState<'ru'|'en'|'uk'|'kk'|'pl'|'tr'>('ru');
   const t=(k:string)=>T[lang][k]||k;
