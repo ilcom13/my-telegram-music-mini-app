@@ -6483,7 +6483,7 @@ style={{width:48,height:48,minWidth:48,borderRadius:'50%',background:ACC,border:
       {/* ── NAV ── */}
       {screen!=='profile'&&screen!=='artist'&&screen!=='album'&&screen!=='monthstats'&&(
         <div style={{position:'fixed',bottom:8,left:12,right:12,background:'rgba(10,10,10,0.6)',backdropFilter:'blur(40px) saturate(1.8)',WebkitBackdropFilter:'blur(40px) saturate(1.8)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:20
-,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,paddingTop:2,boxShadow:'0 4px 24px rgba(0,0,0,0.6)'}}>
+,display:'flex',justifyContent:'space-around',alignItems:'stretch',zIndex:101,height:NAV_H,paddingTop:2,boxShadow:'0 4px 24px rgba(0,0,0,0.6)',userSelect:'none' as const,WebkitUserSelect:'none' as any}}>
           {NAV.map(item=>(
             <NavItem
               key={item.id}
