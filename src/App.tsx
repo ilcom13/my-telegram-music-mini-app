@@ -1448,6 +1448,8 @@ export default function App(){
       artist:(topTrackId[1] as any).artist||'',
       cover:(topTrackId[1] as any).cover||'',
       plays:(topTrackId[1] as any).count||0,
+      source:(topTrackId[1] as any).source||'soundcloud',
+      amId:(topTrackId[1] as any).amId||'',
     }:null;
     const listenedCount=listenedIds.length;
     const payload={uid,name:uName,username:uUsername,photo:uPhoto,topTrack,listenedCount};
@@ -5140,7 +5142,7 @@ return(
                         <button onPointerDown={()=>{
                           const t=p.topTrack;
                           if(!t||!t.id)return;
-                          const track:Track={id:t.id,title:t.title,artist:t.artist,cover:t.cover,duration:'',plays:t.plays,mp3:null,source:'soundcloud'};
+                          const track:Track={id:t.id,title:t.title,artist:t.artist,cover:t.cover,duration:'',plays:t.plays,mp3:null,source:t.source||'soundcloud',amId:t.amId||''};
                           playTrack(track);
                         }} style={{width:42,height:42,borderRadius:'50%',background:ACC,border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,...tap}}>
                           <svg viewBox="0 0 24 24" style={{width:20,height:20,marginLeft:2}} fill={BG} stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg>
