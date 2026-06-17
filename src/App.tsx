@@ -2201,11 +2201,13 @@ const loadRecommendations=useCallback(async()=>{
         const merged:Record<string,number>={};
         for(const[a,n] of Object.entries(allCounts))merged[a]=n;
         for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
-        const sortedArtists=Object.entries(merged)
-          .filter(([a])=>!blocked.includes(a))
-          .sort((a,b)=>b[1]-a[1])
-          .map(([a])=>a)
-          .slice(0,8);
+        // Берём топ-12 и рандомно выбираем 8 — для разнообразия на каждом заходе
+      const topPool=Object.entries(merged)
+        .filter(([a])=>!blocked.includes(a))
+        .sort((a,b)=>b[1]-a[1])
+        .map(([a])=>a)
+        .slice(0,12);
+      const sortedArtists=[...topPool].sort(()=>Math.random()-0.5).slice(0,8);
         if(sortedArtists.length){
           const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
           const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`,{priority:'low'} as RequestInit);
@@ -2231,7 +2233,7 @@ const loadRecommendations=useCallback(async()=>{
 useEffect(()=>{
     if(history.length<1)return;
     // Откладываем на 3 сек при старте — чтобы не мешать воспроизведению
-const delay=recsVersion===0?4000:5000;
+const delay=recsVersion===0?1500:3000;
     const t=setTimeout(()=>{
       // Не грузим если сейчас играет трек (пользователь уже включил музыку)
       if(isPlayingRef.current)return;
@@ -2289,7 +2291,11 @@ const onVisible=()=>{
       }
     };
     document.addEventListener('visibilitychange',onVisible);
-    return()=>document.removeEventListener('visibilitychange',onVisible);
+    window.addEventListener('pageshow',onVisible);
+    return()=>{
+      document.removeEventListener('visibilitychange',onVisible);
+      window.removeEventListener('pageshow',onVisible);
+    };
   },[loadRecommendations]);
 
   useEffect(()=>{
