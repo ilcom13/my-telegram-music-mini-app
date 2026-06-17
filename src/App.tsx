@@ -3852,7 +3852,9 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
 {showFxPanel&&(
   <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column' as const,justifyContent:'flex-end',background:'rgba(0,0,0,0.4)',animation:'fadeIn 0.2s ease'}} onPointerDown={()=>setShowFxPanel(false)}>
     <div style={{background:'rgba(14,14,14,0.55)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',borderRadius:'24px 24px 0 0',padding:'20px 20px 40px',width:'100%',maxHeight:'85vh',overflowY:'auto' as const,border:'1px solid rgba(255,255,255,0.07)',borderBottom:'none'}} onPointerDown={e=>e.stopPropagation()}>
-      <div style={{width:40,height:4,background:'#333',borderRadius:2,margin:'0 auto 20px'}}/>
+      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:12}}>
+        <button onPointerDown={e=>{e.stopPropagation();setShowFxPanel(false);}} style={{background:'none',border:'none',cursor:'pointer',color:TEXT_SEC,fontSize:22,padding:'2px 6px',lineHeight:1,...tap}}>×</button>
+      </div>
       {!subActive&&(
         <div style={{background:'rgba(14,14,14,0.95)',borderRadius:16,padding:'20px',marginBottom:16,display:'flex',flexDirection:'column' as const,alignItems:'center',gap:8,border:'1px solid #252525'}}>
           <div style={{fontSize:24}}>⭐</div>
