@@ -2125,36 +2125,104 @@ navigator.mediaSession.setActionHandler('seekto',(details)=>{
     }
   },[fullPlayer,current?.cover]);
 
-  const loadRecommendations=useCallback(async()=>{
+const loadRecommendations=useCallback(async()=>{
     const hist=historyRef.current;
     const blocked=blockedRef.current;
     if(hist.length<1)return;
     setRecsLoading(true);
     try{
-      const allCounts=getArtistPlayCounts(hist.slice(0,100));
-      const recentCounts=getArtistPlayCounts(hist.slice(0,15));
-      const merged:Record<string,number>={};
-      for(const[a,n] of Object.entries(allCounts))merged[a]=n;
-      for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
-      const sortedArtists=Object.entries(merged)
-        .filter(([a])=>!blocked.includes(a))
-        .sort((a,b)=>b[1]-a[1])
-        .map(([a])=>a)
-        .slice(0,8);
-      if(!sortedArtists.length){setRecsLoading(false);return;}
-      const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
-      const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`,{priority:'low'} as RequestInit);
-      if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-      const d=await resp.json();
-      if(d.tracks?.length){
-const normA=(s:string)=>s.toLowerCase().replace(/[cс]/g,'c').replace(/[oо]/g,'o').replace(/[aа]/g,'a').replace(/[eеёЁ]/g,'e').replace(/[pр]/g,'p').replace(/[xх]/g,'x').replace(/[kк]/g,'k').replace(/[mм]/g,'m').replace(/[tт]/g,'t').replace(/[bв]/g,'b').replace(/[hн]/g,'h').replace(/[yу]/g,'y').replace(/\s*(official|music|records|prod)\s*/gi,'').trim();
-        const knownSet=sortedArtists.map((a:string)=>normA(a));
-        const fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownSet.some(ka=>normA(tr.artist)===ka||normA(tr.artist).includes(ka)||ka.includes(normA(tr.artist))));
-        if(fresh.length>0){
-          setRecs(fresh);
-          try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
-          doFullSync();
+      const plays=trackPlaysRef.current;
+      // Сид-треки SC и сид-артисты AM по реальным play counts
+      const scSeedCandidates:Array<{id:string;count:number}>=[];
+      const amArtistCounts:Map<string,number>=new Map();
+      for(const[tid,info] of Object.entries(plays)){
+        const src=(info as any).source||'soundcloud';
+        const artist=(info as any).artist||'';
+        const count=(info as any).count||0;
+        if(count<=0||!artist||blocked.includes(artist))continue;
+        if(src==='audiomack'){
+          amArtistCounts.set(artist,(amArtistCounts.get(artist)||0)+count);
+        }else if(/^\d+$/.test(tid)){
+          scSeedCandidates.push({id:tid,count});
         }
+      }
+      const scSeeds=scSeedCandidates.sort((a,b)=>b.count-a.count).slice(0,5);
+      const amSeeds=Array.from(amArtistCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      const scTotal=scSeeds.reduce((s,e)=>s+e.count,0);
+      const amTotal=amSeeds.reduce((s,e)=>s+e[1],0);
+      const total=scTotal+amTotal;
+      let fresh:Track[]=[];
+      if(total>0){
+        const scPromises=scSeeds.map(s=>
+          fetch(`${W}/related?trackId=${encodeURIComponent(s.id)}`,{priority:'low'} as RequestInit)
+            .then(r=>r.ok?r.json():{tracks:[]})
+            .catch(()=>({tracks:[]}))
+        );
+        const amPromises=amSeeds.map(([artist])=>
+          fetch(`${W}/audiomack-artist?name=${encodeURIComponent(artist)}`,{priority:'low'} as RequestInit)
+            .then(r=>r.ok?r.json():{tracks:[]})
+            .catch(()=>({tracks:[]}))
+        );
+        const[scResults,amResults]=await Promise.all([Promise.all(scPromises),Promise.all(amPromises)]);
+        const recentIds=new Set(hist.slice(0,30).map(t=>t.id));
+        const seen=new Set<string>();
+        const scPool:Track[]=[];
+        for(const r of scResults){
+          for(const t of (r.tracks||[])){
+            if(!t||!t.id||seen.has(t.id)||recentIds.has(t.id))continue;
+            if(blocked.includes(t.artist))continue;
+            seen.add(t.id);
+            scPool.push(t);
+          }
+        }
+        const amPool:Track[]=[];
+        for(const r of amResults){
+          for(const t of (r.tracks||[])){
+            if(!t||!t.id||seen.has(t.id)||recentIds.has(t.id))continue;
+            if(blocked.includes(t.artist))continue;
+            seen.add(t.id);
+            amPool.push(t);
+          }
+        }
+        const limit=15;
+        const scQuota=Math.round((scTotal/total)*limit);
+        const amQuota=limit-scQuota;
+        fresh=[...scPool.slice(0,scQuota),...amPool.slice(0,amQuota)];
+        // Перемешиваем чтоб не было блоками
+        for(let i=fresh.length-1;i>0;i--){
+          const j=Math.floor(Math.random()*(i+1));
+          [fresh[i],fresh[j]]=[fresh[j],fresh[i]];
+        }
+      }
+      // Фоллбэк: если новая логика ничего не дала — старый /recommend как раньше
+      if(fresh.length===0){
+        const allCounts=getArtistPlayCounts(hist.slice(0,100));
+        const recentCounts=getArtistPlayCounts(hist.slice(0,15));
+        const merged:Record<string,number>={};
+        for(const[a,n] of Object.entries(allCounts))merged[a]=n;
+        for(const[a,n] of Object.entries(recentCounts))merged[a]=(merged[a]||0)+n*2;
+        const sortedArtists=Object.entries(merged)
+          .filter(([a])=>!blocked.includes(a))
+          .sort((a,b)=>b[1]-a[1])
+          .map(([a])=>a)
+          .slice(0,8);
+        if(sortedArtists.length){
+          const recentIds=hist.slice(0,30).map(tr=>tr.id).join(',');
+          const resp=await fetch(`${W}/recommend?artists=${encodeURIComponent(sortedArtists.join(','))}&exclude=${encodeURIComponent(recentIds)}&limit=10`,{priority:'low'} as RequestInit);
+          if(resp.ok){
+            const d=await resp.json();
+            if(d.tracks?.length){
+              const normA=(s:string)=>s.toLowerCase().replace(/[cс]/g,'c').replace(/[oо]/g,'o').replace(/[aа]/g,'a').replace(/[eеёЁ]/g,'e').replace(/[pр]/g,'p').replace(/[xх]/g,'x').replace(/[kк]/g,'k').replace(/[mм]/g,'m').replace(/[tт]/g,'t').replace(/[bв]/g,'b').replace(/[hн]/g,'h').replace(/[yу]/g,'y').replace(/\s*(official|music|records|prod)\s*/gi,'').trim();
+              const knownSet=sortedArtists.map(a=>normA(a));
+              fresh=d.tracks.filter((tr:Track)=>!blocked.includes(tr.artist)&&knownSet.some(ka=>normA(tr.artist)===ka||normA(tr.artist).includes(ka)||ka.includes(normA(tr.artist))));
+            }
+          }
+        }
+      }
+      if(fresh.length>0){
+        setRecs(fresh);
+        try{localStorage.setItem('recs47',JSON.stringify(fresh));}catch{}
+        doFullSync();
       }
     }catch(e){console.warn('recs failed:',e);}
     setRecsLoading(false);
