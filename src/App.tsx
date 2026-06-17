@@ -1434,6 +1434,7 @@ export default function App(){
   const [showFollowList,setShowFollowList]=useState<'following'|'followers'|null>(null);
   const [followListProfiles,setFollowListProfiles]=useState<any[]>([]);
   const [followListLoading,setFollowListLoading]=useState(false);
+  const profileFromFollowListRef=useRef<boolean>(false);
 
   // Отправляем свой профиль на сервер (редко — только при изменениях)
   const lastProfileSyncRef=useRef<string>('');
@@ -5057,7 +5058,7 @@ return(
 
               {/* Кнопка назад */}
               <div style={{position:'relative' as const,zIndex:2,display:'flex',alignItems:'center',padding:'14px 16px'}}>
-                <button onPointerDown={()=>{setScreen('home');setViewingProfile(null);}} style={{background:'rgba(0,0,0,0.4)',border:'none',width:38,height:38,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...tap}}>
+                <button onPointerDown={()=>{const fromFollow=profileFromFollowListRef.current;profileFromFollowListRef.current=false;setViewingProfile(null);setScreen(fromFollow?'profile':'home');}} style={{background:'rgba(0,0,0,0.4)',border:'none',width:38,height:38,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...tap}}>
                   <svg viewBox="0 0 24 24" style={{width:20,height:20}} fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
               </div>
@@ -5552,7 +5553,7 @@ return(
               <div style={{display:'flex',flexDirection:'column' as const,gap:6}}>
                 {followListProfiles.map((pr:any)=>(
                   <div key={pr.uid} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12}}>
-                    <button onPointerDown={()=>{setShowFollowList(null);openUserProfile(pr.uid);}} style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,background:'none',border:'none',padding:0,cursor:'pointer',textAlign:'left' as const,...tap}}>
+                    <button onPointerDown={()=>{setShowFollowList(null);profileFromFollowListRef.current=true;openUserProfile(pr.uid);}} style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0,background:'none',border:'none',padding:0,cursor:'pointer',textAlign:'left' as const,...tap}}>
                       {pr.photo?
                         <img src={pr.photo} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                         :<div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${ACC}66,${ACC}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,color:'#fff',flexShrink:0}}>{(pr.name||'?').charAt(0).toUpperCase()}</div>
