@@ -2001,6 +2001,8 @@ useEffect(()=>{
   const queueRef=useRef<Track[]>([]);
   const currentQueueIdx=useRef<number>(-1);
   const mediaSessionThrottle=useRef<number>(0);
+  const playingRecentRef=useRef<boolean>(false);
+  const recentSnapshotRef=useRef<Track[]>([]);
   useEffect(()=>{queueRef.current=queue;},[queue]);
   useEffect(()=>{historyRef.current=history;},[history]);
   useEffect(()=>{blockedRef.current=blockedArtists;},[blockedArtists]);
@@ -2269,6 +2271,14 @@ if(pl&&pl.repeat&&pl.tracks.length>0){
           else setPlaying(false);
         }
       }
+      else if(playingRecentRef.current&&recentSnapshotRef.current.length>0){
+        const recent=recentSnapshotRef.current.filter(t=>t.id!==current?.id);
+        if(recent.length>0){
+          setQueue(recent.slice(1));
+          try{localStorage.setItem('q47',JSON.stringify(recent.slice(1)));}catch{}
+          playDirect(recent[0]);
+        } else setPlaying(false);
+      }
       else{
         const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
@@ -2411,6 +2421,13 @@ if(a.ended&&a.src){
           if(available.length>0)playDirect(available[Math.floor(Math.random()*Math.min(available.length,10))]);
           else setPlaying(false);
         }
+      } else if(playingRecentRef.current&&recentSnapshotRef.current.length>0){
+        const recent=recentSnapshotRef.current.filter(t=>t.id!==current?.id);
+        if(recent.length>0){
+          setQueue(recent.slice(1));
+          try{localStorage.setItem('q47',JSON.stringify(recent.slice(1)));}catch{}
+          playDirect(recent[0]);
+        } else setPlaying(false);
       } else {
         const pool=recsRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
         const fallbackPool=historyRef.current.filter(tr=>tr.mp3&&!blockedRef.current.includes(tr.artist));
@@ -2964,6 +2981,21 @@ const playNext=()=>{
     if(track.isArtist&&track.source==='audiomack'){openArtist('',track.title,track.cover,track.plays,'audiomack');return;}
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
     if(!track.id)return;
+    if(current?.id===track.id){togglePlay();return;}
+    playingRecentRef.current=false;
+    playDirect(track);
+  };
+
+  const playFromRecent=(track:Track,recentList:Track[])=>{
+    if(!track.id)return;
+    const idx=recentList.findIndex(t=>t.id===track.id);
+    const rest=idx>=0?recentList.slice(idx+1):recentList.filter(t=>t.id!==track.id);
+    setPlayingPlId(null);
+    playingPlIdRef.current=null;
+    setQueue(rest);
+    try{localStorage.setItem('q47',JSON.stringify(rest));}catch{}
+    recentSnapshotRef.current=[...recentList];
+    playingRecentRef.current=true;
     if(current?.id===track.id){togglePlay();return;}
     playDirect(track);
   };
@@ -3534,7 +3566,7 @@ const openAlbum=async(id:string,title:string,artist:string,cover:string)=>{
   const moveTrackInPl=(plId:string,from:number,to:number)=>{setPlaylists(prev=>{const n=prev.map(p=>{if(p.id!==plId)return p;const tracks=[...p.tracks];const[item]=tracks.splice(from,1);tracks.splice(to,0,item);return{...p,tracks};});try{localStorage.setItem('p47',JSON.stringify(n));}catch{}playlistsRef.current=n;return n;});setTimeout(()=>republishIfShared(plId),50);};
   const addToPl2=(plId:string,track:Track)=>{const trackToSave={...track};if(trackToSave.source==='audiomack')trackToSave.mp3=null;const updated=playlists.map(pl=>pl.id===plId&&!pl.tracks.some(t=>t.id===track.id)?{...pl,tracks:[...pl.tracks,trackToSave]}:pl);playlistsRef.current=updated;setPlaylists(updated);try{localStorage.setItem('p47',JSON.stringify(updated));localStorage.setItem('p47_ts',String(Date.now()));}catch{}setAddToPl(null);doFullSync();republishIfShared(plId);};
   const playPl=(pl:Playlist,tracks?:Track[])=>{const t=tracks||pl.tracks;if(!t.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playTrack(t[0]);setQueue(t.slice(1));};
-  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playDirect(sh[0]);setQueue(sh.slice(1));const updated=playlistsRef.current.map(p=>p.id===pl.id?{...p,_shuffled:true}:p);playlistsRef.current=updated;};
+  const shufflePl=(pl:Playlist)=>{const sh=[...pl.tracks].sort(()=>Math.random()-.5);if(!sh.length)return;setPlayingPlId(pl.id);setManualQIds(new Set());playingRecentRef.current=false;playDirect(sh[0]);setQueue(sh.slice(1));const updated=playlistsRef.current.map(p=>p.id===pl.id?{...p,_shuffled:true}:p);playlistsRef.current=updated;};
   const moveQ=(from:number,to:number)=>setQueue(prev=>{const n=[...prev];const[item]=n.splice(from,1);n.splice(to,0,item);queueRef.current=n;try{localStorage.setItem('q47',JSON.stringify(n));}catch{}return n;});
   // Smart add to queue: if playing from a playlist, insert NEXT; otherwise append
   const smartAddQ=(track:Track)=>{
@@ -4590,7 +4622,7 @@ return(
                 </div>
                 <div style={{display:'flex',gap:12,padding:'0 16px 4px',overflowX:'auto'}}>
                   {history.slice(0,12).map(tr=>(
-                    <div key={tr.id} className="press-scale" style={{flexShrink:0,width:148,cursor:'pointer',padding:10,borderRadius:14,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playTrack(tr)}>
+                    <div key={tr.id} className="press-scale" style={{flexShrink:0,width:148,cursor:'pointer',padding:10,borderRadius:14,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)'}} onClick={()=>playFromRecent(tr,history.slice(0,12))}>
                       <div style={{position:'relative' as const,width:128,height:128,borderRadius:10,overflow:'hidden',marginBottom:8,background:BG3}}>
                         <Img src={tr.cover} size={128} radius={0}/>
                         <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:7,right:7,width:28,height:28,borderRadius:8,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
@@ -5602,7 +5634,7 @@ importSource={importSource} setImportSource={setImportSource}
           </div>
           <div style={{padding:'12px 10px',display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>
             {history.slice(0,12).map(tr=>(
-              <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:6,borderRadius:10,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)',minWidth:0,overflow:'hidden'}} onClick={()=>playTrack(tr)}>
+              <div key={tr.id} className="press-scale" style={{cursor:'pointer',padding:6,borderRadius:10,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.05)',minWidth:0,overflow:'hidden'}} onClick={()=>playFromRecent(tr,history.slice(0,12))}>
                 <div style={{position:'relative' as const,width:'100%',paddingBottom:'100%',borderRadius:8,overflow:'hidden' as const,marginBottom:6,background:BG3}}>
                   {tr.cover?<img src={tr.cover} alt="" style={{position:'absolute' as const,inset:0,width:'100%',height:'100%',objectFit:'cover' as const,display:'block'}} onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>:<div style={{position:'absolute' as const,inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,color:ACC}}>🎵</div>}
                   <button onPointerDown={e=>{e.stopPropagation();}} onClick={e=>{e.stopPropagation();e.preventDefault();addQ(tr,e as any);}} style={{position:'absolute' as const,top:5,right:5,width:26,height:26,borderRadius:7,background:'rgba(20,20,20,0.55)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,...tap}}>
