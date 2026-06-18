@@ -2656,7 +2656,7 @@ useEffect(()=>{
     setDlWarnFor({type:'liked'});
   };
   
-const playDirect=async(track:Track)=>{
+const playDirect=async(track:Track,skipHistoryPush:boolean=false)=>{
     // ── Офлайн: если трек скачан, играем из IndexedDB без сети ──
     if(track.id&&offlineIds.has(track.id)){
       try{
@@ -2671,7 +2671,7 @@ const playDirect=async(track:Track)=>{
           (a as any)._objUrl=objUrl;
           a.src=objUrl;a.load();ensureSilence();
           a.play().then(()=>setPlaying(true)).catch(()=>setTimeout(()=>a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false)),300));
-          if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
+          if(!skipHistoryPush&&current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
           setCurrent({...track});
           setPlaybackSpeed(1);setReverbAmount(0);setPitchAmount(1);setBassAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
           progressRef.current=0;curTimeRef.current='0:00';
@@ -2780,7 +2780,7 @@ a.play().then(()=>setPlaying(true)).catch((err)=>{
         setTimeout(()=>{a.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));},300);
       }
     });
-    if(current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
+    if(!skipHistoryPush&&current)setPlayHistory(prev=>[current,...prev.slice(0,29)]);
     setCurrent({...track,mp3:freshMp3});
     setPlaybackSpeed(1);setReverbAmount(0);setPitchAmount(1);setBassAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
     progressRef.current=0;curTimeRef.current='0:00';
@@ -2967,24 +2967,11 @@ if (!fxResp.ok) throw new Error('FX error');
   }
 };
 
-  
 const playPrev=()=>{
     if(loopRef.current&&current){
       // повтор одного трека: рестартуем текущий
       const a=audio.current;
       if(a){a.currentTime=0;a.play().catch(()=>{});}
-      return;
-    }
-    const a=audio.current;
-    if(a&&a.currentTime>5){
-      a.currentTime=0;
-      progressRef.current=0;curTimeRef.current='0:00';
-      if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
-      if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
-      if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
-      if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
-      if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
-      if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
       return;
     }
     if(playHistory.length>0){
@@ -2994,27 +2981,11 @@ const playPrev=()=>{
         setQueue(q=>{
           const already=q.some(t=>t.id===current.id);
           const n=already?q:[current,...q];
-          try{localStorage.setItem('q47',JSON.stringify(n));}catch{}
+          try{localStorage.setItem('q47',JSON.stringify(n))}catch{}
           return n;
         });
       }
-      if(audio.current&&prev.mp3){
-        audio.current.pause();
-        const isHlsPrev=prev.mp3.includes('.m3u8')||prev.mp3.includes('/hls/');
-        audio.current.src=isHlsPrev?prev.mp3:`${W}/stream?url=${encodeURIComponent(prev.mp3)}`;
-        audio.current.load();
-        audio.current.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false));
-      }
-      setCurrent(prev);
-      setCurrent(prev);
-      setPlaybackSpeed(1);setReverbAmount(0);setShowFxPanel(false);setShowEqPanel(false);originalSrcRef.current='';
-      progressRef.current=0;curTimeRef.current='0:00';
-      if(seekBarFillRef.current)seekBarFillRef.current.style.width='0%';
-      if(seekBarThumbRef.current)seekBarThumbRef.current.style.left='0%';
-      if(curTimeDisplayRef.current)curTimeDisplayRef.current.textContent='0:00';
-      if(miniBarFillRef.current)miniBarFillRef.current.style.width='0%';
-      if(miniBarThumbRef.current)miniBarThumbRef.current.style.left='0%';
-      if(miniTimeRef.current)miniTimeRef.current.textContent='0:00';
+      playDirect(prev,true);
     } else if(current&&audio.current){
       audio.current.currentTime=0;
     }
