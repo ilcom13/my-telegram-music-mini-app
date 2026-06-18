@@ -3025,7 +3025,7 @@ const playNext=()=>{
   };
 
   const playTrack=(track:Track)=>{
-    if(track.isArtist&&track.source!=='audiomack'){openArtist(track.id||'',track.title,track.cover,track.plays);return;}
+    if(track.isArtist&&track.source!=='audiomack'){openArtist((track.id||'').replace(/^u_/,''),track.title,track.cover,track.plays);return;}
     if(track.isArtist&&track.source==='audiomack'){openArtist('',track.title,track.cover,track.plays,'audiomack');return;}
     if(track.isAlbum){openAlbum(track.id,track.title,track.artist,track.cover);return;}
     if(!track.id)return;
