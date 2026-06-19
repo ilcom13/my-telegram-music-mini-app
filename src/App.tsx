@@ -2751,7 +2751,8 @@ if(track.source==='audiomack' && track.amId){
         const d=await r.json();
         if(d.hls)freshMp3=d.hls;
         else if(d.mp3)freshMp3=d.mp3;
-        else if(d.error&&!track.mp3)return;
+        // НЕ делаем ранний return — пусть упадёт в блок !freshMp3 ниже,
+        // который покажет модалку setUnavailableTrack
       }catch{}
     }
 if(!freshMp3){
